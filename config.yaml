@@ -1,7 +1,7 @@
 # All knobs in one place. train.py and overfit_check.py read this.
 
 # --- Data ---
-data_root: "/path/to/MFCAD_dataset"   # <-- EDIT: your unzipped dataset folder
+data_root: "MFCAD_dataset"           # unzipped MFCAD++ folder (relative to repo root)
 loader: "h5"                          # "h5" (recommended) or "step"
 h5_path: "graphs.h5"                  # relative to data_root; verify the real name
 num_classes: 25                       # MFCAD++ feature classes; verify from labels file

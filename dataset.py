@@ -78,7 +78,24 @@ class H5GraphDataset(Dataset):
         super().__init__()
         self.h5_path = os.path.join(data_root, h5_path)
         self.num_surface_types = num_surface_types
-        with open(os.path.join(data_root, split_file)) as f:
+        split_path = os.path.join(data_root, split_file)
+        if not os.path.isdir(data_root):
+            raise FileNotFoundError(
+                f"data_root not found: {os.path.abspath(data_root)!r}\n"
+                "Unzip MFCAD++ into MFCAD_dataset/ (see README) or edit "
+                "config.yaml:data_root to your dataset folder."
+            )
+        if not os.path.isfile(split_path):
+            raise FileNotFoundError(
+                f"split file not found: {os.path.abspath(split_path)!r}\n"
+                f"Expected {split_file} inside data_root."
+            )
+        if not os.path.isfile(self.h5_path):
+            raise FileNotFoundError(
+                f"H5 file not found: {os.path.abspath(self.h5_path)!r}\n"
+                "Check config.yaml:h5_path matches your downloaded file name."
+            )
+        with open(split_path) as f:
             self.ids = [l.strip() for l in f if l.strip()]
         self._h5 = None  # opened lazily per worker
 

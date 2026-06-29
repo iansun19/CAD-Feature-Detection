@@ -22,7 +22,7 @@ on a single GPU.
 
 ## Order of operations (do not skip)
 1. Install env (`requirements.txt`).
-2. Point `config.yaml: data_root` at your unzipped MFCAD++ folder.
+2. Unzip MFCAD++ into `MFCAD_dataset/` at the repo root (or set `config.yaml:data_root`).
 3. Run `python overfit_check.py` — must reach ~100% train acc on 20 parts in a couple
    minutes. If it can't memorize 20 parts, your data loader is wrong. Fix before step 4.
 4. Run `python train.py` overnight.
