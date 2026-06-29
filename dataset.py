@@ -97,6 +97,8 @@ class _H5PickleMixin:
         if h5 is not None:
             h5.close()
             self._h5 = None
+        # drop any per-handle array cache so it isn't pickled to workers
+        self._batch_cache = {}
 
     def __getstate__(self):
         self._close_h5()
@@ -150,6 +152,24 @@ class MFCADPPGraphDataset(_H5PickleMixin, Dataset):
     def _ensure_open(self):
         if self._h5 is None:
             self._h5 = h5py.File(self.h5_path, "r")
+            # per-handle cache of full batch arrays needed for edge masking;
+            # avoids re-reading entire batch datasets on every __getitem__.
+            self._batch_cache = {}
+
+    def _batch_arrays(self, batch_key):
+        """Cache the small index arrays read in full (one entry per batch group)."""
+        cached = self._batch_cache.get(batch_key)
+        if cached is None:
+            batch = self._h5[batch_key]
+            cached = {
+                "idx": batch["idx"][()],
+                "A_1_idx": batch["A_1_idx"][()],
+                "E_1_idx": batch["E_1_idx"][()],
+                "E_2_idx": batch["E_2_idx"][()],
+                "E_3_idx": batch["E_3_idx"][()],
+            }
+            self._batch_cache[batch_key] = cached
+        return cached
 
     def len(self):
         return len(self.ids)
@@ -158,19 +178,20 @@ class MFCADPPGraphDataset(_H5PickleMixin, Dataset):
         self._ensure_open()
         batch_key, model_idx = self._index[part_id]
         batch = self._h5[batch_key]
-        idx_arr = batch["idx"][()]
+        arrs = self._batch_arrays(batch_key)
+        idx_arr = arrs["idx"]
         v1_len = batch["V_1"].shape[0]
         start, end = _brep_bounds(idx_arr, model_idx, v1_len)
-        v1 = np.asarray(batch["V_1"][()][start:end], dtype=np.float32)
+        v1 = np.asarray(batch["V_1"][start:end], dtype=np.float32)  # slice in HDF5
         surface_type_ids = np.clip(np.round(v1[:, 4] * 11).astype(int) - 1,
                                  0, self.num_surface_types - 1)
         areas = v1[:, 0]
         x = build_node_features(surface_type_ids, areas, self.num_surface_types)
 
-        a1 = _edge_set(batch["A_1_idx"][()], start, end)
-        e1 = {_canonical_edge(u, v) for u, v in _edge_set(batch["E_1_idx"][()], start, end)}
-        e2 = {_canonical_edge(u, v) for u, v in _edge_set(batch["E_2_idx"][()], start, end)}
-        e3 = {_canonical_edge(u, v) for u, v in _edge_set(batch["E_3_idx"][()], start, end)}
+        a1 = _edge_set(arrs["A_1_idx"], start, end)
+        e1 = {_canonical_edge(u, v) for u, v in _edge_set(arrs["E_1_idx"], start, end)}
+        e2 = {_canonical_edge(u, v) for u, v in _edge_set(arrs["E_2_idx"], start, end)}
+        e3 = {_canonical_edge(u, v) for u, v in _edge_set(arrs["E_3_idx"], start, end)}
 
         edges = sorted(a1)
         if edges:
@@ -195,7 +216,7 @@ class MFCADPPGraphDataset(_H5PickleMixin, Dataset):
             np.asarray(angles, dtype=np.float32),
             np.asarray(lengths, dtype=np.float32),
         )
-        y = np.asarray(batch["labels"][()][start:end], dtype=np.int64)
+        y = np.asarray(batch["labels"][start:end], dtype=np.int64)
         return Data(
             x=torch.from_numpy(x),
             edge_index=torch.from_numpy(edge_index).long(),

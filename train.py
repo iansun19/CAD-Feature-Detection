@@ -62,13 +62,17 @@ def main():
     test_ds = get_dataset(cfg, "test.txt")
     log(f"sizes train={len(train_ds)} val={len(val_ds)} test={len(test_ds)}")
 
+    persistent = cfg["num_workers"] > 0
     train_ld = DataLoader(train_ds, batch_size=cfg["batch_size"], shuffle=True,
                           num_workers=cfg["num_workers"],
+                          persistent_workers=persistent,
                           pin_memory=(device.type == "cuda"))
     val_ld = DataLoader(val_ds, batch_size=cfg["batch_size"],
-                        num_workers=cfg["num_workers"])
+                        num_workers=cfg["num_workers"],
+                        persistent_workers=persistent)
     test_ld = DataLoader(test_ds, batch_size=cfg["batch_size"],
-                         num_workers=cfg["num_workers"])
+                         num_workers=cfg["num_workers"],
+                         persistent_workers=persistent)
 
     # infer feature dims from one sample (close H5 so workers can pickle the dataset)
     sample = train_ds[0]
@@ -100,6 +104,11 @@ def main():
             run_loss += loss.item(); run_acc += accuracy(logits, batch.y); nb += 1
         val_acc = evaluate(model, val_ld, device)
         sched.step(val_acc)
+        # MPS caches a buffer per distinct allocation size; variable-sized graph
+        # batches make the pool grow unbounded against unified memory until the
+        # machine swaps. Drain it each epoch to keep epoch time flat.
+        if device.type == "mps":
+            torch.mps.empty_cache()
         log(f"epoch {epoch:03d} | loss {run_loss/nb:.4f} | "
             f"train_acc {run_acc/nb:.4f} | val_acc {val_acc:.4f} | "
             f"{time.time()-t0:.1f}s")

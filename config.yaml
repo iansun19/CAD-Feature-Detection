@@ -23,7 +23,7 @@ lr: 0.001
 weight_decay: 0.0001
 patience: 10             # early stop after N epochs with no val improvement
 seed: 42
-num_workers: 4
+num_workers: 0
 
 # --- Output ---
 out_dir: "runs"
