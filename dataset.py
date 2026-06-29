@@ -56,10 +56,185 @@ def make_undirected(edge_index, edge_attr):
     return ei, ea
 
 
+SPLIT_H5 = {
+    "train.txt": "training_MFCAD++.h5",
+    "val.txt": "val_MFCAD++.h5",
+    "test.txt": "test_MFCAD++.h5",
+}
+
+
+def _canonical_edge(u, v):
+    return (int(u), int(v)) if u < v else (int(v), int(u))
+
+
+def _brep_bounds(idx_arr, model_idx, v1_len):
+    """Per-model B-rep row range within a batched H5 group.
+
+    idx[i, 0] is the global B-rep start for CAD_model[i]; idx[i, 1] is a mesh
+    (V_2) bound — not the B-rep end. End for model i is idx[i+1, 0].
+    """
+    base = int(idx_arr[0, 0])
+    start = int(idx_arr[model_idx, 0]) - base
+    if model_idx + 1 < len(idx_arr):
+        end = int(idx_arr[model_idx + 1, 0]) - base
+    else:
+        end = v1_len
+    return start, end
+
+
+def _edge_set(idx, start, end):
+    mask = ((idx[:, 0] >= start) & (idx[:, 0] < end) &
+            (idx[:, 1] >= start) & (idx[:, 1] < end))
+    local = idx[mask] - start
+    return {tuple(row) for row in local}
+
+
+class _H5PickleMixin:
+    """Drop open h5py handles before DataLoader worker pickling."""
+
+    def _close_h5(self):
+        h5 = getattr(self, "_h5", None)
+        if h5 is not None:
+            h5.close()
+            self._h5 = None
+
+    def __getstate__(self):
+        self._close_h5()
+        return self.__dict__
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._h5 = None
+
+
 # ----------------------------------------------------------------------------
-# (a) Preferred: prebuilt H5 graphs
+# (a) Official MFCAD++ batched hierarchical H5 (training/val/test *_MFCAD++.h5)
 # ----------------------------------------------------------------------------
-class H5GraphDataset(Dataset):
+class MFCADPPGraphDataset(_H5PickleMixin, Dataset):
+    """
+    Reads the official MFCAD++ H5 splits (batched hierarchical B-Rep graphs).
+
+    Each split file lists part ids; graphs live in hierarchical_graphs/<split>.h5
+    under batch groups. We extract the B-Rep level (V_1, A_1, E_1/E_2/E_3, labels).
+    """
+    def __init__(self, data_root, h5_dir, split_file, num_surface_types):
+        super().__init__()
+        self.data_root = data_root
+        self.num_surface_types = num_surface_types
+        split_path = os.path.join(data_root, split_file)
+        h5_name = SPLIT_H5.get(split_file)
+        if h5_name is None:
+            raise ValueError(f"unknown split file: {split_file}")
+        self.h5_path = os.path.join(data_root, h5_dir, h5_name)
+        _check_data_root(data_root, split_path, self.h5_path)
+
+        with open(split_path) as f:
+            requested = [line.strip() for line in f if line.strip()]
+        self._index = self._build_index()
+        self.ids = [pid for pid in requested if pid in self._index]
+        missing = len(requested) - len(self.ids)
+        if missing:
+            print(f"warning: {missing} ids in {split_file} not found in {h5_name}")
+        self._h5 = None
+
+    def _build_index(self):
+        index = {}
+        with h5py.File(self.h5_path, "r") as f:
+            for batch_key in f.keys():
+                batch = f[batch_key]
+                for i, raw_id in enumerate(batch["CAD_model"][()]):
+                    pid = raw_id.decode() if isinstance(raw_id, bytes) else str(raw_id)
+                    index[pid] = (batch_key, i)
+        return index
+
+    def _ensure_open(self):
+        if self._h5 is None:
+            self._h5 = h5py.File(self.h5_path, "r")
+
+    def len(self):
+        return len(self.ids)
+
+    def _read_sample(self, part_id):
+        self._ensure_open()
+        batch_key, model_idx = self._index[part_id]
+        batch = self._h5[batch_key]
+        idx_arr = batch["idx"][()]
+        v1_len = batch["V_1"].shape[0]
+        start, end = _brep_bounds(idx_arr, model_idx, v1_len)
+        v1 = np.asarray(batch["V_1"][()][start:end], dtype=np.float32)
+        surface_type_ids = np.clip(np.round(v1[:, 4] * 11).astype(int) - 1,
+                                 0, self.num_surface_types - 1)
+        areas = v1[:, 0]
+        x = build_node_features(surface_type_ids, areas, self.num_surface_types)
+
+        a1 = _edge_set(batch["A_1_idx"][()], start, end)
+        e1 = {_canonical_edge(u, v) for u, v in _edge_set(batch["E_1_idx"][()], start, end)}
+        e2 = {_canonical_edge(u, v) for u, v in _edge_set(batch["E_2_idx"][()], start, end)}
+        e3 = {_canonical_edge(u, v) for u, v in _edge_set(batch["E_3_idx"][()], start, end)}
+
+        edges = sorted(a1)
+        if edges:
+            edge_index = np.asarray(edges, dtype=np.int64).T
+        else:
+            edge_index = np.zeros((2, 0), dtype=np.int64)
+        convexity, angles, lengths = [], [], []
+        for u, v in edges:
+            key = _canonical_edge(u, v)
+            if key in e1:
+                convexity.append(1)
+            elif key in e2:
+                convexity.append(0)
+            elif key in e3:
+                convexity.append(2)
+            else:
+                convexity.append(1)
+            angles.append(0.0)
+            lengths.append(1.0)
+        ea = build_edge_features(
+            np.asarray(convexity, dtype=np.int64),
+            np.asarray(angles, dtype=np.float32),
+            np.asarray(lengths, dtype=np.float32),
+        )
+        y = np.asarray(batch["labels"][()][start:end], dtype=np.int64)
+        return Data(
+            x=torch.from_numpy(x),
+            edge_index=torch.from_numpy(edge_index).long(),
+            edge_attr=torch.from_numpy(ea),
+            y=torch.from_numpy(y),
+        )
+
+    def get(self, idx):
+        return self._read_sample(self.ids[idx])
+
+
+def _check_data_root(data_root, split_path, h5_path):
+    if not os.path.isdir(data_root):
+        raise FileNotFoundError(
+            f"data_root not found: {os.path.abspath(data_root)!r}\n"
+            "Unzip MFCAD++ into MFCAD++_dataset/ (see README) or edit "
+            "config.yaml:data_root."
+        )
+    if not os.path.isfile(split_path):
+        setup_hint = (
+            "Run: python setup_data.py"
+            if not os.listdir(data_root)
+            else f"Expected {os.path.basename(split_path)} inside data_root."
+        )
+        raise FileNotFoundError(
+            f"split file not found: {os.path.abspath(split_path)!r}\n"
+            f"{setup_hint}"
+        )
+    if not os.path.isfile(h5_path):
+        raise FileNotFoundError(
+            f"H5 file not found: {os.path.abspath(h5_path)!r}\n"
+            "Check config.yaml:h5_dir and that hierarchical_graphs/ is present."
+        )
+
+
+# ----------------------------------------------------------------------------
+# (b) Simple single-H5 layout (one group per part id)
+# ----------------------------------------------------------------------------
+class H5GraphDataset(_H5PickleMixin, Dataset):
     """
     Reads samples listed in split file (train.txt/val.txt/test.txt) from a single H5.
 
@@ -79,22 +254,7 @@ class H5GraphDataset(Dataset):
         self.h5_path = os.path.join(data_root, h5_path)
         self.num_surface_types = num_surface_types
         split_path = os.path.join(data_root, split_file)
-        if not os.path.isdir(data_root):
-            raise FileNotFoundError(
-                f"data_root not found: {os.path.abspath(data_root)!r}\n"
-                "Unzip MFCAD++ into MFCAD_dataset/ (see README) or edit "
-                "config.yaml:data_root to your dataset folder."
-            )
-        if not os.path.isfile(split_path):
-            raise FileNotFoundError(
-                f"split file not found: {os.path.abspath(split_path)!r}\n"
-                f"Expected {split_file} inside data_root."
-            )
-        if not os.path.isfile(self.h5_path):
-            raise FileNotFoundError(
-                f"H5 file not found: {os.path.abspath(self.h5_path)!r}\n"
-                "Check config.yaml:h5_path matches your downloaded file name."
-            )
+        _check_data_root(data_root, split_path, self.h5_path)
         with open(split_path) as f:
             self.ids = [l.strip() for l in f if l.strip()]
         self._h5 = None  # opened lazily per worker
@@ -146,6 +306,10 @@ class StepGraphDataset(Dataset):
 
 def get_dataset(cfg, split_file):
     if cfg["loader"] == "h5":
+        if cfg.get("h5_format", "mfcadpp") == "mfcadpp":
+            return MFCADPPGraphDataset(
+                cfg["data_root"], cfg.get("h5_dir", "hierarchical_graphs"),
+                split_file, cfg["num_surface_types"])
         return H5GraphDataset(cfg["data_root"], cfg["h5_path"], split_file,
                               cfg["num_surface_types"])
     return StepGraphDataset()

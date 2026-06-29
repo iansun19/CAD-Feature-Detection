@@ -70,9 +70,12 @@ def main():
     test_ld = DataLoader(test_ds, batch_size=cfg["batch_size"],
                          num_workers=cfg["num_workers"])
 
-    # infer feature dims from one sample
+    # infer feature dims from one sample (close H5 so workers can pickle the dataset)
     sample = train_ds[0]
     node_in, edge_in = sample.x.shape[1], sample.edge_attr.shape[1]
+    train_ds._close_h5()
+    val_ds._close_h5()
+    test_ds._close_h5()
     log(f"node_in={node_in} edge_in={edge_in}")
 
     model = BRepGNN(node_in, edge_in, cfg["hidden_dim"], cfg["num_classes"],

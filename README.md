@@ -22,11 +22,12 @@ on a single GPU.
 
 ## Order of operations (do not skip)
 1. Install env (`requirements.txt`).
-2. Unzip MFCAD++ into `MFCAD_dataset/` at the repo root (or set `config.yaml:data_root`).
-3. Run `python overfit_check.py` — must reach ~100% train acc on 20 parts in a couple
-   minutes. If it can't memorize 20 parts, your data loader is wrong. Fix before step 4.
-4. Run `python train.py` overnight.
-5. Read `runs/<timestamp>/log.txt` and `best_model.pt` in the morning.
+2. Download MFCAD++ (~1.5 GB) from [Queen's University Belfast](https://pure.qub.ac.uk/en/datasets/mfcad-dataset-dataset-for-paper-hierarchical-cadnet-learning-from/) and unzip into `MFCAD++_dataset/` at the repo root.
+3. Run `python setup_data.py` — confirms `train.txt`, `val.txt`, `test.txt`, and the H5 file are present.
+4. Run `python overfit_check.py` — must reach ~100% train acc on 20 parts in a couple
+   minutes. If it can't memorize 20 parts, your data loader is wrong. Fix before step 5.
+5. Run `python train.py` overnight.
+6. Read `runs/<timestamp>/log.txt` and `best_model.pt` in the morning.
 
 ### Mac / Apple Silicon
 1. Use the **minimal Mac install** in `requirements.txt` (`torch` + `torch_geometric` only —

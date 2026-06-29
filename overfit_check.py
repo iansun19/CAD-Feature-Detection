@@ -15,6 +15,7 @@ from torch_geometric.loader import DataLoader
 from dataset import get_dataset
 from device import resolve_device
 from model import BRepGNN
+from setup_data import check_data
 
 
 def _pyg_wheel_status():
@@ -34,6 +35,9 @@ def main():
     device = resolve_device(cfg.get("device", "auto"))
     print(f"device={device}")
     print(f"pyg wheels: {_pyg_wheel_status()}")
+
+    if not check_data(cfg):
+        raise SystemExit(1)
 
     full = get_dataset(cfg, "train.txt")
     subset = [full[i] for i in range(min(20, len(full)))]

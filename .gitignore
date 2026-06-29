@@ -17,6 +17,7 @@ runs/
 *.stp
 data/
 MFCAD_dataset/
+MFCAD++_dataset/
 
 # OS / editor
 .DS_Store

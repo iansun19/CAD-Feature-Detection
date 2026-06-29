@@ -1,9 +1,11 @@
 # All knobs in one place. train.py and overfit_check.py read this.
 
 # --- Data ---
-data_root: "MFCAD_dataset"           # unzipped MFCAD++ folder (relative to repo root)
+data_root: "MFCAD++_dataset"         # unzipped MFCAD++ folder (relative to repo root)
 loader: "h5"                          # "h5" (recommended) or "step"
-h5_path: "graphs.h5"                  # relative to data_root; verify the real name
+h5_format: "mfcadpp"                  # mfcadpp = official batched H5; simple = one H5 per sample key
+h5_dir: "hierarchical_graphs"        # mfcadpp: folder with training/val/test *_MFCAD++.h5
+h5_path: "graphs.h5"                  # simple format only: single H5 relative to data_root
 num_classes: 25                       # MFCAD++ feature classes; verify from labels file
 num_surface_types: 6                  # plane, cylinder, cone, sphere, torus, other
 
