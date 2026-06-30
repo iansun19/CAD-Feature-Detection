@@ -25,8 +25,9 @@ REQUIRED = ("train.txt", "val.txt", "test.txt")
 def _h5_paths(cfg):
     root = cfg["data_root"]
     fmt = cfg.get("h5_format", "mfcadpp")
-    if fmt == "mfcadpp":
-        h5_dir = os.path.join(root, cfg.get("h5_dir", "hierarchical_graphs"))
+    if fmt in ("mfcadpp", "mfcadpp_regen"):
+        default_dir = "hierarchical_graphs_regen" if fmt == "mfcadpp_regen" else "hierarchical_graphs"
+        h5_dir = os.path.join(root, cfg.get("h5_dir", default_dir))
         return {name: os.path.join(h5_dir, fname) for name, fname in SPLIT_H5.items()}
     return {"graphs": os.path.join(root, cfg["h5_path"])}
 
