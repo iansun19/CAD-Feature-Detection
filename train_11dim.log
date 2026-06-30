@@ -1,0 +1,6 @@
+[20:47:20] device=mps  out=runs/20260629_204720
+warning: 1474 ids in train.txt not found in training_MFCAD++.h5
+warning: 311 ids in val.txt not found in val_MFCAD++.h5
+warning: 317 ids in test.txt not found in test_MFCAD++.h5
+[20:47:21] sizes train=40292 val=8639 test=8632
+[20:47:21] node_in=11 edge_in=5

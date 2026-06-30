@@ -99,11 +99,13 @@ def build_node_features(surface_type_ids, areas, num_surface_types, centroids=No
 
     D = num_surface_types + 1                (no extras)
     D = num_surface_types + 1 + 3            (with centroids)
-    D = num_surface_types + 1 + 3 + 4        (with centroids + pooled mesh feats)
+    D = num_surface_types + 1 + 3 + 1        (with centroids + pooled plane-d)
     Centroids give the model a sense of *where* a face sits, which separates
-    otherwise-identical faces (e.g. two cylinders of equal type/area). The 4 pooled
-    mesh features (mean facet normal xyz + mean plane offset d) add coarse orientation
-    and position-along-normal that the B-rep level alone does not expose.
+    otherwise-identical faces (e.g. two cylinders of equal type/area). From the 4-dim
+    pooled mesh block we keep only plane-d (mean plane offset along the normal): the
+    mean-normal xyz dims were audited to be orientation noise (the V_2 normal columns
+    are not decodable to real geometry), so feeding them would inject noise. plane-d
+    adds position-along-normal that the B-rep level alone does not expose.
     """
     n = len(surface_type_ids)
     onehot = np.zeros((n, num_surface_types), dtype=np.float32)
@@ -119,12 +121,14 @@ def build_node_features(surface_type_ids, areas, num_surface_types, centroids=No
         feats.append(c)
     if mesh_feats is not None:
         mf = np.asarray(mesh_feats, dtype=np.float32).reshape(n, -1)
-        normals = mf[:, :3]                  # already unit-length directions
+        # plane-d only (col 3 of the pooled block). The 3 mean-normal dims (cols 0-2)
+        # are dropped: an audit (diag/) confirmed the V_2 normal columns are orientation
+        # noise, not decodable geometry. plane-d is stored raw and is the geometrically
+        # meaningful signed distance from origin to the face plane, so we keep just it.
         d = mf[:, 3:4]
         # plane-d is raw and huge-ranged (~+/-8000): signed-log then per-part standardize
         d = np.sign(d) * np.log1p(np.abs(d))
         d = (d - d.mean()) / (d.std() + 1e-6)
-        feats.append(normals)
         feats.append(d)
     return np.concatenate(feats, axis=1)
 

@@ -2,9 +2,9 @@
 sanity_mesh_feats.py — validate the pooled mesh node features BEFORE training.
 
 Loads one real batch through the PyG DataLoader and checks:
-  1. node feature width == EXPECTED_DIM (10 base + 4 pooled mesh feats = 14)
+  1. node feature width == EXPECTED_DIM (10 base + 1 pooled plane-d = 11)
   2. no NaN / Inf anywhere in x
-  3. the pooled mean-normal block (cols -4:-1) is ~unit length after re-normalization
+  3. the pooled plane-d channel (last col) is standardized (mean ~0, std ~1, finite)
   4. one forward pass through BRepGNN succeeds at the new input width (model
      auto-sizes node_in from x.shape[1]; this proves nothing is hardcoded)
 
@@ -23,8 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset import get_dataset
 from model import BRepGNN
 
-EXPECTED_DIM = 14          # 6 surface-type one-hot + 1 area + 3 centroid + 4 mesh
-MESH_BLOCK = 4             # [mean_n_x, mean_n_y, mean_n_z, mean_d]
+EXPECTED_DIM = 11          # 6 surface-type one-hot + 1 area + 3 centroid + 1 plane-d
 
 
 def main():
@@ -58,26 +57,15 @@ def main():
     else:
         print("  OK: no NaN / Inf in node features")
 
-    # 3. mean-normal block unit length (cols -4:-1)
-    normals = x[:, -MESH_BLOCK:-1]
-    lengths = normals.norm(dim=1)
-    # zero-facet faces (if any) are intentionally zero -> exclude from unit check
-    nonzero = lengths > 1e-6
-    off = (lengths[nonzero] - 1.0).abs()
-    n_zero = int((~nonzero).sum())
-    print(f"  mean-normal lengths: min={lengths.min():.4f} "
-          f"max={lengths.max():.4f}  (zero-facet faces: {n_zero})")
-    if nonzero.any() and off.max() < 1e-3:
-        print("  OK: non-zero mean normals are unit length (|len-1| < 1e-3)")
-    else:
-        worst = off.max().item() if nonzero.any() else float("nan")
-        print(f"  FAIL: mean normals not unit length (max |len-1| = {worst:.4g})")
-        ok = False
-
-    # quick distribution peek at the pooled d channel
+    # 3. pooled plane-d channel (last col): standardized per-part, must be finite
     d = x[:, -1]
     print(f"  pooled-d channel: mean={d.mean():.3f} std={d.std():.3f} "
           f"min={d.min():.3f} max={d.max():.3f}")
+    if torch.isfinite(d).all() and d.std() > 1e-3:
+        print("  OK: plane-d channel present, finite, and non-degenerate")
+    else:
+        print("  FAIL: plane-d channel is non-finite or degenerate (std ~ 0)")
+        ok = False
 
     # 4. forward pass at the new width
     try:
