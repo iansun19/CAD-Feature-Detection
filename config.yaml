@@ -19,12 +19,12 @@ edge_dim: 4              # regen: 3 (convex/concave/smooth one-hot) + 1 cos(dihe
 # --- Training ---
 device: auto             # auto | cuda | mps | cpu
 epochs: 60               # early stopping usually halts well before this
-batch_size: 64           # graphs per batch; lower if you hit OOM
+batch_size: 128          # graphs per batch; lower if you hit OOM
 lr: 0.001
 weight_decay: 0.0001
 patience: 10             # early stop after N epochs with no val improvement
 seed: 42
-num_workers: 4           # >0 to keep the GPU fed; persistent_workers reuses them
+num_workers: 28          # >0 to keep the GPU fed; persistent_workers reuses them
 
 # --- Output ---
 out_dir: "runs"
