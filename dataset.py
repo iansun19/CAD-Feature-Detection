@@ -656,21 +656,88 @@ class StepGraphDataset(Dataset):
         )
 
 
+class CachedGraphDataset(Dataset):
+    """Holds pre-built Data objects in memory; getitem is a list lookup.
+
+    The expensive per-graph Python processing in the H5 loaders runs ONCE at
+    build time (see build_cache); every epoch after that reads finished tensors,
+    so the loader is no longer the bottleneck. Pickles cleanly to workers (no
+    open h5py handles), so num_workers>0 is fine.
+    """
+
+    def __init__(self, data_list):
+        super().__init__()
+        self._data = data_list
+
+    def len(self):
+        return len(self._data)
+
+    def get(self, idx):
+        return self._data[idx]
+
+    def _close_h5(self):  # no-op: train.py calls this on every dataset
+        pass
+
+
+def _build_uncached(cfg, split_file):
+    if cfg["loader"] != "h5":
+        return StepGraphDataset()
+    fmt = cfg.get("h5_format", "mfcadpp")
+    if fmt == "mfcadpp_regen":
+        return MFCADPPRegenGraphDataset(
+            cfg["data_root"], cfg.get("h5_dir", "hierarchical_graphs_regen"),
+            split_file, cfg["num_surface_types"],
+            angle_reduce=cfg.get("angle_reduce", "median"))
+    if fmt == "mfcadpp":
+        return MFCADPPGraphDataset(
+            cfg["data_root"], cfg.get("h5_dir", "hierarchical_graphs"),
+            split_file, cfg["num_surface_types"])
+    return H5GraphDataset(cfg["data_root"], cfg["h5_path"], split_file,
+                          cfg["num_surface_types"])
+
+
+def _cache_path(cfg, split_file):
+    fmt = cfg.get("h5_format", "mfcadpp")
+    reduce_tag = cfg.get("angle_reduce", "median")
+    cache_dir = os.path.join(cfg["data_root"], "graph_cache")
+    base = os.path.splitext(os.path.basename(split_file))[0]
+    return os.path.join(cache_dir, f"{base}.{fmt}.{reduce_tag}.pt")
+
+
+def build_cache(cfg, split_file, verbose=True):
+    """Materialize one split's graphs to a .pt cache. Safe to call repeatedly."""
+    path = _cache_path(cfg, split_file)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    ds = _build_uncached(cfg, split_file)
+    n = len(ds)
+    data_list = []
+    for i in range(n):
+        data_list.append(ds[i])
+        if verbose and (i + 1) % 2000 == 0:
+            print(f"  {split_file}: {i + 1}/{n}", flush=True)
+    if hasattr(ds, "_close_h5"):
+        ds._close_h5()
+    torch.save(data_list, path)
+    if verbose:
+        print(f"  wrote {path} ({n} graphs)", flush=True)
+    return path
+
+
 def get_dataset(cfg, split_file):
-    if cfg["loader"] == "h5":
-        fmt = cfg.get("h5_format", "mfcadpp")
-        if fmt == "mfcadpp_regen":
-            return MFCADPPRegenGraphDataset(
-                cfg["data_root"], cfg.get("h5_dir", "hierarchical_graphs_regen"),
-                split_file, cfg["num_surface_types"],
-                angle_reduce=cfg.get("angle_reduce", "median"))
-        if fmt == "mfcadpp":
-            return MFCADPPGraphDataset(
-                cfg["data_root"], cfg.get("h5_dir", "hierarchical_graphs"),
-                split_file, cfg["num_surface_types"])
-        return H5GraphDataset(cfg["data_root"], cfg["h5_path"], split_file,
-                              cfg["num_surface_types"])
-    return StepGraphDataset()
+    """Return a dataset for one split, using the on-disk graph cache if enabled.
+
+    Set cfg['use_cache']=True (default) to read pre-built graphs; the cache is
+    built on first use. Delete MFCAD++_dataset/graph_cache/ to force a rebuild
+    after changing any feature/edge logic.
+    """
+    if cfg.get("use_cache", True) and cfg["loader"] == "h5":
+        path = _cache_path(cfg, split_file)
+        if not os.path.isfile(path):
+            print(f"[cache] building {path} (one-time)...", flush=True)
+            build_cache(cfg, split_file)
+        data_list = torch.load(path, weights_only=False)
+        return CachedGraphDataset(data_list)
+    return _build_uncached(cfg, split_file)
 
 
 # ----------------------------------------------------------------------------
