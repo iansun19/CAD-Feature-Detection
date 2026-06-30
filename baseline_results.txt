@@ -1,0 +1,48 @@
+device=cuda  num_classes=25  num_surface_types=6
+Loading cached graphs...
+  loading MFCAD++_dataset/graph_cache/train.mfcadpp_regen.median.pt
+  loading MFCAD++_dataset/graph_cache/test.mfcadpp_regen.median.pt
+train faces = 1,254,260   test faces = 268,982   node dim = 14
+
+==============================================================
+BASELINE 1: Majority class (always predict train majority)
+==============================================================
+majority class = 24 ('Stock')  train support = 280,716
+test accuracy  = 0.2236
+test macro-F1  = 0.0146  (classes present in test: 25)
+
+==============================================================
+BASELINE 2: Per-surface-type majority (no graph)
+==============================================================
+Train majority label per surface type:
+  plane      (id=0): label=24 ('Stock')  purity=0.251  n=1,119,403
+  cylinder   (id=1): label=11 ('O-ring')  purity=0.242  n=131,231
+  cone       (id=2): label=23 ('Round')  purity=1.000  n=632
+  sphere     (id=3): (unseen in train, fallback=24)
+  torus      (id=4): label= 0 ('Chamfer')  purity=1.000  n=2,463
+  other      (id=5): label= 0 ('Chamfer')  purity=0.652  n=531
+test accuracy  = 0.2521
+test macro-F1  = 0.0500  (classes present in test: 25)
+
+[k-NN] subsampled train to 200,000 faces
+
+==============================================================
+BASELINE 3: k-NN (k=5, node dim=14)
+==============================================================
+train faces used = 200,000   device = cuda
+test accuracy  = 0.4349
+test macro-F1  = 0.3046  (classes present in test: 25)
+
+GNN metrics from runs/20260630_162956
+
+==============================================================
+SUMMARY
+==============================================================
+Model                                   Test Acc    Macro-F1    
+--------------------------------------------------------------
+Baseline 1 (majority class)             0.2236      0.0146      
+Baseline 2 (per-surface-type)           0.2521      0.0500      
+Baseline 3 (k-NN k=5)                   0.4349      0.3046      
+GNN (from evaluate.py)                  0.9936      0.9897      
+
+GNN accuracy lift over baseline 2: +0.7415 (+74.15 pp)

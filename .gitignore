@@ -24,3 +24,4 @@ MFCAD++_dataset/
 .DS_Store
 .idea/
 .vscode/
+heuristic_baselines/*.parquet
