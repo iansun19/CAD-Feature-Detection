@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const GRAY_DIM = 0x888888;
+const GRAY_DIM = 0xbbbbbb;
 const DIM_OPACITY_ISOLATE = 0.5;
 const DIM_OPACITY_FOCUS = 0.1;
 
@@ -22,6 +22,7 @@ const els = {
   gallerySubtitle: document.getElementById("gallery-subtitle"),
   partGrid: document.getElementById("part-grid"),
   loadMoreBtn: document.getElementById("load-more-btn"),
+  viewerWrap: document.querySelector(".viewer-wrap"),
   viewerCanvas: document.getElementById("viewer-canvas"),
   viewerLoading: document.getElementById("viewer-loading"),
   faceTooltip: document.getElementById("face-tooltip"),
@@ -69,7 +70,7 @@ function renderClassList() {
     item.dataset.classId = cls.id;
 
     const swatch = document.createElement("span");
-    swatch.className = "swatch" + (cls.id === 20 ? " light" : "");
+    swatch.className = "swatch";
     swatch.style.background = cls.color;
 
     const meta = document.createElement("div");
@@ -147,45 +148,69 @@ function makePartCard(part) {
   return card;
 }
 
+function viewerSize() {
+  const wrap = els.viewerWrap;
+  return {
+    w: Math.max(wrap?.clientWidth || 640, 1),
+    h: Math.max(wrap?.clientHeight || 480, 1),
+  };
+}
+
 function initViewer() {
-  const w = els.viewerCanvas.clientWidth || 400;
-  const h = els.viewerCanvas.clientHeight || 320;
+  const { w, h } = viewerSize();
 
   viewer.scene = new THREE.Scene();
-  viewer.scene.background = new THREE.Color(0x0a0c10);
+  viewer.scene.background = new THREE.Color(0xffffff);
 
-  viewer.camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 10000);
+  viewer.camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100000);
   viewer.camera.position.set(120, 90, 120);
 
   viewer.renderer = new THREE.WebGLRenderer({ antialias: true });
-  viewer.renderer.setPixelRatio(window.devicePixelRatio);
+  viewer.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   viewer.renderer.setSize(w, h);
   els.viewerCanvas.innerHTML = "";
   els.viewerCanvas.appendChild(viewer.renderer.domElement);
 
   viewer.controls = new OrbitControls(viewer.camera, viewer.renderer.domElement);
   viewer.controls.enableDamping = true;
+  viewer.controls.dampingFactor = 0.08;
+  viewer.controls.enableZoom = true;
+  viewer.controls.zoomSpeed = 1.4;
+  viewer.controls.enablePan = true;
+  viewer.controls.screenSpacePanning = true;
+  viewer.controls.mouseButtons = {
+    LEFT: THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN,
+  };
+
+  const canvas = viewer.renderer.domElement;
+  canvas.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });
+  canvas.addEventListener("pointerdown", onPointerDown);
 
   const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.45);
   const dir1 = new THREE.DirectionalLight(0xffffff, 0.85);
   dir1.position.set(1, 1.2, 0.8);
-  const dir2 = new THREE.DirectionalLight(0xffffff, 0.35);
+  const dir2 = new THREE.DirectionalLight(0xffffff, 0.4);
   dir2.position.set(-0.8, -0.4, -1);
-  viewer.scene.add(ambient, dir1, dir2);
+  viewer.scene.add(ambient, hemi, dir1, dir2);
 
   viewer.root = new THREE.Group();
   viewer.scene.add(viewer.root);
 
-  viewer.renderer.domElement.addEventListener("pointerdown", onPointerDown);
-  window.addEventListener("resize", onResize);
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => onResize()).observe(els.viewerWrap);
+  } else {
+    window.addEventListener("resize", onResize);
+  }
 
   animate();
 }
 
 function onResize() {
   if (!viewer.renderer) return;
-  const w = els.viewerCanvas.clientWidth || 400;
-  const h = els.viewerCanvas.clientHeight || 320;
+  const { w, h } = viewerSize();
   viewer.camera.aspect = w / h;
   viewer.camera.updateProjectionMatrix();
   viewer.renderer.setSize(w, h);
@@ -215,12 +240,12 @@ function applyViewMode() {
     if (state.viewMode === "full") {
       mat.color.copy(baseColor);
       mat.opacity = 1;
-      mat.transparent = cls === 20;
+      mat.transparent = false;
     } else if (state.viewMode === "isolate") {
       if (cls === state.isolatedClassId) {
         mat.color.copy(baseColor);
         mat.opacity = 1;
-        mat.transparent = cls === 20;
+        mat.transparent = false;
       } else {
         mat.color.setHex(GRAY_DIM);
         mat.opacity = DIM_OPACITY_ISOLATE;
@@ -230,7 +255,7 @@ function applyViewMode() {
       if (cls === state.focusClassId) {
         mat.color.copy(baseColor);
         mat.opacity = 1;
-        mat.transparent = cls === 20;
+        mat.transparent = false;
       } else {
         mat.color.copy(baseColor);
         mat.opacity = DIM_OPACITY_FOCUS;
@@ -256,11 +281,9 @@ function buildFaceMesh(face) {
   const colorHex = cls?.color || "#888888";
   const mat = new THREE.MeshStandardMaterial({
     color: hexToThree(colorHex),
-    metalness: 0.08,
-    roughness: 0.65,
+    metalness: 0.05,
+    roughness: 0.72,
     side: THREE.DoubleSide,
-    transparent: face.class_id === 20,
-    opacity: 1,
   });
 
   const mesh = new THREE.Mesh(geom, mat);
@@ -270,15 +293,6 @@ function buildFaceMesh(face) {
     className: face.class_name,
     baseColor: colorHex,
   };
-
-  if (face.class_id === 20) {
-    const edges = new THREE.EdgesGeometry(geom, 15);
-    const line = new THREE.LineSegments(
-      edges,
-      new THREE.LineBasicMaterial({ color: 0x333333 })
-    );
-    mesh.add(line);
-  }
 
   return mesh;
 }
@@ -292,6 +306,33 @@ function centerAndScale(root) {
 
   root.position.sub(center);
   root.scale.setScalar(scale);
+  return maxDim * scale;
+}
+
+function fitCameraToModel() {
+  const box = new THREE.Box3().setFromObject(viewer.root);
+  if (box.isEmpty()) return;
+
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
+  const fitHeight = maxDim / (2 * Math.tan((viewer.camera.fov * Math.PI) / 360));
+  const fitWidth = fitHeight * viewer.camera.aspect;
+  const distance = Math.max(fitHeight, fitWidth) * 1.35;
+
+  viewer.controls.target.copy(center);
+  viewer.camera.position.set(
+    center.x + distance * 0.75,
+    center.y + distance * 0.55,
+    center.z + distance * 0.75
+  );
+
+  viewer.controls.minDistance = maxDim * 0.02;
+  viewer.controls.maxDistance = maxDim * 80;
+  viewer.camera.near = Math.max(maxDim / 500, 0.001);
+  viewer.camera.far = maxDim * 200;
+  viewer.camera.updateProjectionMatrix();
+  viewer.controls.update();
 }
 
 async function loadPart(partId) {
@@ -321,9 +362,7 @@ async function loadPart(partId) {
     }
 
     centerAndScale(viewer.root);
-    viewer.controls.target.set(0, 0, 0);
-    viewer.camera.position.set(120, 90, 120);
-    viewer.controls.update();
+    fitCameraToModel();
 
     applyViewMode();
     renderPartInfo(info);
@@ -395,6 +434,7 @@ function resetView() {
   state.isolatedClassId = null;
   state.focusClassId = null;
   els.faceTooltip.classList.add("hidden");
+  fitCameraToModel();
   applyViewMode();
 }
 

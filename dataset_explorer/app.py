@@ -2,13 +2,17 @@
 """
 MFCAD++ Dataset Explorer — interactive browser for 25 machining-feature classes.
 
-Setup:
-  pip install flask pythonocc-core
+Setup (pythonocc-core is NOT on PyPI for macOS — use conda-forge):
+  conda activate mfcadstep          # existing env with pythonocc (Python 3.11)
+  pip install flask                 # if not already installed
   python dataset_explorer/app.py
   open http://localhost:5000
 
-Uses the mfcadstep conda env if pythonocc is not on your default Python:
-  /path/to/miniconda3/envs/mfcadstep/bin/python dataset_explorer/app.py
+Or create a fresh env:
+  conda create -n explorer python=3.11 -y
+  conda activate explorer
+  conda install -c conda-forge pythonocc-core flask -y
+  python dataset_explorer/app.py
 """
 
 from __future__ import annotations
@@ -89,32 +93,33 @@ CLASS_DESCRIPTIONS = [
     "Stock: original raw-material outer surface — large planar faces forming the part's outer bounding box, typically convex neighbors.",
 ]
 
+# Saturated palette tuned for white 3D viewer background (WCAG-friendly contrast).
 CLASS_COLORS = [
-    "#E6194B",  # 0 Chamfer
-    "#3CB44B",  # 1 Through hole
-    "#FFE119",  # 2 Tri passage
-    "#4363D8",  # 3 Rect passage
-    "#F58231",  # 4 6-sided passage
-    "#911EB4",  # 5 Tri through slot
-    "#42D4F4",  # 6 Rect through slot
-    "#F032E6",  # 7 Circ through slot
-    "#BFEF45",  # 8 Rect through step
-    "#FABED4",  # 9 2-sided through step
-    "#469990",  # 10 Slanted through step
-    "#DCBEFF",  # 11 O-ring
-    "#9A6324",  # 12 Blind hole
-    "#FFFAC8",  # 13 Tri pocket
-    "#800000",  # 14 Rect pocket
-    "#AAFFC3",  # 15 6-sided pocket
-    "#808000",  # 16 Circ end pocket
-    "#FFD8B1",  # 17 Rect blind slot
-    "#000075",  # 18 Vert circ blind slot
-    "#A9A9A9",  # 19 Horiz circ blind slot
-    "#FFFFFF",  # 20 Tri blind step (dark border in viewer)
-    "#FF6680",  # 21 Circ blind step (lighter red)
-    "#7DD88A",  # 22 Rect blind step (lighter green)
-    "#FFF566",  # 23 Round (lighter yellow)
-    "#C0C0C0",  # 24 Stock
+    "#DC2626",  # 0 Chamfer
+    "#16A34A",  # 1 Through hole
+    "#CA8A04",  # 2 Triangular passage
+    "#2563EB",  # 3 Rectangular passage
+    "#EA580C",  # 4 6-sided passage
+    "#9333EA",  # 5 Triangular through slot
+    "#0891B2",  # 6 Rectangular through slot
+    "#DB2777",  # 7 Circular through slot
+    "#65A30D",  # 8 Rectangular through step
+    "#E11D48",  # 9 2-sided through step
+    "#0D9488",  # 10 Slanted through step
+    "#7C3AED",  # 11 O-ring
+    "#92400E",  # 12 Blind hole
+    "#D97706",  # 13 Triangular pocket
+    "#991B1B",  # 14 Rectangular pocket
+    "#059669",  # 15 6-sided pocket
+    "#4D7C0F",  # 16 Circular end pocket
+    "#C2410C",  # 17 Rectangular blind slot
+    "#1E3A8A",  # 18 Vertical circular end blind slot
+    "#7E22CE",  # 19 Horizontal circular end blind slot
+    "#0369A1",  # 20 Triangular blind step
+    "#BE185D",  # 21 Circular blind step
+    "#15803D",  # 22 Rectangular blind step
+    "#B45309",  # 23 Round
+    "#854D0E",  # 24 Stock (bronze — visible on white, not gray)
 ]
 
 
