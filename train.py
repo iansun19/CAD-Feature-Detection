@@ -20,6 +20,7 @@ from torch_geometric.loader import DataLoader
 from dataset import get_dataset
 from device import resolve_device, set_seed
 from model import BRepGNN
+from taxonomy import NUM_CLASSES
 
 
 def accuracy(logits, y):
@@ -103,6 +104,7 @@ def main():
             batch = batch.to(device)
             opt.zero_grad()
             logits = model(batch.x, batch.edge_index, batch.edge_attr)
+            assert int(batch.y.min()) >= 0 and int(batch.y.max()) < NUM_CLASSES
             loss = F.cross_entropy(logits, batch.y)
             loss.backward()
             opt.step()

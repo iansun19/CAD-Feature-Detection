@@ -5,8 +5,13 @@ distribution across all edges, and the concave class-8 90-degree anchor.
 
 Run: /Users/iansun19/miniconda3/envs/mfcadstep/bin/python diag/final_report.py
 """
+import os
+import sys
 import numpy as np
 import h5py
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from taxonomy import NUM_CLASSES
 
 DIR = "MFCAD++_dataset/hierarchical_graphs_regen"
 SPLITS = [("train", "training_MFCAD++.h5"), ("val", "val_MFCAD++.h5"),
@@ -22,7 +27,7 @@ def main():
         f = h5py.File(f"{DIR}/{fn}", "r")
         groups = list(f.keys())
         nmodels = nfaces = 0
-        labhist = np.zeros(25, np.int64)
+        labhist = np.zeros(NUM_CLASSES, np.int64)
         ang_hist = np.zeros(7, np.int64)            # 7 bins below
         ang_n = 0; nan_like = 0
         c8 = []
@@ -32,7 +37,7 @@ def main():
             idx = b["idx"][()]; lab = b["labels"][()].astype(int)
             nmodels += len(idx); nfaces += b["V_1"].shape[0]
             for c in lab:
-                if 0 <= c < 25:
+                if 0 <= c < NUM_CLASSES:
                     labhist[c] += 1
             AV = b["A_1_values"][()]
             deg = np.degrees(AV)
@@ -51,8 +56,8 @@ def main():
         c8 = np.array(c8)
         print(f"\n===== {split} =====")
         print(f"models={nmodels} faces={nfaces} groups={len(groups)}")
-        miss = [c for c in range(25) if labhist[c] == 0]
-        print(f"label classes present: {25 - len(miss)}/25" +
+        miss = [c for c in range(NUM_CLASSES) if labhist[c] == 0]
+        print(f"label classes present: {NUM_CLASSES - len(miss)}/{NUM_CLASSES}" +
               (f"  MISSING {miss}" if miss else "  (all present)"))
         print(f"dihedral over all {ang_n} edges:")
         names = ["0-30", "30-60", "60-80", "80-95", "95-120", "120-150", "150-180"]

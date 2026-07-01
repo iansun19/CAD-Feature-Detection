@@ -9,7 +9,7 @@ import numpy as np
 import h5py
 
 PATH = sys.argv[1] if len(sys.argv) > 1 else \
-    "MFCAD++_dataset/hierarchical_graphs_regen/val_MFCAD++.h5"
+    "MFCAD++_dataset/hierarchical_graphs_regen_12/val_MFCAD++.h5"
 
 
 def canon(u, v):
@@ -35,7 +35,7 @@ def main():
     issues = 0
     v1min = np.array([9, 9, 9, 9.]); v1max = -v1min
     lab_seen = set()
-    class8_ok = []; class8_all = []
+    class3_ok = []; class3_all = []
     checked = 0
     for pid, (bk, mi) in index.items():
         b = f[bk]
@@ -49,7 +49,7 @@ def main():
             issues += 1
         if n != len(y):
             print(f"  {pid}: node/label mismatch"); issues += 1
-        if (y < 0).any() or (y > 24).any():
+        if (y < 0).any() or (y > 11).any():
             print(f"  {pid}: label out of range"); issues += 1
         lab_seen |= set(y.tolist())
         v1min = np.minimum(v1min, v1[:, :4].min(0)); v1max = np.maximum(v1max, v1[:, :4].max(0))
@@ -73,27 +73,28 @@ def main():
         if miss:
             print(f"  {pid}: {len(miss)} A_1 edges not in exactly one bucket"); issues += 1
 
-        # geometric: concave (E_2) edges between two class-8 faces ~ 90 deg
-        if 8 in y:
+        # geometric: concave (E_2) edges between two through_step (class 3) faces ~ 90 deg
+        if 3 in y:
             A1 = b["A_1_idx"][()]; AV = b["A_1_values"][()]
             m = ((A1[:, 0] >= s) & (A1[:, 0] < e) & (A1[:, 1] >= s) & (A1[:, 1] < e))
             rows = A1[m] - s; vals = AV[m]
             for (i, j), ang in zip(rows.tolist(), vals.tolist()):
-                if y[i] == 8 and y[j] == 8 and canon(i, j) in e2:
+                if y[i] == 3 and y[j] == 3 and canon(i, j) in e2:
                     deg = np.degrees(ang)
-                    class8_all.append(deg)
+                    class3_all.append(deg)
                     if 80 <= deg <= 95:
-                        class8_ok.append(deg)
+                        class3_ok.append(deg)
         checked += 1
 
     print(f"\nchecked {checked} models; structural issues={issues}")
     print(f"V_1[:, :4] global min={np.round(v1min,3)} max={np.round(v1max,3)} "
           f"(expect ~0 and ~1)")
     print(f"label values seen: {sorted(lab_seen)}")
-    if class8_all:
-        a = np.array(class8_all)
-        print(f"concave class-8 pairs (A_1_values): n={a.size} median={np.median(a):.1f} "
-              f"std={a.std():.1f} in80-95={100*len(class8_ok)/a.size:.0f}%")
+    if class3_all:
+        a = np.array(class3_all)
+        print(f"concave through_step (class 3) pairs (A_1_values): n={a.size} "
+              f"median={np.median(a):.1f} std={a.std():.1f} "
+              f"in80-95={100*len(class3_ok)/a.size:.0f}%")
     print("\nVERDICT:", "PASS" if issues == 0 else f"{issues} ISSUES")
 
 

@@ -24,6 +24,12 @@ import numpy as np
 import torch
 from torch_geometric.data import Data, Dataset
 
+from brep_features import (
+    build_edge_features_regen,
+    build_node_features_regen,
+    make_undirected,
+)
+
 
 # ----------------------------------------------------------------------------
 # Node / edge feature construction (shared by both loaders)
@@ -142,65 +148,6 @@ def build_edge_features(convexity_ids, angles, lengths):
     ln = np.asarray(lengths, dtype=np.float32).reshape(-1, 1)
     ln = (ln - ln.mean()) / (ln.std() + 1e-6)
     return np.concatenate([onehot, ang, ln], axis=1)
-
-
-def build_node_features_regen(v1, num_surface_types):
-    """14-dim node features from a regenerated V_1 block [N, 9].
-
-    Layout of the regenerated V_1 (see diag/regen_dataset.py):
-      col 0    : area      (per-model min-max -> [0,1])
-      col 1-3  : centroid  (per-model min-max -> [0,1])
-      col 4    : surface-type code / 11   (plane=1..cone=5, other=11)
-      col 5-7  : exact per-face UNIT normal (nx, ny, nz)            <-- new, reliable
-      col 8    : plane-d = n . centroid    (raw signed offset)      <-- new, reliable
-
-    Output (14) = onehot surface type(6) + area(1) + centroid(3) + unit normal(3)
-                  + plane-d(1). The first 10 dims mirror the previous pipeline
-    (surface type / area / centroid); the trailing 4 replace the old broken
-    V_2-pooled mesh block with exact geometry read straight from V_1 — no decode,
-    no facet pooling.
-    """
-    v1 = np.asarray(v1, dtype=np.float32)
-    n = v1.shape[0]
-    type_ids = np.clip(np.round(v1[:, 4] * 11).astype(int) - 1,
-                       0, num_surface_types - 1)
-    onehot = np.zeros((n, num_surface_types), dtype=np.float32)
-    onehot[np.arange(n), type_ids] = 1.0
-    # area already min-max [0,1]; standardize per part so big parts don't dominate
-    area = v1[:, 0:1].copy()
-    area = (area - area.mean()) / (area.std() + 1e-6)
-    # centroid already [0,1]; center per part (relative layout, not absolute pos)
-    cent = v1[:, 1:4].copy()
-    cent = cent - cent.mean(axis=0, keepdims=True)
-    # exact unit normal: already bounded [-1,1], used raw (no decode/pool)
-    normal = v1[:, 5:8].copy()
-    # plane-d: raw and large-ranged -> signed-log then per-part standardize
-    d = v1[:, 8:9].copy()
-    d = np.sign(d) * np.log1p(np.abs(d))
-    d = (d - d.mean()) / (d.std() + 1e-6)
-    return np.concatenate([onehot, area, cent, normal, d], axis=1)
-
-
-def build_edge_features_regen(convexity_ids, cos_angles):
-    """convexity one-hot(3) + cos(dihedral)(1) -> [E, 4].
-
-    convexity id: 0=concave, 1=convex, 2=smooth (same scheme as build_edge_features).
-    The angle is stored as cos(dihedral): bounded in [-1,1], with the geometrically
-    meaningful anchors 0 deg -> +1, 90 deg -> 0, 180 deg -> -1. Replaces the old
-    constant-1.0 angle/length placeholders, which carried no signal.
-    """
-    e = len(convexity_ids)
-    onehot = np.zeros((e, 3), dtype=np.float32)
-    onehot[np.arange(e), np.clip(convexity_ids, 0, 2)] = 1.0
-    cosv = np.asarray(cos_angles, dtype=np.float32).reshape(-1, 1)
-    return np.concatenate([onehot, cosv], axis=1)
-
-
-def make_undirected(edge_index, edge_attr):
-    """Duplicate edges in both directions for message passing."""
-    ei = np.concatenate([edge_index, edge_index[::-1]], axis=1)
-    ea = np.concatenate([edge_attr, edge_attr], axis=0)
-    return ei, ea
 
 
 SPLIT_H5 = {

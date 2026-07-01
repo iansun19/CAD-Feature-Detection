@@ -39,7 +39,7 @@ FACE-ID ALIGNMENT
 -----------------
 The i-th ADVANCED_FACE entity in file order (== CLOSED_SHELL order) maps to label
 index i in the H5. We map an LLM's per-entity prediction back to label index i via
-that ordering, then score against the same 25-class metric evaluate.py uses.
+that ordering, then score against the same 12-class metric evaluate.py uses.
 
 USAGE
 -----
@@ -65,11 +65,14 @@ import yaml
 
 from evaluate import load_class_names, per_class_metrics
 from dataset import _brep_bounds, _edge_set, _canonical_edge, SPLIT_H5
+from taxonomy import NEW_DESCRIPTIONS, NUM_CLASSES
 
 # ---------------------------------------------------------------------------
 # config / constants
 # ---------------------------------------------------------------------------
-WEAK_CLASS_IDS = (0, 5, 6, 7, 8, 9, 10, 17, 18, 19)  # mirror heuristic_baseline.py
+# Interim weak-class set (legacy ids remapped via old_to_new, deduped). Mirror heuristic_baseline.py.
+# TODO: re-derive from a fresh 12-class confusion matrix after the first 12-class eval.
+WEAK_CLASS_IDS = (9, 2, 3, 7)
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_TEMPERATURE = 0.0
 # gpt-4o-mini context = 128k. Leave headroom for system prompt + output.
@@ -158,12 +161,12 @@ def build_system_prompt(class_names, bounded=False):
         "single solid part. Every B-rep face appears as an entity of the form "
         "`#N = ADVANCED_FACE('', (...loops...), #surface, .T./.F.);` where `#N` is "
         "the face's entity id. The face's name field has been intentionally blanked.\n\n"
-        "Classify EVERY face in the part into exactly one of these 25 machining-"
+        "Classify EVERY face in the part into exactly one of these 12 machining-"
         "feature classes (use the integer id):\n"
         f"{listing}\n\n"
         "Reason from the geometry: surface type (PLANE/CYLINDRICAL_SURFACE/CONICAL_"
         "SURFACE/etc.), the edge loops, how faces bound pockets/slots/steps/holes, "
-        "and which faces are the original stock surfaces (class 24).\n\n"
+        "and which faces are the original stock surfaces (class 11).\n\n"
         + out_fmt
     )
 
@@ -210,17 +213,17 @@ def build_name_to_id(class_names):
     return {norm(n): i for i, n in enumerate(class_names)}
 
 
-def coerce_class(value, name_to_id, num_classes):
+def coerce_class(value, name_to_id, num_classes=NUM_CLASSES):
     """Map a model-emitted value (int id, numeric string, or class name) to an id."""
     if isinstance(value, bool):
         return None
     if isinstance(value, int):
-        return value if 0 <= value < num_classes else None
+        return value if 0 <= value < NUM_CLASSES else None
     if isinstance(value, str):
         v = value.strip()
         if re.fullmatch(r"-?\d+", v):
             iv = int(v)
-            return iv if 0 <= iv < num_classes else None
+            return iv if 0 <= iv < NUM_CLASSES else None
         key = re.sub(r"[^a-z0-9]", "", v.lower())
         return name_to_id.get(key)
     return None
@@ -248,36 +251,11 @@ SURFACE_TYPES = ["plane", "cylinder", "cone", "sphere", "torus", "other"]
 CONVEXITY_NAMES = ["concave", "convex", "smooth"]  # 0=concave,1=convex,2=smooth
 
 # One-line geometric signature of each MFCAD++ class (ids match feature_labels.txt).
-CLASS_DESCRIPTIONS = [
-    "Chamfer: narrow planar bevel joining two faces at an oblique angle (~45°).",
-    "Through hole: a single cylindrical face passing entirely through the part, open at both ends.",
-    "Triangular passage: through opening with a 3-walled (triangular) planar cross-section, open both ends.",
-    "Rectangular passage: through opening with 4 planar walls (rectangular section), open both ends.",
-    "6-sided passage: through opening with 6 planar walls (hexagonal section), open both ends.",
-    "Triangular through slot: triangular-profile channel cut fully across the part, open at both ends and top.",
-    "Rectangular through slot: rectangular channel (floor + 2 walls) cut fully across, open at both ends and top.",
-    "Circular through slot: through channel with cylindrical (rounded) walls, open at both ends and top.",
-    "Rectangular through step: L-shaped shoulder running fully across the part, open at both ends.",
-    "2-sided through step: step open on two sides of the part.",
-    "Slanted through step: through step whose wall/floor is slanted — planar faces meeting at a non-90° oblique dihedral.",
-    "O-ring: a circular ring groove (toroidal/cylindrical channel) recessed into a face.",
-    "Blind hole: cylindrical hole that does NOT pass through — a cylinder wall plus a flat bottom.",
-    "Triangular pocket: closed blind pocket with a triangular floor (3 walls + floor), open only at the top.",
-    "Rectangular pocket: closed blind pocket with a rectangular floor (4 walls + floor), open only at the top.",
-    "6-sided pocket: closed blind pocket with a hexagonal floor (6 walls + floor), open only at the top.",
-    "Circular end pocket: blind pocket with rounded (cylindrical) ends — curved walls + floor.",
-    "Rectangular blind slot: slot closed at one end (floor + 3 walls), open at the other end and the top.",
-    "Vertical circular end blind slot: blind slot terminated by a vertically-oriented circular (cylindrical) end.",
-    "Horizontal circular end blind slot: blind slot terminated by a horizontally-oriented circular (cylindrical) end.",
-    "Triangular blind step: step closed at one end with a triangular profile.",
-    "Circular blind step: blind step bounded by a circular/cylindrical wall.",
-    "Rectangular blind step: step closed at one end with a rectangular profile.",
-    "Round: a fillet — a rounded (cylindrical/toroidal) face blending two faces across a smooth/tangent edge.",
-    "Stock: original raw-material outer surface — large planar faces forming the part's outer bounding box, typically convex neighbors.",
-]
+CLASS_DESCRIPTIONS = NEW_DESCRIPTIONS
 
 # Few-shot exemplar classes, spanning simple (Stock) to hard orientation-dependent.
-FEWSHOT_CLASSES = [0, 6, 10, 17, 24]
+# Remapped from legacy [0, 6, 10, 17, 24] via old_to_new → [9, 2, 3, 7, 11].
+FEWSHOT_CLASSES = [9, 2, 3, 7, 11]
 
 
 def _regen_h5_path(cfg, split_file):
@@ -432,53 +410,39 @@ def build_fewshot(cfg, class_names):
 
 
 # ---------------------------------------------------------------------------
-# --templates mode (additive on top of --features): a full 25-class canonical
+# --templates mode (additive on top of --features): a full 12-class canonical
 # template bank replaces the 5-example few-shot block, so EVERY class has one
 # representative face in the prompt and the model is constrained to pick exactly
-# one of the 25 class ids per face.
+# one of the 12 class ids per face.
 # ---------------------------------------------------------------------------
-# The 25 canonical (part_id, face_index, class_id) tuples below were computed ONCE
+# The 12 canonical (part_id, face_index, class_id) tuples below were computed ONCE
 # from the TRAINING SPLIT ONLY (never val/test — no leakage into test evaluation)
-# by _build_templates.py: for each class, the mean 14-dim node-feature vector over
-# all training faces of that class (centroid in the same feature space the GNN uses,
-# build_node_features_regen), then the actual training face nearest that centroid in
-# L2. This yields the single most "typical" face per class. Re-run _build_templates.py
-# to regenerate. Features are pulled from the same regen H5 as --features mode.
+# by _build_templates.py against hierarchical_graphs_regen_12: for each class, the mean
+# 14-dim node-feature vector over all training faces of that class (centroid in the
+# same feature space the GNN uses, build_node_features_regen), then the actual
+# training face nearest that centroid in L2. Re-run _build_templates.py to regenerate.
 TEMPLATE_FACES = [
-    ('9346', 2, 0),
-    ('33715', 11, 1),
-    ('50546', 14, 2),
-    ('585', 5, 3),
-    ('28157', 21, 4),
-    ('35056', 18, 5),
-    ('34563', 6, 6),
-    ('54215', 7, 7),
-    ('47084', 11, 8),
-    ('19566', 6, 9),
-    ('28414', 6, 10),
-    ('39886', 35, 11),
-    ('30861', 13, 12),
-    ('8112', 16, 13),
-    ('7298', 23, 14),
-    ('19406', 18, 15),
-    ('34429', 16, 16),
-    ('29937', 3, 17),
-    ('11964', 3, 18),
-    ('2709', 29, 19),
-    ('57942', 26, 20),
-    ('25893', 9, 21),
-    ('26044', 4, 22),
-    ('12108', 2, 23),
-    ('37842', 0, 24),
+    ('33715', 11, 0),
+    ('28157', 21, 1),
+    ('3767', 26, 2),
+    ('47084', 11, 3),
+    ('39886', 35, 4),
+    ('30861', 13, 5),
+    ('19406', 18, 6),
+    ('35580', 8, 7),
+    ('49309', 24, 8),
+    ('9346', 2, 9),
+    ('12108', 2, 10),
+    ('37842', 0, 11),
 ]
 
 
 def build_template_bank(cfg, class_names):
-    """Serialize the 25 canonical class templates from the TRAINING split ONLY.
+    """Serialize the 12 canonical class templates from the TRAINING split ONLY.
 
     Uses the SAME serialize_face / per-face block format as --features mode so the
     template representation is byte-for-byte comparable to the test faces. Returns
-    the full template-bank text (25 labelled blocks). Confirmed TRAIN-only: opened
+    the full template-bank text (12 labelled blocks). Confirmed TRAIN-only: opened
     from train.txt's H5; TEMPLATE_FACES are training part ids."""
     h5, index = open_regen_split(cfg, "train.txt")  # TRAIN split — confirmed no leak
     try:
@@ -516,11 +480,11 @@ def build_template_system_prompt(class_names, template_text):
         "other faces (each neighbour labelled concave / convex / smooth with the "
         "dihedral angle in degrees). These are the same geometric features a graph "
         "neural network uses.\n\n"
-        "You must classify each face as EXACTLY ONE of the 25 classes listed below. "
+        "You must classify each face as EXACTLY ONE of the 12 classes listed below. "
         "Do not invent new classes, do not output fractional or combined labels, "
         "do not refuse to classify. If a face is ambiguous, pick the single closest "
-        "match from the 25 templates above.\n\n"
-        "The 25 machining-feature classes (use the integer id):\n"
+        "match from the 12 templates above.\n\n"
+        "The 12 machining-feature classes (use the integer id):\n"
         f"{listing}\n\n"
         "CANONICAL CLASS TEMPLATES — one representative face per class, in the exact "
         "same format as the faces you will classify. Match each test face to its "
@@ -544,8 +508,8 @@ def build_template_messages(class_names, faces_text, face_ids, template_text):
 
 
 def cmd_templates_audit(cfg):
-    """--features --templates --audit-only: print the 25 canonical templates (class,
-    centroid distance, serialized block), confirm all 25 classes are covered, and
+    """--features --templates --audit-only: print the 12 canonical templates (class,
+    centroid distance, serialized block), confirm all 12 classes are covered, and
     estimate the full system-prompt token count. Makes NO API calls."""
     class_names = load_class_names(cfg["data_root"], cfg["num_classes"])
     enc = _enc()
@@ -578,7 +542,7 @@ def cmd_templates_audit(cfg):
         if enc:
             sys_tok = len(enc.encode(msgs[0]["content"]))
             flag = "  <-- EXCEEDS 8000 flag threshold" if sys_tok > 8000 else "  (under 8000 — OK)"
-            print(f"system prompt (incl. 25-template bank) tokens: {sys_tok}{flag}")
+            print(f"system prompt (incl. 12-template bank) tokens: {sys_tok}{flag}")
             print("note: per-part face blocks (~1,500 tok) + this system prompt should "
                   "total ~3,250 tok/part; --run flags any part exceeding 6,000.")
         print("Confirm coverage + token count, then drop --audit-only to run.")
@@ -606,8 +570,8 @@ def build_feature_system_prompt(class_names, fewshot_text):
         "dihedral angle in degrees). These are the same geometric features a graph "
         "neural network uses. Reason from this geometry — surface types, dihedral "
         "convexity, how faces bound pockets/slots/steps/holes, and which faces are "
-        "the original stock surfaces (class 24).\n\n"
-        "Classify EVERY listed face into exactly one of these 25 machining-feature "
+        "the original stock surfaces (class 11).\n\n"
+        "Classify EVERY listed face into exactly one of these 12 machining-feature "
         "classes (use the integer id):\n"
         f"{listing}\n\n"
         "WORKED EXAMPLES (input face block -> correct class):\n"
@@ -825,7 +789,7 @@ async def run_one(client, sem, limiter, pid, cfg, class_names, keep_labels,
         # everything else (ordering, eval, retry, output) is identical.
         send_text = feature_prompts[pid]
         if templates:
-            # 25-class canonical template bank replaces the few-shot examples;
+            # 12-class canonical template bank replaces the few-shot examples;
             # identical serialization, eval, retry and output paths.
             messages = build_template_messages(class_names, send_text, face_ids, template_text)
         else:
@@ -1207,8 +1171,8 @@ def main():
                          "STEP text (bounded face-id list; same eval/output path)")
     ap.add_argument("--templates", action="store_true",
                     help="with --features: replace the 5-example few-shot block with "
-                         "a full 25-class canonical template bank (one face per class) "
-                         "and constrain output to exactly one of the 25 class ids")
+                         "a full 12-class canonical template bank (one face per class) "
+                         "and constrain output to exactly one of the 12 class ids")
     ap.add_argument("--audit-only", dest="audit_only", action="store_true",
                     help="with --features: serialize 3 test parts and print them for "
                          "inspection, make NO API calls")

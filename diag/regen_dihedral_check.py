@@ -3,9 +3,10 @@ regen_dihedral_check.py — DEFINITIVE salvageability test.
 
 Regenerate graphs directly from LOCAL .step files (faces + per-face labels + true
 normals + adjacency + convexity sign), exactly as the documented generator does, then
-run the concave same-label class-8 (rectangular through step) wall-floor 90-degree
-check. Here face<->label<->normal correspondence is exact BY CONSTRUCTION (one STEP
-read), so there is no matching step and no normalization artifact.
+run the concave same-label through_step wall-floor ~90-degree check on legacy STEP
+label "8" (rectangular through step; old id 8 -> new class 3 through_step). Here
+face<->label<->normal correspondence is exact BY CONSTRUCTION (one STEP read), so
+there is no matching step and no normalization artifact.
 
 GO  : median ~90, low std, majority in 80-95 bucket.
 Run: /Users/iansun19/miniconda3/envs/mfcadstep/bin/python diag/regen_dihedral_check.py
@@ -29,7 +30,8 @@ from OCC.Core.BRepTools import breptools
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
 STEP_DIR = "MFCAD++_dataset/step/train"
-CLASS8 = "8"          # rectangular through step (generator label string)
+# Legacy STEP label for rectangular through step (old id 8 -> new class 3 through_step).
+OLD_RECT_THROUGH_STEP = "8"
 
 
 def normal_at_uv(face, u, v):
@@ -128,7 +130,7 @@ def main():
             shape, faces, fidx, labels, normals = read_part(path)
         except Exception:
             continue
-        if CLASS8 not in labels:
+        if OLD_RECT_THROUGH_STEP not in labels:
             continue
         topo = TopologyExplorer(shape)
         part_pairs = 0
@@ -137,7 +139,7 @@ def main():
             if len(efaces) != 2:
                 continue
             i, j = fidx[efaces[0]], fidx[efaces[1]]
-            if labels[i] != CLASS8 or labels[j] != CLASS8:
+            if labels[i] != OLD_RECT_THROUGH_STEP or labels[j] != OLD_RECT_THROUGH_STEP:
                 continue
             s = convexity_sign(edge, efaces)
             if s >= 0:                      # concave only (match prior convention)
@@ -152,8 +154,9 @@ def main():
             parts_used += 1
 
     a = np.array(angles)
-    print(f"scanned {scanned} STEP files; used {parts_used} parts with concave class-8 pairs")
-    print(f"concave same-label class-8 pairs: n={a.size}")
+    print(f"scanned {scanned} STEP files; used {parts_used} parts with concave "
+          f"through_step (legacy label {OLD_RECT_THROUGH_STEP}) pairs")
+    print(f"concave same-label through_step pairs: n={a.size}")
     if a.size:
         print(f"  mean={a.mean():.1f}  median={np.median(a):.1f}  std={a.std():.1f}")
         bins = [0, 30, 60, 80, 95, 180]

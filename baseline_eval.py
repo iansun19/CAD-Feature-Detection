@@ -29,6 +29,7 @@ import yaml
 from dataset import _cache_path
 from device import resolve_device, set_seed
 from evaluate import load_class_names, per_class_metrics
+from taxonomy import NUM_CLASSES
 
 
 SURFACE_NAMES = ("plane", "cylinder", "cone", "sphere", "torus", "other")
@@ -174,6 +175,7 @@ def main():
     set_seed(cfg.get("seed", 42))
 
     num_classes = cfg["num_classes"]
+    assert num_classes == NUM_CLASSES
     num_st = cfg["num_surface_types"]
     names = load_class_names(cfg["data_root"], num_classes)
     device = resolve_device(args.device or cfg.get("device", "auto"))

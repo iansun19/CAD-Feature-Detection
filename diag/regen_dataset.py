@@ -13,7 +13,7 @@ Per batch group (mirrors released):
   CAD_model [m]    bytes ids
   idx       [m,2]  col0 = cumulative face start (base 0); col1 unused (0)
   V_1       [N,9]  [area,cx,cy,cz] per-model min-max -> [0,1]; type/11; nx;ny;nz;plane_d
-  labels    [N]    float32 per-face class (0-24)
+  labels    [N]    float32 per-face class (0-11)
   A_1_idx   [E,2]  int32 global face-index pairs (BOTH directions)
   A_1_values[E]    float32 dihedral radians (both directions equal)
   E_1_idx/E_2_idx/E_3_idx  int32 global pairs: convex / concave / smooth(+seam self-loops)
@@ -29,122 +29,31 @@ import argparse
 import numpy as np
 import h5py
 
-sys.path.insert(0, "diag")
-from regen_dihedral_check import edge_midpnt_tangent, normal_on_face_at_point
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from step_ingest import StepIngestError, build_V1, extract_brep_from_step
 
-from OCC.Core.STEPControl import STEPControl_Reader
-from OCC.Core.StepRepr import StepRepr_RepresentationItem
-from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.BRepLProp import BRepLProp_SLProps
-from OCC.Core.GProp import GProp_GProps
-from OCC.Core.GeomAbs import (GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone,
-                              GeomAbs_Sphere, GeomAbs_Torus)
-from OCC.Core.TopAbs import TopAbs_REVERSED, TopAbs_FORWARD
-from OCC.Core.BRepTools import breptools
-from OCC.Extend.TopologyUtils import TopologyExplorer
-try:
-    from OCC.Core.BRepGProp import brepgprop
-    def sprops(f):
-        p = GProp_GProps(); brepgprop.SurfaceProperties(f, p); return p
-except Exception:
-    from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
-    def sprops(f):
-        p = GProp_GProps(); brepgprop_SurfaceProperties(f, p); return p
-
-OCC2CODE = {GeomAbs_Plane: 1, GeomAbs_Cylinder: 2, GeomAbs_Torus: 3,
-            GeomAbs_Sphere: 4, GeomAbs_Cone: 5}
 OUT_DIR = "MFCAD++_dataset/hierarchical_graphs_regen"
+OUT_DIR_12 = "MFCAD++_dataset/hierarchical_graphs_regen_12"
+STEP_DIR = "MFCAD++_dataset/step"
+STEP_DIR_12 = "MFCAD++_dataset/step_12class"
 SPLIT_OUT = {"train": "training_MFCAD++.h5", "val": "val_MFCAD++.h5",
              "test": "test_MFCAD++.h5"}
 
 
-def face_mid_normal(face):
-    umin, umax, vmin, vmax = breptools.UVBounds(face)
-    surf = BRepAdaptor_Surface(face, True)
-    p = BRepLProp_SLProps(surf, 0.5 * (umin + umax), 0.5 * (vmin + vmax), 1, 1e-6)
-    if not p.IsNormalDefined():
-        return np.array([0.0, 0.0, 0.0])
-    d = p.Normal(); n = np.array([d.X(), d.Y(), d.Z()])
-    if face.Orientation() == TopAbs_REVERSED:
-        n = -n
-    nn = np.linalg.norm(n)
-    return n / nn if nn > 1e-9 else n
-
-
-def read_model(path):
+def read_model(path, *, require_12class=False):
     """Return per-face arrays + edge lists for one STEP part, or None on failure."""
-    r = STEPControl_Reader()
-    r.ReadFile(path)
-    r.TransferRoots()
-    shape = r.OneShape()
-    treader = r.WS().TransferReader()
-    topo = TopologyExplorer(shape)
-    faces = list(topo.faces())
-    fidx = {f: i for i, f in enumerate(faces)}
-    N = len(faces)
-    area = np.zeros(N); cent = np.zeros((N, 3)); tcode = np.zeros(N)
-    normals = np.zeros((N, 3)); labels = np.full(N, -1, int)
-    for f, i in fidx.items():
-        gp = sprops(f); c = gp.CentreOfMass()
-        area[i] = gp.Mass(); cent[i] = [c.X(), c.Y(), c.Z()]
-        tcode[i] = OCC2CODE.get(BRepAdaptor_Surface(f, True).GetType(), 11)
-        normals[i] = face_mid_normal(f)
-        item = treader.EntityFromShapeResult(f, 1)
-        name = ""
-        if item is not None:
-            item = StepRepr_RepresentationItem.DownCast(item)
-            if item is not None:
-                name = item.Name().ToCString()
-        if name == "" or not name.lstrip("-").isdigit():
-            return None                      # missing/garbage label -> drop model
-        labels[i] = int(name)
-    if (labels < 0).any():
+    try:
+        m, _stats = extract_brep_from_step(
+            path, require_labels=True, require_12class=require_12class)
+    except StepIngestError:
         return None
-
-    # edges -> adjacency (both dirs), convexity bucket, dihedral radians
-    A = []; Aval = []; E1 = []; E2 = []; E3 = []
-    for edge in topo.edges():
-        ef = list(topo.faces_from_edge(edge))
-        if len(ef) == 1:                     # seam/boundary -> self-loop in E_3
-            i = fidx[ef[0]]; E3.append((i, i)); continue
-        if len(ef) != 2:
-            continue
-        i, j = fidx[ef[0]], fidx[ef[1]]
-        if i == j:
-            E3.append((i, i)); continue
-        mid, tan = edge_midpnt_tangent(edge)
-        ang = np.pi; sgn = 0
-        if mid is not None:
-            n0 = normal_on_face_at_point(mid, ef[0])
-            n1 = normal_on_face_at_point(mid, ef[1])
-            if n0 is not None and n1 is not None:
-                cos = np.clip(n0 @ n1 / (np.linalg.norm(n0) * np.linalg.norm(n1)), -1, 1)
-                ang = float(np.arccos(cos))
-                r = (np.dot(np.cross(n0, n1), tan) if edge.Orientation() == TopAbs_FORWARD
-                     else np.dot(np.cross(n1, n0), tan))
-                sgn = int(np.sign(r))
-        A.append((i, j)); Aval.append(ang)
-        A.append((j, i)); Aval.append(ang)
-        bucket = E1 if sgn == 1 else (E2 if sgn == -1 else E3)
-        bucket.append((i, j)); bucket.append((j, i))
-
-    plane_d = np.sum(normals * cent, axis=1)         # n . centroid (signed offset)
-    return dict(N=N, area=area, cent=cent, tcode=tcode, normals=normals,
-                plane_d=plane_d, labels=labels,
-                A=np.array(A, np.int64).reshape(-1, 2), Aval=np.array(Aval, np.float32),
-                E1=np.array(E1, np.int64).reshape(-1, 2),
-                E2=np.array(E2, np.int64).reshape(-1, 2),
-                E3=np.array(E3, np.int64).reshape(-1, 2))
-
-
-def mm01(a):
-    a = np.asarray(a, float); lo = a.min(0); hi = a.max(0)
-    return (a - lo) / (hi - lo + 1e-9)
-
-
-def build_V1(m):
-    cc = mm01(np.column_stack([m["area"], m["cent"]]))     # [N,4] -> [0,1]
-    return np.column_stack([cc, m["tcode"] / 11.0, m["normals"], m["plane_d"]]).astype(np.float32)
+    except Exception:
+        return None
+    if m is None:
+        return None
+    if (m["labels"] < 0).any():
+        return None
+    return m
 
 
 def write_group(g, models):
@@ -186,17 +95,25 @@ def main():
     ap.add_argument("--split", required=True, choices=["train", "val", "test"])
     ap.add_argument("--bs", type=int, default=256)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument(
+        "--twelve-class",
+        dest="twelve_class",
+        action="store_true",
+        help="Read step_12class/ (0–11 labels) and write hierarchical_graphs_regen_12/",
+    )
     args = ap.parse_args()
 
-    step_dir = f"MFCAD++_dataset/step/{args.split}"
+    step_root = STEP_DIR_12 if args.twelve_class else STEP_DIR
+    step_dir = f"{step_root}/{args.split}"
+    out_dir = OUT_DIR_12 if args.twelve_class else OUT_DIR
     split_txt = f"MFCAD++_dataset/{args.split}.txt"
     with open(split_txt) as f:
         ids = [ln.strip() for ln in f if ln.strip()]
     if args.limit:
         ids = ids[:args.limit]
 
-    os.makedirs(OUT_DIR, exist_ok=True)
-    out_path = os.path.join(OUT_DIR, SPLIT_OUT[args.split])
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, SPLIT_OUT[args.split])
     fout = h5py.File(out_path, "w")
 
     batch = []; gi = 0; done = 0; fails = 0; faces_tot = 0
@@ -211,7 +128,7 @@ def main():
         if not os.path.isfile(p):
             fails += 1; continue
         try:
-            m = read_model(p)
+            m = read_model(p, require_12class=args.twelve_class)
         except Exception:
             m = None
         if m is None:

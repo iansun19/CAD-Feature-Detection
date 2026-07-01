@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MFCAD++ Dataset Explorer — interactive browser for 25 machining-feature classes.
+MFCAD++ Dataset Explorer — interactive browser for 12 machining-feature classes.
 
 Setup (pythonocc-core is NOT on PyPI for macOS — use conda-forge):
   conda activate mfcadstep          # existing env with pythonocc (Python 3.11)
@@ -18,6 +18,7 @@ Or create a fresh env:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from collections import Counter, defaultdict
@@ -30,97 +31,19 @@ from flask import Flask, jsonify, render_template, request
 APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parent
 DATA_ROOT = REPO_ROOT / "MFCAD++_dataset"
-H5_PATH = DATA_ROOT / "hierarchical_graphs_regen" / "test_MFCAD++.h5"
+H5_PATH = DATA_ROOT / "hierarchical_graphs_regen_12" / "test_MFCAD++.h5"
 STEP_DIR = DATA_ROOT / "step" / "test"
 TEST_SPLIT = DATA_ROOT / "test.txt"
 CACHE_DIR = APP_DIR / "cache"
 
-NUM_CLASSES = 25
+sys.path.insert(0, str(REPO_ROOT))
+from taxonomy import NUM_CLASSES, NEW_COLORS, NEW_DESCRIPTIONS, NEW_NAMES
 
-CLASS_NAMES = [
-    "Chamfer",
-    "Through hole",
-    "Triangular passage",
-    "Rectangular passage",
-    "6-sided passage",
-    "Triangular through slot",
-    "Rectangular through slot",
-    "Circular through slot",
-    "Rectangular through step",
-    "2-sided through step",
-    "Slanted through step",
-    "O-ring",
-    "Blind hole",
-    "Triangular pocket",
-    "Rectangular pocket",
-    "6-sided pocket",
-    "Circular end pocket",
-    "Rectangular blind slot",
-    "Vertical circular end blind slot",
-    "Horizontal circular end blind slot",
-    "Triangular blind step",
-    "Circular blind step",
-    "Rectangular blind step",
-    "Round",
-    "Stock",
-]
+log = logging.getLogger(__name__)
 
-CLASS_DESCRIPTIONS = [
-    "Chamfer: narrow planar bevel joining two faces at an oblique angle (~45°).",
-    "Through hole: a single cylindrical face passing entirely through the part, open at both ends.",
-    "Triangular passage: through opening with a 3-walled (triangular) planar cross-section, open both ends.",
-    "Rectangular passage: through opening with 4 planar walls (rectangular section), open both ends.",
-    "6-sided passage: through opening with 6 planar walls (hexagonal section), open both ends.",
-    "Triangular through slot: triangular-profile channel cut fully across the part, open at both ends and top.",
-    "Rectangular through slot: rectangular channel (floor + 2 walls) cut fully across, open at both ends and top.",
-    "Circular through slot: through channel with cylindrical (rounded) walls, open at both ends and top.",
-    "Rectangular through step: L-shaped shoulder running fully across the part, open at both ends.",
-    "2-sided through step: step open on two sides of the part.",
-    "Slanted through step: through step whose wall/floor is slanted — planar faces meeting at a non-90° oblique dihedral.",
-    "O-ring: a circular ring groove (toroidal/cylindrical channel) recessed into a face.",
-    "Blind hole: cylindrical hole that does NOT pass through — a cylinder wall plus a flat bottom.",
-    "Triangular pocket: closed blind pocket with a triangular floor (3 walls + floor), open only at the top.",
-    "Rectangular pocket: closed blind pocket with a rectangular floor (4 walls + floor), open only at the top.",
-    "6-sided pocket: closed blind pocket with a hexagonal floor (6 walls + floor), open only at the top.",
-    "Circular end pocket: blind pocket with rounded (cylindrical) ends — curved walls + floor.",
-    "Rectangular blind slot: slot closed at one end (floor + 3 walls), open at the other end and the top.",
-    "Vertical circular end blind slot: blind slot terminated by a vertically-oriented circular (cylindrical) end.",
-    "Horizontal circular end blind slot: blind slot terminated by a horizontally-oriented circular (cylindrical) end.",
-    "Triangular blind step: step closed at one end with a triangular profile.",
-    "Circular blind step: blind step bounded by a circular/cylindrical wall.",
-    "Rectangular blind step: step closed at one end with a rectangular profile.",
-    "Round: a fillet — a rounded (cylindrical/toroidal) face blending two faces across a smooth/tangent edge.",
-    "Stock: original raw-material outer surface — large planar faces forming the part's outer bounding box, typically convex neighbors.",
-]
-
-# Saturated palette tuned for white 3D viewer background (WCAG-friendly contrast).
-CLASS_COLORS = [
-    "#DC2626",  # 0 Chamfer
-    "#16A34A",  # 1 Through hole
-    "#CA8A04",  # 2 Triangular passage
-    "#2563EB",  # 3 Rectangular passage
-    "#EA580C",  # 4 6-sided passage
-    "#9333EA",  # 5 Triangular through slot
-    "#0891B2",  # 6 Rectangular through slot
-    "#DB2777",  # 7 Circular through slot
-    "#65A30D",  # 8 Rectangular through step
-    "#E11D48",  # 9 2-sided through step
-    "#0D9488",  # 10 Slanted through step
-    "#7C3AED",  # 11 O-ring
-    "#92400E",  # 12 Blind hole
-    "#D97706",  # 13 Triangular pocket
-    "#991B1B",  # 14 Rectangular pocket
-    "#059669",  # 15 6-sided pocket
-    "#4D7C0F",  # 16 Circular end pocket
-    "#C2410C",  # 17 Rectangular blind slot
-    "#1E3A8A",  # 18 Vertical circular end blind slot
-    "#7E22CE",  # 19 Horizontal circular end blind slot
-    "#0369A1",  # 20 Triangular blind step
-    "#BE185D",  # 21 Circular blind step
-    "#15803D",  # 22 Rectangular blind step
-    "#B45309",  # 23 Round
-    "#854D0E",  # 24 Stock (bronze — visible on white, not gray)
-]
+CLASS_NAMES = NEW_NAMES
+CLASS_DESCRIPTIONS = NEW_DESCRIPTIONS
+CLASS_COLORS = NEW_COLORS
 
 
 def _brep_bounds(idx_arr, model_idx, v1_len):
@@ -269,7 +192,12 @@ def parse_part_geometry(part_id: str, labels: np.ndarray) -> dict:
     face_payload = []
     for idx, face in enumerate(faces):
         cls = int(labels[idx])
-        cls = cls if 0 <= cls < NUM_CLASSES else 24
+        if not (0 <= cls < NUM_CLASSES):
+            log.warning(
+                "out-of-range label %d for part_id=%s face_index=%d — clamping to stock (11)",
+                cls, part_id, idx,
+            )
+            cls = NUM_CLASSES - 1  # stock
         tris = _triangulate_face(face)
         face_payload.append({
             "face_index": idx,

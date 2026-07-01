@@ -21,6 +21,9 @@ import random
 import numpy as np
 import h5py
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from taxonomy import NEW_NAMES, NUM_CLASSES
+
 sys.path.insert(0, "diag")
 from regen_dihedral_check import (read_part, edge_midpnt_tangent,
                                   normal_on_face_at_point)
@@ -30,12 +33,7 @@ from OCC.Extend.TopologyUtils import TopologyExplorer
 STEP_DIR = "MFCAD++_dataset/step/train"
 H5 = "MFCAD++_dataset/hierarchical_graphs/training_MFCAD++.h5"
 N = 800
-NAMES = ["Chamfer", "Through hole", "Tri passage", "Rect passage", "6-sided passage",
-         "Tri through slot", "Rect through slot", "Circ through slot",
-         "Rect through step", "2-sided through step", "Slanted through step", "O-ring",
-         "Blind hole", "Tri pocket", "Rect pocket", "6-sided pocket", "Circ end pocket",
-         "Rect blind slot", "V circ end blind slot", "H circ end blind slot",
-         "Tri blind step", "Circ blind step", "Rect blind step", "Round", "Stock"]
+NAMES = [NEW_NAMES[i] for i in range(NUM_CLASSES)]
 
 
 def regen_edges(shape, faces, fidx, normals):
@@ -88,7 +86,7 @@ def main():
         e = int(idx[mi + 1, 0]) - base if mi + 1 < len(idx) else lab.shape[0]
         return lab[s:e].astype(int)
 
-    regen_hist = np.zeros(25, int); h5_hist = np.zeros(25, int)
+    regen_hist = np.zeros(NUM_CLASSES, int); h5_hist = np.zeros(NUM_CLASSES, int)
     face_counts = []; edge_counts = []; angles = []; signs = []
     nan_edges = 0; fails = 0; zero_edge = 0; used = 0
 
@@ -107,10 +105,10 @@ def main():
             fails += 1; continue
         used += 1
         for c in ints:
-            if 0 <= c < 25:
+            if 0 <= c < NUM_CLASSES:
                 regen_hist[c] += 1
         for c in h5_labels(mid):
-            if 0 <= c < 25:
+            if 0 <= c < NUM_CLASSES:
                 h5_hist[c] += 1
         edges = regen_edges(shape, faces, fidx, normals)
         face_counts.append(len(faces)); edge_counts.append(len(edges))
@@ -131,7 +129,7 @@ def main():
     P("\n(a) class-level label distribution (face-fraction): regen vs released-H5 (same ids)")
     rt = regen_hist.sum(); ht = h5_hist.sum()
     P(f"{'cls':>3} {'name':<22} {'regen%':>7} {'H5%':>7}  flag")
-    for c in range(25):
+    for c in range(NUM_CLASSES):
         rp = 100 * regen_hist[c] / rt; hp = 100 * h5_hist[c] / ht
         flag = ""
         if h5_hist[c] > 0 and regen_hist[c] == 0:

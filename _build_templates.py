@@ -1,4 +1,4 @@
-"""One-off: compute the 25 canonical template faces (TRAIN split only).
+"""One-off: compute the 12 canonical template faces (TRAIN split only).
 
 For each class: mean 14-dim node-feature vector (centroid) over ALL training
 faces of that class, then the training face nearest (L2) to that centroid.

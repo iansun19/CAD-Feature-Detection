@@ -63,6 +63,7 @@ from baseline_eval import (
 from dataset import _build_uncached, _cache_path, build_cache
 from device import resolve_device, set_seed
 from evaluate import load_class_names, per_class_metrics
+from taxonomy import NUM_CLASSES
 
 try:
     import lightgbm as lgb
@@ -87,13 +88,11 @@ except ImportError:
 SURFACE_NAMES = ("plane", "cylinder", "cone", "sphere", "torus", "other")
 CONVEXITY_NAMES = ("concave", "convex", "smooth")
 
-# Weak / step-family / slot-chamfer classes (indices from feature_labels.txt).
-WEAK_CLASS_IDS = (
-    0,   # Chamfer
-    5, 6, 7,   # through slots
-    8, 9, 10,  # through steps (rectangular, 2-sided, slanted)
-    17, 18, 19,  # blind slots
-)
+# Interim weak-class set: legacy weak ids remapped via taxonomy.old_to_new and deduped
+# (0→9 chamfer; 5,6,7→2 through_slot; 8,9,10→3 through_step; 17,18,19→7 blind_slot).
+# TODO: re-derive from a fresh 12-class confusion matrix after the first 12-class eval —
+# collapsing may have removed some formerly-weak distinctions.
+WEAK_CLASS_IDS = (9, 2, 3, 7)
 
 NODE_DIM = 14
 EDGE_DIM = 4
@@ -420,12 +419,13 @@ def _feature_matrix(df: pd.DataFrame, feature_cols: list[str]) -> np.ndarray:
     return df[feature_cols].to_numpy(dtype=np.float32)
 
 
-def train_lightgbm(X_train, y_train, X_val, y_val, num_classes: int, seed: int):
+def train_lightgbm(X_train, y_train, X_val, y_val, num_classes: int = NUM_CLASSES, seed: int = 42):
+    assert num_classes == NUM_CLASSES
     train_set = lgb.Dataset(X_train, label=y_train)
     val_set = lgb.Dataset(X_val, label=y_val, reference=train_set)
     params = {
         "objective": "multiclass",
-        "num_class": num_classes,
+        "num_class": NUM_CLASSES,
         "metric": "multi_logloss",
         "learning_rate": 0.1,
         "num_leaves": 63,

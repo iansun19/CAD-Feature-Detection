@@ -12,12 +12,12 @@ Answers, strictly from the data (NOT the docs):
      continuous angle partially subsumes it — quantify the overlap.
   3. CONNECTIVITY: are the wall<->floor faces of the step features actually connected
      by an A_1 edge? Confirmed by counting same-label adjacent face pairs for the
-     step-family classes (8 Rect-through-step, 10 Slanted-through-step, 9 2-sided,
-     22 Rect-blind-step).
+     collapsed step-family classes (3 through_step, 8 blind_step).
   4. GO/NO-GO: for same-label step edges, compute the angle between the two faces'
      pooled mean normals (decoded exactly as pool_facet_features_to_faces does) and
-     report mean/median/std per class. Class 8 vs class 10 must be clearly separable
-     (means differ by >= 2x the larger std) to proceed.
+     report mean/median/std per class. Under 12-class collapse, old rectangular
+     through step (8) vs slanted through step (10) separation is NO LONGER testable
+     — both map to new class 3.
 
 Local .venv has only h5py + numpy (no torch), so pooling logic is replicated inline
 rather than imported from dataset.py.
@@ -30,15 +30,16 @@ import h5py
 import numpy as np
 
 path = sys.argv[1] if len(sys.argv) > 1 else \
-    "MFCAD++_dataset/hierarchical_graphs/training_MFCAD++.h5"
+    "MFCAD++_dataset/hierarchical_graphs_regen_12/training_MFCAD++.h5"
 N_BATCHES = int(sys.argv[2]) if len(sys.argv) > 2 else 150
 np.set_printoptions(precision=4, suppress=True, linewidth=120)
 
+# 12-class collapsed ids. Old 8/9/10 (rect/2-sided/slanted through step) merged -> 3.
 LABELS = {
-    8: "Rect through step", 9: "2-sided through step",
-    10: "Slanted through step", 22: "Rect blind step",
+    3: "through_step (was old 8/9/10)",
+    8: "blind_step (was old 22)",
 }
-STEP_CLASSES = [8, 10, 9, 22]   # 8 vs 10 is the decisive comparison
+STEP_CLASSES = [3, 8]
 
 
 def canon_set(idx):
@@ -204,21 +205,13 @@ for c in STEP_CLASSES:
     print(f"  class {c:2d} {LABELS[c]:22s}: {samelabel_adj[c]:6d} same-label A_1 edges")
 print("  (>0 confirms the wall<->floor pair IS a graph edge under A_1)")
 
-print("\n=== 4. GO/NO-GO: angle(deg) between mean normals, same-label step edges ===")
+print("\n=== 4. same-label step edge angles (mean normals) ===")
 for c in STEP_CLASSES:
     print(f"  class {c:2d} {LABELS[c]:22s}: {summ(angles_by_class[c])}")
 
-a8 = np.asarray(angles_by_class[8], dtype=np.float64)
-a10 = np.asarray(angles_by_class[10], dtype=np.float64)
-if a8.size and a10.size:
-    dmean = abs(a8.mean() - a10.mean())
-    bigstd = max(a8.std(), a10.std())
-    ratio = dmean / max(bigstd, 1e-9)
-    print(f"\n  |mean8 - mean10| = {dmean:.2f} deg ;  larger std = {bigstd:.2f} deg")
-    print(f"  separation ratio = {ratio:.2f}x  (need >= 2.0x for GO)")
-    print("  VERDICT:", "GO — distributions clearly separable."
-          if ratio >= 2.0 else
-          "NO-GO — overlapping; see diagnosis below.")
+print("\n  GRANULARITY LOST: old class 8 (rect through step) vs 10 (slanted) both "
+      "collapsed to new class 3 — the former 8-vs-10 GO/NO-GO separation test is "
+      "no longer applicable.")
 
 print("\n=== 5. convexity-bucket distribution on same-label step edges (redundancy) ===")
 for c in STEP_CLASSES:

@@ -4,12 +4,12 @@ verify_label_scheme.py  (Step C)
 (1) SEMANTIC/GEOMETRIC: regenerate parts from local STEP and, per feature class in the
     confused step-family, measure the dihedral on concave same-label adjacent face
     pairs. Documented meaning must hold:
-      class 8  (rectangular through step) -> ~90 deg
-      class 10 (slanted through step)     -> systematically != 90 deg
-      class 9  (2-sided through step)     -> ~90 deg (two rectangular walls)
-      class 22 (rectangular blind step)   -> ~90 deg
-    If 8 and 10 separate cleanly, the label integers match the documented scheme AND
-    the dihedral feature distinguishes exactly the classes the model confuses.
+      through_step (new class 3; legacy STEP labels 8/9/10) -> ~90 deg on concave pairs
+      blind_step   (new class 8; legacy STEP label 22)     -> ~90 deg
+    GRANULARITY LOST under 12-class collapse: old classes 8 (rectangular through step),
+    9 (2-sided), and 10 (slanted) merged into new class 3 — we can no longer assert
+    ~90° for 8 vs systematically !=90° for 10 independently; one pooled through_step
+    check replaces three per-subtype checks.
 
 (2) CROSS-CHECK vs released H5: for simple single-feature local-STEP parts
     (label set == {24=stock, k}), confirm the released H5 part of the SAME id also
@@ -24,20 +24,20 @@ import random
 import numpy as np
 import h5py
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from taxonomy import NEW_NAMES
+
 sys.path.insert(0, "diag")
 from regen_dihedral_check import read_part, convexity_sign  # faithful regen helpers
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
 STEP_DIR = "MFCAD++_dataset/step/train"
 H5 = "MFCAD++_dataset/hierarchical_graphs/training_MFCAD++.h5"
-NAMES = {0: "Chamfer", 1: "Through hole", 2: "Tri passage", 3: "Rect passage",
-         4: "6-sided passage", 5: "Tri through slot", 6: "Rect through slot",
-         7: "Circ through slot", 8: "Rect through step", 9: "2-sided through step",
-         10: "Slanted through step", 11: "O-ring", 12: "Blind hole", 13: "Tri pocket",
-         14: "Rect pocket", 15: "6-sided pocket", 16: "Circ end pocket",
-         17: "Rect blind slot", 18: "V circ end blind slot", 19: "H circ end blind slot",
-         20: "Tri blind step", 21: "Circ blind step", 22: "Rect blind step",
-         23: "Round", 24: "Stock"}
+NAMES = NEW_NAMES
+
+# Legacy STEP name-field labels (files still encode 0–24, not collapsed ids).
+THROUGH_STEP_OLD = ("8", "9", "10")   # -> new class 3 (through_step)
+BLIND_STEP_OLD = "22"                 # -> new class 8 (blind_step)
 
 
 def concave_same_label_angles(shape, faces, fidx, labels, normals, target):
@@ -79,22 +79,54 @@ def scan_class(files, target, max_parts=20, scan_cap=600):
     return np.array(ang), used, scanned
 
 
+def scan_legacy_labels(files, legacy_labels, max_parts=20, scan_cap=600):
+    """Pool concave same-label dihedrals across several legacy STEP label strings."""
+    ang = []; used = 0; scanned = 0
+    legacy = tuple(str(x) for x in legacy_labels)
+    for path in files:
+        if used >= max_parts or scanned >= scan_cap:
+            break
+        scanned += 1
+        try:
+            shape, faces, fidx, labels, normals = read_part(path)
+        except Exception:
+            continue
+        if not any(lbl in labels for lbl in legacy):
+            continue
+        part_ang = []
+        for tstr in legacy:
+            part_ang.extend(concave_same_label_angles(
+                shape, faces, fidx, labels, normals, tstr))
+        if part_ang:
+            ang.extend(part_ang); used += 1
+    return np.array(ang), used, scanned
+
+
+def _print_angle_summary(new_cls, label, a, used, scanned):
+    if a.size:
+        within = 100 * np.mean((a >= 80) & (a <= 95))
+        print(f"  class {new_cls:>2} {label:<22} n={a.size:4d} parts={used:2d}  "
+              f"mean={a.mean():5.1f} median={np.median(a):5.1f} std={a.std():4.1f} "
+              f"80-95deg={within:5.1f}%")
+    else:
+        print(f"  class {new_cls:>2} {label:<22} no concave same-label pairs found "
+              f"(scanned {scanned})")
+
+
 def main():
     random.seed(7)
     files = glob.glob(os.path.join(STEP_DIR, "*.step"))
     random.shuffle(files)
 
-    print("=== (1) per-class concave same-label dihedral (regenerated from local STEP) ===", flush=True)
-    for cls in [8, 10, 9, 22]:
-        a, used, scanned = scan_class(files, cls, max_parts=20, scan_cap=600)
-        if a.size:
-            within = 100 * np.mean((a >= 80) & (a <= 95))
-            print(f"  class {cls:>2} {NAMES[cls]:<22} n={a.size:4d} parts={used:2d}  "
-                  f"mean={a.mean():5.1f} median={np.median(a):5.1f} std={a.std():4.1f} "
-                  f"80-95deg={within:5.1f}%")
-        else:
-            print(f"  class {cls:>2} {NAMES[cls]:<22} no concave same-label pairs found "
-                  f"(scanned {scanned})")
+    print("=== (1) per-class concave same-label dihedral (regenerated from local STEP) ===",
+          flush=True)
+    print("  NOTE: old STEP labels 8/9/10 (rect/2-sided/slanted through step) collapsed "
+          "to new class 3 — subtype-specific checks are merged below.")
+    a, used, scanned = scan_legacy_labels(files, THROUGH_STEP_OLD, max_parts=20, scan_cap=600)
+    _print_angle_summary(3, NAMES[3], a, used, scanned)
+
+    a, used, scanned = scan_class(files, BLIND_STEP_OLD, max_parts=20, scan_cap=600)
+    _print_angle_summary(8, NAMES[8], a, used, scanned)
 
     print("\n=== (2) cross-check simple single-feature parts vs released H5 ===")
     # build H5 id -> (batch, model_idx)

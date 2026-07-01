@@ -28,22 +28,12 @@ from torch_geometric.loader import DataLoader
 from dataset import get_dataset
 from device import resolve_device
 from model import BRepGNN
+from taxonomy import NEW_NAMES
 
 
 def load_class_names(data_root, num_classes):
-    """Parse 'id - Name' lines from feature_labels.txt; fall back to ints."""
-    names = {i: str(i) for i in range(num_classes)}
-    path = os.path.join(data_root, "feature_labels.txt")
-    if os.path.isfile(path):
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if " - " not in line:
-                    continue
-                left, right = line.split(" - ", 1)
-                if left.strip().isdigit():
-                    names[int(left.strip())] = right.strip()
-    return [names[i] for i in range(num_classes)]
+    """Return canonical class names from taxonomy (single source of truth)."""
+    return [NEW_NAMES[i] for i in range(num_classes)]
 
 
 def latest_run(out_dir):

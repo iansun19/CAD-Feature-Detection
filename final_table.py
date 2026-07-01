@@ -31,7 +31,7 @@ LLM_RUNS = [
     ("LLM bounded, stripped (fair ceiling)",   "bounded_stripped"),
     ("LLM bounded, unstripped (+leak)",        "bounded_unstripped"),
     ("LLM features (serialized GNN geom)",      "features_run"),
-    ("LLM features + 25-class templates",       "templates_run"),
+    ("LLM features + 12-class templates",       "templates_run"),
 ]
 
 
@@ -67,7 +67,7 @@ def main():
     w = 42
     print("=" * 96)
     print("FINAL COMPARISON — B-rep face classification, MFCAD++ test split")
-    print("  LLM rows = (b) full-set metric (missing/malformed = wrong). Same 25-class metric.")
+    print("  LLM rows = (b) full-set metric (missing/malformed = wrong). Same 12-class metric.")
     print("=" * 96)
     print(f"{'Model':<{w}}{'Acc':>9}{'MacroF1':>9}{'WeakF1':>9}{'Malf%':>8}{'Cost$':>9}")
     print("-" * 96)

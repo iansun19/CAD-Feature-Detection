@@ -15,17 +15,9 @@ from collections import Counter
 
 import h5py
 
-CLASS_NAMES = {
-    0: "Chamfer", 1: "Through hole", 2: "Triangular passage", 3: "Rectangular passage",
-    4: "6-sided passage", 5: "Triangular through slot", 6: "Rectangular through slot",
-    7: "Circular through slot", 8: "Rectangular through step", 9: "2-sided through step",
-    10: "Slanted through step", 11: "O-ring", 12: "Blind hole", 13: "Triangular pocket",
-    14: "Rectangular pocket", 15: "6-sided pocket", 16: "Circular end pocket",
-    17: "Rectangular blind slot", 18: "Vertical circ end blind slot",
-    19: "Horizontal circ end blind slot", 20: "Triangular blind step",
-    21: "Circular blind step", 22: "Rectangular blind step", 23: "Round",
-    24: "Stock",
-}
+from taxonomy import NEW_NAMES, NUM_CLASSES
+
+CLASS_NAMES = NEW_NAMES
 
 # Adjust this glob if your directory layout differs
 H5_ROOT = "MFCAD++_dataset/hierarchical_graphs_regen"
