@@ -139,12 +139,14 @@ def strip_labels(step_text):
 # ---------------------------------------------------------------------------
 def build_system_prompt(class_names, bounded=False):
     listing = "\n".join(f"  {i} - {n}" for i, n in enumerate(class_names))
+    # example ids are illustrative; must stay within 0..num_classes-1
+    example = '{"#17": 0, "#619": 3, "#808": 6}\n'
     if bounded:
         out_fmt = (
             "OUTPUT FORMAT (STRICT): you will be given the EXACT list of face entity "
             "ids to classify. Return a single JSON object whose keys are EXACTLY those "
             "ids (and no others) mapping to the integer class id. Example:\n"
-            '{"#17": 24, "#619": 3, "#808": 15}\n'
+            + example +
             "Classify only the listed faces — do NOT invent or enumerate any other "
             "entity ids. Output ONLY the JSON object — no markdown, no commentary."
         )
@@ -152,7 +154,7 @@ def build_system_prompt(class_names, bounded=False):
         out_fmt = (
             "OUTPUT FORMAT (STRICT): a single JSON object mapping each face entity id "
             '(string, including the leading "#") to its integer class id. Example:\n'
-            '{"#17": 24, "#619": 3, "#808": 15}\n'
+            + example +
             "Include EVERY face entity id present in the file, exactly once. Output "
             "ONLY the JSON object — no markdown, no commentary."
         )
@@ -464,11 +466,13 @@ def build_template_bank(cfg, class_names):
 
 def build_template_system_prompt(class_names, template_text):
     listing = "\n".join(f"  {i} - {CLASS_DESCRIPTIONS[i]}" for i in range(len(class_names)))
+    # example ids are illustrative; must stay within 0..num_classes-1
+    example = '{"#17": 0, "#619": 3, "#808": 6}\n'
     out_fmt = (
         "OUTPUT FORMAT (STRICT): you will be given the EXACT list of face entity "
         "ids to classify. Return a single JSON object whose keys are EXACTLY those "
         "ids (and no others) mapping to the integer class id. Example:\n"
-        '{"#17": 24, "#619": 3, "#808": 15}\n'
+        + example +
         "Classify only the listed faces — do NOT invent or enumerate any other "
         "entity ids. You MUST output a prediction for every listed id. Output ONLY "
         "the JSON object — no markdown, no commentary."
@@ -553,11 +557,13 @@ def cmd_templates_audit(cfg):
 
 def build_feature_system_prompt(class_names, fewshot_text):
     listing = "\n".join(f"  {i} - {CLASS_DESCRIPTIONS[i]}" for i in range(len(class_names)))
+    # example ids are illustrative; must stay within 0..num_classes-1
+    example = '{"#17": 0, "#619": 3, "#808": 6}\n'
     out_fmt = (
         "OUTPUT FORMAT (STRICT): you will be given the EXACT list of face entity "
         "ids to classify. Return a single JSON object whose keys are EXACTLY those "
         "ids (and no others) mapping to the integer class id. Example:\n"
-        '{"#17": 24, "#619": 3, "#808": 15}\n'
+        + example +
         "Classify only the listed faces — do NOT invent or enumerate any other "
         "entity ids. You MUST output a prediction for every listed id. Output ONLY "
         "the JSON object — no markdown, no commentary."
