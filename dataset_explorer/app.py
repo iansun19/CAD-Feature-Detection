@@ -327,6 +327,12 @@ def create_app(store: DataStore | None = None) -> Flask:
         store = DataStore()
     app.config["store"] = store
 
+    @app.after_request
+    def disable_api_cache(response):
+        if request.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.route("/")
     def index():
         return render_template("index.html")
