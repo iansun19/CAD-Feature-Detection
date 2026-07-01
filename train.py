@@ -17,6 +17,12 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
 
+# Workers share sample tensors via shared memory. The default 'file_descriptor'
+# strategy keeps one open FD per shared tensor; with persistent workers these
+# accumulate across epochs until we blow past `ulimit -n` ("Too many open
+# files"). 'file_system' names shared segments instead, using no per-tensor FD.
+torch.multiprocessing.set_sharing_strategy("file_system")
+
 from dataset import get_dataset
 from device import resolve_device, set_seed
 from model import BRepGNN
