@@ -8,6 +8,7 @@ h5_format: "mfcadpp_regen"           # mfcadpp_regen = regenerated B-rep graphs 
 h5_dir: "hierarchical_graphs_regen_12"  # mfcadpp*: 12-class relabeled H5 (training/val/test *_MFCAD++.h5)
 h5_path: "graphs.h5"                  # simple format only: single H5 relative to data_root
 angle_reduce: "median"               # regen dedup: how to collapse a multi-edge face pair's per-edge dihedral angles (median|mean)
+include_curvature: false             # must match checkpoint / H5 regen schema (current model: 14-dim nodes)
 num_classes: 12                       # collapsed machining-feature classes (taxonomy.py)
 num_surface_types: 6                  # plane, cylinder, cone, sphere, torus, other
 

@@ -12,7 +12,8 @@ it drop-in, PLUS two additions for the dihedral edge-feature work:
 Per batch group (mirrors released):
   CAD_model [m]    bytes ids
   idx       [m,2]  col0 = cumulative face start (base 0); col1 unused (0)
-  V_1       [N,9]  [area,cx,cy,cz] per-model min-max -> [0,1]; type/11; nx;ny;nz;plane_d
+  V_1       [N,11] [area,cx,cy,cz] per-model min-max -> [0,1]; type/11; nx;ny;nz;plane_d;
+                   mean_curv; gauss_curv  (cols 9-10 added for curvature node features)
   labels    [N]    float32 per-face class (0-11)
   A_1_idx   [E,2]  int32 global face-index pairs (BOTH directions)
   A_1_values[E]    float32 dihedral radians (both directions equal)

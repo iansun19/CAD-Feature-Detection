@@ -29,4 +29,5 @@ nist_ctc_01_stage_a.npz
 .DS_Store
 .idea/
 .vscode/
-heuristic_baselines/*.parquet
+# Pipeline outputs (Phase 4)
+pipeline_out/

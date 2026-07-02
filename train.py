@@ -9,6 +9,8 @@ Outputs to runs/<timestamp>/:
     config_used.yaml
 """
 
+import env_bootstrap  # noqa: F401
+
 import os
 import time
 import datetime

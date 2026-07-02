@@ -12,6 +12,8 @@ import os
 import sys
 import unittest
 
+import numpy as np
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
@@ -47,6 +49,8 @@ class StepIngestTest(unittest.TestCase):
         self.assertGreater(model["N"], 0)
         self.assertEqual(model["area"].shape[0], model["N"])
         self.assertEqual(model["normals"].shape, (model["N"], 3))
+        self.assertEqual(model["curv"].shape, (model["N"], 2))
+        self.assertTrue(np.isfinite(model["curv"]).all())
         self.assertNotIn("labels", model)
 
     def test_pyg_shapes(self):

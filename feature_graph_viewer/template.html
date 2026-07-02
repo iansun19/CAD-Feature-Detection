@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Graph Viewer</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --panel: #171a22;
+      --border: #2a2f3a;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --accent: #6ea8fe;
+      --highlight: #1e3a5f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    header .meta { color: var(--muted); font-size: 0.85rem; }
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 0;
+    }
+    aside {
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      overflow-y: auto;
+      padding: 0.75rem;
+    }
+    aside h2 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+    .hint { color: var(--muted); font-size: 0.78rem; line-height: 1.4; margin-bottom: 0.75rem; }
+    .feature-item, .edge-item {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.6rem;
+      margin-bottom: 0.45rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+    .feature-item:hover { border-color: var(--accent); }
+    .feature-item.selected { background: var(--highlight); border-color: var(--accent); }
+    .feature-item .title { font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+    .swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+    .faces { color: var(--muted); margin-top: 0.25rem; word-break: break-all; }
+    pre.params {
+      margin: 0.35rem 0 0;
+      padding: 0.35rem;
+      background: rgba(0,0,0,0.25);
+      border-radius: 4px;
+      font-size: 0.68rem;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #c9d1d9;
+    }
+    .edge-item { cursor: default; color: var(--muted); }
+    .viewer-wrap {
+      position: relative;
+      min-height: 0;
+      background: #ffffff;
+    }
+    #canvas-host, #label-host {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #label-host { pointer-events: none; overflow: hidden; }
+    .face-label {
+      color: #111;
+      font-size: 13px;
+      font-weight: 700;
+      text-shadow:
+        -1px -1px 0 #fff, 1px -1px 0 #fff,
+        -1px 1px 0 #fff, 1px 1px 0 #fff,
+        0 0 4px #fff;
+      user-select: none;
+      transform: translate(-50%, -50%);
+    }
+    .toolbar {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+    }
+    .toolbar button {
+      background: rgba(15, 17, 23, 0.85);
+      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .toolbar button:hover { border-color: var(--accent); }
+    .tooltip {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 17, 23, 0.9);
+      color: #fff;
+      padding: 0.45rem 0.65rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      max-width: 90%;
+      z-index: 10;
+    }
+    .stock-section { margin-top: 1rem; }
+    .stock-faces { font-size: 0.78rem; color: var(--muted); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="title">Feature Graph Viewer</h1>
+    <span class="meta" id="meta"></span>
+  </header>
+  <div class="layout">
+    <aside>
+      <h2>Features</h2>
+      <p class="hint">Colors group faces into feature instances. Numbers on the model are <strong>face indices</strong> (0-based, STEP order). Red lines = feature adjacency edges.</p>
+      <div id="feature-list"></div>
+      <h2 style="margin-top:1rem">Edges</h2>
+      <div id="edge-list"></div>
+      <div class="stock-section">
+        <h2>Stock / unassigned faces</h2>
+        <div class="stock-faces" id="stock-faces"></div>
+      </div>
+    </aside>
+    <div class="viewer-wrap" id="viewer-wrap">
+      <div id="canvas-host"></div>
+      <div id="label-host"></div>
+      <div class="toolbar">
+        <button type="button" id="btn-labels">Hide labels</button>
+        <button type="button" id="btn-edges">Hide edges</button>
+        <button type="button" id="btn-reset">Reset view</button>
+      </div>
+      <div class="tooltip" id="tooltip">Click a face or sidebar feature to inspect.</div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+  import * as THREE from "three";
+  import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+  import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+
+  const DATA = __DATA_JSON__;
+
+  document.getElementById("title").textContent =
+    `Feature Graph · ${DATA.part_id}`;
+  document.getElementById("meta").textContent =
+    `${DATA.n_faces} faces · ${DATA.features.length} features · ${DATA.edges.length} edges`;
+
+  const wrap = document.getElementById("viewer-wrap");
+  const canvasHost = document.getElementById("canvas-host");
+  const labelHost = document.getElementById("label-host");
+  const tooltip = document.getElementById("tooltip");
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e7);
+  camera.position.set(120, 90, 120);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  canvasHost.appendChild(renderer.domElement);
+
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.domElement.style.position = "absolute";
+  labelRenderer.domElement.style.top = "0";
+  labelRenderer.domElement.style.pointerEvents = "none";
+  labelHost.appendChild(labelRenderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.45);
+  scene.add(hemi);
+  const dir1 = new THREE.DirectionalLight(0xffffff, 0.85);
+  dir1.position.set(1, 1.2, 0.8);
+  scene.add(dir1);
+  const dir2 = new THREE.DirectionalLight(0xffffff, 0.4);
+  dir2.position.set(-0.8, -0.4, -1);
+  scene.add(dir2);
+
+  const root = new THREE.Group();
+  scene.add(root);
+
+  const faceMeshes = [];
+  const labelObjects = [];
+  let edgeLines = null;
+  let selectedFeature = null;
+  let showLabels = true;
+  let showEdges = true;
+
+  function hexColor(hex) {
+    return new THREE.Color(hex);
+  }
+
+  function buildMeshes() {
+    for (const face of DATA.faces) {
+      const positions = [];
+      for (const v of face.triangles) positions.push(v[0], v[1], v[2]);
+      if (!positions.length) continue;
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geom.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: hexColor(face.color),
+        metalness: 0.05,
+        roughness: 0.72,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.userData = {
+        faceIndex: face.face_index,
+        featureId: face.feature_id,
+        baseColor: face.color,
+      };
+      root.add(mesh);
+      faceMeshes.push(mesh);
+
+      const div = document.createElement("div");
+      div.className = "face-label";
+      div.textContent = String(face.face_index);
+      const label = new CSS2DObject(div);
+      label.position.set(face.centroid[0], face.centroid[1], face.centroid[2]);
+      root.add(label);
+      labelObjects.push(label);
+    }
+  }
+
+  function buildEdgeLines() {
+    const centroids = {};
+    for (const f of DATA.features) {
+      centroids[f.feature_id] = new THREE.Vector3(
+        f.centroid[0], f.centroid[1], f.centroid[2],
+      );
+    }
+    const pts = [];
+    for (const e of DATA.edges) {
+      const a = centroids[e.source];
+      const b = centroids[e.target];
+      if (!a || !b) continue;
+      pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+    }
+    if (!pts.length) return null;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: hexColor(DATA.edge_color || "#ff4444"),
+      linewidth: 2,
+      depthTest: false,
+    });
+    return new THREE.LineSegments(geom, mat);
+  }
+
+  function centerAndScale() {
+    const box = new THREE.Box3().setFromObject(root);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
+    root.position.sub(center);
+    root.scale.setScalar(100 / maxDim);
+  }
+
+  function fitCamera() {
+    const box = new THREE.Box3().setFromObject(root);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
+    const fitHeight = maxDim / (2 * Math.tan((camera.fov * Math.PI) / 360));
+    const fitWidth = fitHeight * camera.aspect;
+    const distance = Math.max(fitHeight, fitWidth) * 1.35;
+    controls.target.copy(center);
+    camera.position.set(
+      center.x + distance * 0.75,
+      center.y + distance * 0.55,
+      center.z + distance * 0.75,
+    );
+    controls.minDistance = maxDim * 0.02;
+    controls.maxDistance = maxDim * 80;
+    camera.near = Math.max(maxDim / 500, 0.001);
+    camera.far = maxDim * 200;
+    camera.updateProjectionMatrix();
+    controls.update();
+  }
+
+  function applyHighlight(featureId) {
+    selectedFeature = featureId;
+    for (const item of document.querySelectorAll(".feature-item")) {
+      item.classList.toggle("selected", Number(item.dataset.featureId) === featureId);
+    }
+    for (const mesh of faceMeshes) {
+      const mat = mesh.material;
+      const fid = mesh.userData.featureId;
+      if (featureId == null) {
+        mat.color.copy(hexColor(mesh.userData.baseColor));
+        mat.opacity = 1;
+        mat.transparent = false;
+      } else if (fid === featureId) {
+        mat.color.copy(hexColor(mesh.userData.baseColor));
+        mat.opacity = 1;
+        mat.transparent = false;
+      } else {
+        mat.color.setHex(0xbbbbbb);
+        mat.opacity = 0.35;
+        mat.transparent = true;
+      }
+    }
+  }
+
+  function renderSidebar() {
+    const fl = document.getElementById("feature-list");
+    fl.innerHTML = "";
+    for (const f of DATA.features) {
+      const el = document.createElement("div");
+      el.className = "feature-item";
+      el.dataset.featureId = f.feature_id;
+        el.innerHTML = `
+        <div class="title">
+          <span class="swatch" style="background:${f.color}"></span>
+          F${f.feature_id} · ${f.class_name} (${f.class_id})
+        </div>
+        <div class="faces">faces: [${f.face_ids.join(", ")}]</div>
+        ${f.params ? `<pre class="params">${JSON.stringify(f.params, null, 2)}</pre>` : ""}
+      `;
+      el.addEventListener("click", () => {
+        applyHighlight(f.feature_id);
+        tooltip.textContent =
+          `Feature ${f.feature_id} · ${f.class_name} · faces [${f.face_ids.join(", ")}]`;
+      });
+      fl.appendChild(el);
+    }
+
+    const el = document.getElementById("edge-list");
+    el.innerHTML = "";
+    for (const e of DATA.edges) {
+      const div = document.createElement("div");
+      div.className = "edge-item";
+      div.textContent = `F${e.source} ↔ F${e.target} (${e.type || "adjacent"})`;
+      el.appendChild(div);
+    }
+
+    const stock = DATA.faces
+      .filter((f) => f.feature_id < 0)
+      .map((f) => f.face_index);
+    document.getElementById("stock-faces").textContent =
+      stock.length ? `[${stock.join(", ")}]` : "(none)";
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+
+  renderer.domElement.addEventListener("pointerdown", (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(faceMeshes, false);
+    if (!hits.length) {
+      applyHighlight(null);
+      tooltip.textContent = "Click a face or sidebar feature to inspect.";
+      return;
+    }
+    const mesh = hits[0].object;
+    const fi = mesh.userData.faceIndex;
+    const fid = mesh.userData.featureId;
+    if (fid >= 0) applyHighlight(fid);
+    const feat = DATA.features.find((f) => f.feature_id === fid);
+    tooltip.textContent = feat
+      ? `Face ${fi} → Feature ${fid} (${feat.class_name}) · neighbors in sidebar edges`
+      : `Face ${fi} · stock / unassigned (not in any feature node)`;
+  });
+
+  document.getElementById("btn-labels").addEventListener("click", () => {
+    showLabels = !showLabels;
+    for (const l of labelObjects) l.visible = showLabels;
+    document.getElementById("btn-labels").textContent =
+      showLabels ? "Hide labels" : "Show labels";
+  });
+
+  document.getElementById("btn-edges").addEventListener("click", () => {
+    showEdges = !showEdges;
+    if (edgeLines) edgeLines.visible = showEdges;
+    document.getElementById("btn-edges").textContent =
+      showEdges ? "Hide edges" : "Show edges";
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    applyHighlight(null);
+    fitCamera();
+    tooltip.textContent = "Click a face or sidebar feature to inspect.";
+  });
+
+  function resize() {
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    labelRenderer.setSize(w, h);
+  }
+
+  new ResizeObserver(resize).observe(wrap);
+
+  buildMeshes();
+  edgeLines = buildEdgeLines();
+  if (edgeLines) root.add(edgeLines);
+  centerAndScale();
+  fitCamera();
+  renderSidebar();
+  resize();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+  }
+  animate();
+  </script>
+</body>
+</html>

@@ -148,6 +148,25 @@ def _surface_type_code(face) -> tuple[int, str]:
     return 11, name
 
 
+def face_mid_curvature(face) -> tuple[float, float]:
+    """(mean, gaussian) curvature at the face UV midpoint, in 1/length units.
+
+    Rotation- and orientation-invariant scalars from the CAD kernel: planes give
+    (0, 0), cylinders (1/2r, 0), spheres (1/r, 1/r^2). Returns (0, 0) when the
+    surface has no defined curvature (degenerate/undefined patch)."""
+    umin, umax, vmin, vmax = breptools.UVBounds(face)
+    surf = BRepAdaptor_Surface(face, True)
+    p = BRepLProp_SLProps(surf, 0.5 * (umin + umax), 0.5 * (vmin + vmax), 2, 1e-6)
+    if not p.IsCurvatureDefined():
+        return 0.0, 0.0
+    h = float(p.MeanCurvature())
+    k = float(p.GaussianCurvature())
+    # OCC can emit inf/nan on near-degenerate patches; clamp to a safe zero.
+    if not (np.isfinite(h) and np.isfinite(k)):
+        return 0.0, 0.0
+    return h, k
+
+
 def face_mid_normal(face) -> np.ndarray:
     umin, umax, vmin, vmax = breptools.UVBounds(face)
     surf = BRepAdaptor_Surface(face, True)
@@ -275,6 +294,8 @@ def extract_brep_from_step(
                 raw_i, stats.filename,
             )
 
+        mean_curv, gauss_curv = face_mid_curvature(face)
+
         c = gp.CentreOfMass()
         label = _read_face_label(treader, face)
         if require_labels:
@@ -292,6 +313,7 @@ def extract_brep_from_step(
             "cent": np.array([c.X(), c.Y(), c.Z()], dtype=np.float64),
             "tcode": float(tcode),
             "normal": normal.astype(np.float64),
+            "curv": np.array([mean_curv, gauss_curv], dtype=np.float64),
         })
 
     if require_labels and len(kept_labels) != len(kept_faces):
@@ -309,6 +331,7 @@ def extract_brep_from_step(
     cent = np.stack([r["cent"] for r in kept_faces])
     tcode = np.array([r["tcode"] for r in kept_faces], dtype=np.float64)
     normals = np.stack([r["normal"] for r in kept_faces])
+    curv = np.stack([r["curv"] for r in kept_faces])  # [N, 2] (mean, gaussian)
     labels = np.array(kept_labels, dtype=np.int64) if require_labels else None
 
     A, Aval, E1, E2, E3 = [], [], [], [], []
@@ -396,6 +419,7 @@ def extract_brep_from_step(
         cent=cent,
         tcode=tcode,
         normals=normals,
+        curv=curv,
         plane_d=plane_d,
         A=np.array(A, np.int64).reshape(-1, 2),
         Aval=np.array(Aval, np.float32),
@@ -420,11 +444,17 @@ def mm01(a):
     return (a - lo) / (hi - lo + 1e-9)
 
 
-def build_V1(model: dict) -> np.ndarray:
+def build_V1(model: dict, *, include_curvature: bool = False) -> np.ndarray:
     cc = mm01(np.column_stack([model["area"], model["cent"]]))
-    return np.column_stack(
-        [cc, model["tcode"] / 11.0, model["normals"], model["plane_d"]]
-    ).astype(np.float32)
+    # cols 0-8: [area,cx,cy,cz]/[0,1]; type/11; nx;ny;nz; plane_d  (released schema)
+    cols = [cc, model["tcode"] / 11.0, model["normals"], model["plane_d"]]
+    if include_curvature:
+        # cols 9-10: mean & gaussian curvature (raw 1/length; normalized in feature build)
+        curv = model.get("curv")
+        if curv is None:
+            curv = np.zeros((model["cent"].shape[0], 2), dtype=np.float64)
+        cols.append(curv)
+    return np.column_stack(cols).astype(np.float32)
 
 
 def _canonical_edge(u, v):
@@ -435,6 +465,7 @@ def model_to_pyg(
     model: dict,
     num_surface_types: int = 6,
     angle_reduce: str = "median",
+    include_curvature: bool = False,
 ):
     """Convert a B-rep model dict to (x, edge_index, edge_attr) PyG tensors as numpy."""
     from brep_features import (
@@ -443,7 +474,7 @@ def model_to_pyg(
         make_undirected,
     )
 
-    v1 = build_V1(model)
+    v1 = build_V1(model, include_curvature=include_curvature)
     x = build_node_features_regen(v1, num_surface_types)
 
     e1 = {_canonical_edge(u, v) for u, v in model["E1"] if u != v}
@@ -496,12 +527,16 @@ def ingest_step_to_pyg(
     num_surface_types: int = 6,
     angle_reduce: str = "median",
     min_face_area: float = DEFAULT_MIN_FACE_AREA,
+    include_curvature: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, StepIngestStats]:
     """Single-file runtime entry: STEP path -> (x, edge_index, edge_attr), stats."""
     model, stats = extract_brep_from_step(
         path, require_labels=False, min_face_area=min_face_area,
     )
     x, edge_index, edge_attr = model_to_pyg(
-        model, num_surface_types=num_surface_types, angle_reduce=angle_reduce,
+        model,
+        num_surface_types=num_surface_types,
+        angle_reduce=angle_reduce,
+        include_curvature=include_curvature,
     )
     return x, edge_index, edge_attr, stats

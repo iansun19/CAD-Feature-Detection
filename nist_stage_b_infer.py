@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Stage B (torch env): load the 25-class 0.9945 checkpoint, run inference on the
-Stage-A graph, and COLLAPSE 25->12 via taxonomy.OLD_TO_NEW (sum softmax mass per
-group) to get a proper 12-class distribution. Emits per-face predictions +
-honesty checks + nist_ctc_01_predictions.jsonl.
+Stage B (torch env): load the promoted checkpoint from runs_cloud_latest/, run
+inference on the Stage-A graph, and emit per-face predictions + honesty checks +
+nist_ctc_01_predictions.jsonl.
 
-NOTE (documented deviation): no 12-class checkpoint exists on disk; per user
-direction we run the 25-class model and collapse for this one file only.
+Handles both head widths: a native 12-class checkpoint is used directly; a legacy
+25-class checkpoint is collapsed 25->12 via taxonomy.OLD_TO_NEW (sum softmax mass
+per group). The current system model is native 12-class.
 
 Run: .venv/bin/python nist_stage_b_infer.py
 """
@@ -23,12 +23,15 @@ import torch.nn.functional as F
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
+from feature_graph import build_feature_graph, summarize_graph, write_feature_graph  # noqa: E402
+from feature_instances import union_find_instances  # noqa: E402
 from model import BRepGNN  # noqa: E402
 from taxonomy import NEW_NAMES, NUM_CLASSES, OLD_TO_NEW, validate  # noqa: E402
 
 NPZ = os.path.join(ROOT, "nist_ctc_01_stage_a.npz")
-CKPT = os.path.join(ROOT, "runs_cloud_latest", "best_model.pt")  # 25-class, acc 0.9945
+CKPT = os.path.join(ROOT, "runs_cloud_latest", "best_model.pt")  # native 12-class, test_acc 0.9944
 OUT_JSONL = os.path.join(ROOT, "nist_ctc_01_predictions.jsonl")
+OUT_FEATURE_GRAPH = os.path.join(ROOT, "nist_ctc_01_feature_graph.json")
 NUM_OLD = 25
 HIDDEN, NUM_LAYERS, DROPOUT = 128, 4, 0.2
 SYNTH_TEST_ACC = 0.9945
@@ -47,30 +50,8 @@ def collapse_matrix() -> np.ndarray:
 
 def union_find_clusters(n, pred, edges):
     """Group connected faces sharing the same predicted class. edges: (2,E)."""
-    parent = list(range(n))
-
-    def find(a):
-        while parent[a] != a:
-            parent[a] = parent[parent[a]]
-            a = parent[a]
-        return a
-
-    def union(a, b):
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[ra] = rb
-
-    src, dst = edges
-    for u, v in zip(src.tolist(), dst.tolist()):
-        if pred[u] == pred[v]:
-            union(int(u), int(v))
-    root_to_cid, cluster_of = {}, [0] * n
-    for i in range(n):
-        r = find(i)
-        if r not in root_to_cid:
-            root_to_cid[r] = len(root_to_cid)
-        cluster_of[i] = root_to_cid[r]
-    return np.array(cluster_of, dtype=np.int64)
+    edge_index = np.stack([np.asarray(edges[0]), np.asarray(edges[1])])
+    return union_find_instances(n, pred, edge_index, ignore_class=None)
 
 
 def neighbors(n, edges):
@@ -94,28 +75,32 @@ def main():
     print(f"[Stage B] N={N} node_in={x.shape[1]} edge_in={edge_attr.shape[1]} "
           f"edges={edge_index.shape[1]}")
 
-    # --- load 25-class checkpoint, assert its true width ---
+    # --- load checkpoint; support native 12-class or legacy 25-class heads ---
     sd = torch.load(CKPT, map_location="cpu")
     head_w = sd["head.3.weight"].shape[0]
     node_in = sd["input_proj.weight"].shape[1]
     edge_in = sd["edge_proj.weight"].shape[1]
-    print(f"[Stage B] checkpoint head width = {head_w} (expected 25 legacy), "
+    print(f"[Stage B] checkpoint head width = {head_w}, "
           f"node_in={node_in} edge_in={edge_in}")
-    assert head_w == NUM_OLD, f"expected 25-class head, got {head_w}"
+    assert head_w in (NUM_CLASSES, NUM_OLD), (
+        f"head width {head_w} is neither 12-class nor 25-class")
     assert node_in == x.shape[1] and edge_in == edge_attr.shape[1], "dim mismatch"
-    print("[Stage B] DEVIATION: 25-class model + OLD_TO_NEW collapse (no 12-class ckpt)")
 
-    model = BRepGNN(node_in, edge_in, HIDDEN, NUM_OLD, NUM_LAYERS, DROPOUT)
+    model = BRepGNN(node_in, edge_in, HIDDEN, head_w, NUM_LAYERS, DROPOUT)
     model.load_state_dict(sd)
     model.eval()
 
     with torch.no_grad():
-        logits25 = model(x, edge_index, edge_attr)          # [N,25]
-        probs25 = F.softmax(logits25, dim=1).cpu().numpy()  # [N,25]
+        logits = model(x, edge_index, edge_attr)            # [N,head_w]
+        probs = F.softmax(logits, dim=1).cpu().numpy()
 
-    M = collapse_matrix()
-    probs12 = probs25 @ M                                   # [N,12], rows sum ~1
-    assert np.allclose(probs12.sum(1), 1.0, atol=1e-5), "collapsed probs not normalized"
+    if head_w == NUM_CLASSES:
+        print("[Stage B] native 12-class model (direct, no collapse)")
+        probs12 = probs                                     # [N,12]
+    else:
+        print("[Stage B] legacy 25-class model + OLD_TO_NEW collapse")
+        probs12 = probs @ collapse_matrix()                 # [N,12], mass-preserving
+    assert np.allclose(probs12.sum(1), 1.0, atol=1e-5), "12-class probs not normalized"
     pred = probs12.argmax(1).astype(np.int64)
     conf = probs12[np.arange(N), pred].astype(np.float64)
 
@@ -223,11 +208,20 @@ def main():
 
     # NO accuracy / F1 — there is no ground truth in this file.
 
-    # ---------- write jsonl ----------
+    # ---------- write jsonl + feature graph ----------
     with open(OUT_JSONL, "w") as f:
         for r in records:
             f.write(json.dumps(r) + "\n")
     print(f"\n[Stage B] wrote {OUT_JSONL} ({len(records)} records)")
+
+    graph = build_feature_graph(
+        pred, conf, edge_index.cpu().numpy(),
+        part_id="nist_ctc_01",
+        entity_ids=entity_ids,
+    )
+    write_feature_graph(OUT_FEATURE_GRAPH, graph)
+    print(f"[Stage B] wrote {OUT_FEATURE_GRAPH}")
+    print(f"[Stage B]   {summarize_graph(graph)}")
 
 
 if __name__ == "__main__":

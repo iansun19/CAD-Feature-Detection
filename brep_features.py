@@ -3,7 +3,12 @@ import numpy as np
 
 
 def build_node_features_regen(v1, num_surface_types):
-    """14-dim node features from a regenerated V_1 block [N, 9]."""
+    """Node features from a regenerated V_1 block.
+
+    V_1 cols 0-8 (released schema) give surface-type one-hot + area + centroid +
+    normal + plane-d. When V_1 has cols 9-10 (mean & gaussian curvature, raw
+    1/length), two extra normalized curvature dims are appended; a 9-col block
+    stays backward-compatible (no curvature dims)."""
     v1 = np.asarray(v1, dtype=np.float32)
     n = v1.shape[0]
     type_ids = np.clip(np.round(v1[:, 4] * 11).astype(int) - 1,
@@ -18,7 +23,14 @@ def build_node_features_regen(v1, num_surface_types):
     d = v1[:, 8:9].copy()
     d = np.sign(d) * np.log1p(np.abs(d))
     d = (d - d.mean()) / (d.std() + 1e-6)
-    return np.concatenate([onehot, area, cent, normal, d], axis=1)
+    feats = [onehot, area, cent, normal, d]
+    if v1.shape[1] >= 11:
+        # curvature is signed and wide-ranged: signed-log then per-part standardize
+        curv = v1[:, 9:11].copy()
+        curv = np.sign(curv) * np.log1p(np.abs(curv))
+        curv = (curv - curv.mean(axis=0, keepdims=True)) / (curv.std(axis=0, keepdims=True) + 1e-6)
+        feats.append(curv)
+    return np.concatenate(feats, axis=1)
 
 
 def build_edge_features_regen(convexity_ids, cos_angles):

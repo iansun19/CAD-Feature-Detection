@@ -1,0 +1,26 @@
+# Unified environment: PyTorch + PyG + pythonocc-core (OpenCASCADE).
+#
+# Create and activate:
+#   conda env create -f environment.yml
+#   conda activate mlcad
+#
+# Or run: bash scripts/setup_env.sh
+
+name: mlcad
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pythonocc-core=7.7.2
+  - numpy
+  - h5py
+  - pyyaml
+  - scikit-learn
+  - tqdm
+  - pip
+  - pip:
+      - torch
+      - torch-geometric
+variables:
+  # torch + OCCT both ship libomp on macOS
+  KMP_DUPLICATE_LIB_OK: "TRUE"

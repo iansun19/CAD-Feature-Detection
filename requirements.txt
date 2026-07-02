@@ -1,51 +1,21 @@
-# --- Environment setup -------------------------------------------------------
-# Pick ONE path below. Companion wheels (torch_scatter, etc.) are optional
-# speed optimizations — this repo runs fine without them via PyG fallbacks.
+# mlcad — unified environment (recommended)
+#
+#   conda env create -f environment.yml
+#   conda activate mlcad
+#
+# Or: bash scripts/setup_env.sh
+#
+# This single env includes:
+#   - pythonocc-core (OpenCASCADE STEP/BRep parsing)
+#   - torch + torch-geometric (GNN training and inference)
+#   - h5py, pyyaml, numpy, scikit-learn, tqdm
+#
+# Verify after install:
+#   python -c "import torch; from OCC.Core.STEPControl import STEPControl_Reader; import torch_geometric; print('ok')"
 #
 # =============================================================================
-# Mac / Apple Silicon (recommended first try — no companion wheels needed)
+# Legacy pip-only path (H5 training/inference only — no STEP parsing)
 # =============================================================================
 #    pip install torch torch_geometric h5py pyyaml numpy tqdm scikit-learn
 #
-# Verify MPS is available:
-#    python -c "import torch; print('mps', torch.backends.mps.is_available())"
-#
-# =============================================================================
-# NVIDIA GPU (fast path — companion wheels optional but recommended)
-# =============================================================================
-# Adjust the CUDA version (cu121) to match your driver: check with `nvidia-smi`.
-#
-# 1) PyTorch (pick the line matching your CUDA):
-#    pip install torch --index-url https://download.pytorch.org/whl/cu121
-#
-# 2) PyTorch Geometric (minimal — works without companion wheels):
-#    pip install torch_geometric
-#
-# 3) Optional speed wheels (must match torch & CUDA; skip if install fails):
-#    pip install pyg_lib torch_scatter torch_sparse \
-#        -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
-#    (replace 2.3.0+cu121 with your actual `python -c "import torch;print(torch.__version__)"`)
-#
-# 4) Utilities:
-#    pip install h5py pyyaml numpy tqdm scikit-learn
-#
-# Verify GPU is visible:
-#    python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
-#
-# =============================================================================
-# Verify PyG + device (any platform)
-# =============================================================================
-#    python -c "
-# import torch
-# for pkg in ('torch_scatter', 'torch_sparse'):
-#     try: __import__(pkg); print(pkg, 'installed')
-#     except ImportError: print(pkg, 'not installed (OK)')
-# print('cuda', torch.cuda.is_available())
-# print('mps', getattr(torch.backends, 'mps', None) and torch.backends.mps.is_available())
-# "
-#
-# =============================================================================
-# ONLY if you parse STEP files yourself (skip if using the prebuilt H5 graphs):
-# =============================================================================
-#    conda install -c conda-forge pythonocc-core=7.7.0
-#    (pythonocc is conda-only in practice; this is why the H5 path is preferred.)
+# STEP ingest and param enrichment require pythonocc-core (conda-forge only).

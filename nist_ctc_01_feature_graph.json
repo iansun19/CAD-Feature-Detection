@@ -1,0 +1,688 @@
+{
+  "schema_version": 1,
+  "part_id": "nist_ctc_01_stage_a",
+  "n_faces": 139,
+  "n_features": 29,
+  "n_edges": 26,
+  "nodes": [
+    {
+      "feature_id": 0,
+      "class_id": 2,
+      "class_name": "through_slot",
+      "face_ids": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        17,
+        19,
+        20,
+        21,
+        22,
+        23,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        49,
+        50,
+        51,
+        52,
+        53,
+        55,
+        56,
+        57,
+        58,
+        59,
+        68,
+        69,
+        70,
+        71,
+        72,
+        77,
+        79,
+        80,
+        83,
+        84,
+        85
+      ],
+      "n_faces": 60,
+      "mean_confidence": 0.9683,
+      "entity_ids": [
+        300,
+        301,
+        302,
+        303,
+        304,
+        305,
+        306,
+        307,
+        308,
+        309,
+        310,
+        312,
+        313,
+        314,
+        316,
+        317,
+        318,
+        319,
+        320,
+        323,
+        324,
+        325,
+        326,
+        327,
+        328,
+        329,
+        330,
+        331,
+        332,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341,
+        342,
+        343,
+        344,
+        346,
+        347,
+        348,
+        349,
+        350,
+        352,
+        353,
+        354,
+        355,
+        356,
+        365,
+        366,
+        367,
+        368,
+        369,
+        374,
+        376,
+        377,
+        380,
+        381,
+        382
+      ]
+    },
+    {
+      "feature_id": 1,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104
+      ],
+      "n_faces": 13,
+      "mean_confidence": 0.9386,
+      "entity_ids": [
+        358,
+        359,
+        360,
+        361,
+        362,
+        363,
+        364,
+        396,
+        397,
+        398,
+        399,
+        400,
+        401
+      ]
+    },
+    {
+      "feature_id": 2,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        73
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.998,
+      "entity_ids": [
+        370
+      ]
+    },
+    {
+      "feature_id": 3,
+      "class_id": 5,
+      "class_name": "blind_hole",
+      "face_ids": [
+        74
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9847,
+      "entity_ids": [
+        371
+      ]
+    },
+    {
+      "feature_id": 4,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        75
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9973,
+      "entity_ids": [
+        372
+      ]
+    },
+    {
+      "feature_id": 5,
+      "class_id": 5,
+      "class_name": "blind_hole",
+      "face_ids": [
+        76
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9844,
+      "entity_ids": [
+        373
+      ]
+    },
+    {
+      "feature_id": 6,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        86
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.998,
+      "entity_ids": [
+        383
+      ]
+    },
+    {
+      "feature_id": 7,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        87,
+        88
+      ],
+      "n_faces": 2,
+      "mean_confidence": 0.845,
+      "entity_ids": [
+        384,
+        385
+      ]
+    },
+    {
+      "feature_id": 8,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        89,
+        90
+      ],
+      "n_faces": 2,
+      "mean_confidence": 0.9526,
+      "entity_ids": [
+        386,
+        387
+      ]
+    },
+    {
+      "feature_id": 9,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        91,
+        92
+      ],
+      "n_faces": 2,
+      "mean_confidence": 0.9983,
+      "entity_ids": [
+        388,
+        389
+      ]
+    },
+    {
+      "feature_id": 10,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        93,
+        94,
+        95,
+        96,
+        98
+      ],
+      "n_faces": 5,
+      "mean_confidence": 0.9934,
+      "entity_ids": [
+        390,
+        391,
+        392,
+        393,
+        395
+      ]
+    },
+    {
+      "feature_id": 11,
+      "class_id": 0,
+      "class_name": "through_hole",
+      "face_ids": [
+        97
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9662,
+      "entity_ids": [
+        394
+      ]
+    },
+    {
+      "feature_id": 12,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        105
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.5064,
+      "entity_ids": [
+        402
+      ]
+    },
+    {
+      "feature_id": 13,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        106
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9999,
+      "entity_ids": [
+        403
+      ]
+    },
+    {
+      "feature_id": 14,
+      "class_id": 1,
+      "class_name": "poly_through_passage",
+      "face_ids": [
+        107
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.5389,
+      "entity_ids": [
+        404
+      ]
+    },
+    {
+      "feature_id": 15,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        108
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9983,
+      "entity_ids": [
+        405
+      ]
+    },
+    {
+      "feature_id": 16,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        110
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9993,
+      "entity_ids": [
+        407
+      ]
+    },
+    {
+      "feature_id": 17,
+      "class_id": 1,
+      "class_name": "poly_through_passage",
+      "face_ids": [
+        111
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.3805,
+      "entity_ids": [
+        408
+      ]
+    },
+    {
+      "feature_id": 18,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        118
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9892,
+      "entity_ids": [
+        415
+      ]
+    },
+    {
+      "feature_id": 19,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        119
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.8745,
+      "entity_ids": [
+        416
+      ]
+    },
+    {
+      "feature_id": 20,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        120
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9859,
+      "entity_ids": [
+        417
+      ]
+    },
+    {
+      "feature_id": 21,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        121
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.8507,
+      "entity_ids": [
+        418
+      ]
+    },
+    {
+      "feature_id": 22,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        122
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.997,
+      "entity_ids": [
+        419
+      ]
+    },
+    {
+      "feature_id": 23,
+      "class_id": 6,
+      "class_name": "blind_pocket",
+      "face_ids": [
+        126,
+        127,
+        128,
+        130,
+        132,
+        133,
+        134,
+        138
+      ],
+      "n_faces": 8,
+      "mean_confidence": 0.975,
+      "entity_ids": [
+        423,
+        424,
+        425,
+        427,
+        429,
+        430,
+        431,
+        435
+      ]
+    },
+    {
+      "feature_id": 24,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        129
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.9995,
+      "entity_ids": [
+        426
+      ]
+    },
+    {
+      "feature_id": 25,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        131
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "entity_ids": [
+        428
+      ]
+    },
+    {
+      "feature_id": 26,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        135
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "entity_ids": [
+        432
+      ]
+    },
+    {
+      "feature_id": 27,
+      "class_id": 9,
+      "class_name": "chamfer",
+      "face_ids": [
+        136
+      ],
+      "n_faces": 1,
+      "mean_confidence": 0.6989,
+      "entity_ids": [
+        433
+      ]
+    },
+    {
+      "feature_id": 28,
+      "class_id": 10,
+      "class_name": "round_fillet",
+      "face_ids": [
+        137
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "entity_ids": [
+        434
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": 0,
+      "target": 11,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 10,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 6,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 7,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 9,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 8,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 10,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 11,
+      "type": "adjacent"
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "type": "adjacent"
+    },
+    {
+      "source": 4,
+      "target": 5,
+      "type": "adjacent"
+    },
+    {
+      "source": 10,
+      "target": 11,
+      "type": "adjacent"
+    },
+    {
+      "source": 12,
+      "target": 13,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 14,
+      "type": "adjacent"
+    },
+    {
+      "source": 14,
+      "target": 15,
+      "type": "adjacent"
+    },
+    {
+      "source": 16,
+      "target": 17,
+      "type": "adjacent"
+    },
+    {
+      "source": 18,
+      "target": 19,
+      "type": "adjacent"
+    },
+    {
+      "source": 19,
+      "target": 20,
+      "type": "adjacent"
+    },
+    {
+      "source": 20,
+      "target": 21,
+      "type": "adjacent"
+    },
+    {
+      "source": 21,
+      "target": 22,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 28,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 24,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 25,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 26,
+      "type": "adjacent"
+    },
+    {
+      "source": 26,
+      "target": 27,
+      "type": "adjacent"
+    },
+    {
+      "source": 27,
+      "target": 28,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 27,
+      "type": "adjacent"
+    }
+  ]
+}
