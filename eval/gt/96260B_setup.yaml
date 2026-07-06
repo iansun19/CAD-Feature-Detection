@@ -1,0 +1,33 @@
+# Setup descriptor - 96260B XR004 PCD PLATE (both split-panel setups)
+# Matches run_cascade behavior: +Y opening axis (auto, confidence 1.0),
+# front->filleted_open_pocket, rear->filleted_pocket for spatial pockets.
+# Lobe-tier split emits both mouth (filleted_open_pocket) and deep
+# (filleted_pocket) bands per lobe; setup pocket_access does not override tiers.
+# part_id values in eval/gt/96260B_{front,rear}.yaml remain 96260B_front / 96260B_rear
+# for eval harness identity; this file uses the family part_id plus named setups.
+
+part_id: "96260B"
+
+defaults:
+  setup_id: default
+  opening_axis:
+    mode: auto
+    min_confidence: 0.85
+  pocket_access: unknown
+
+setups:
+  front:
+    setup_id: front
+    part_step: "96260B_FRONT_XR004_PCD PLATE.stp copy"
+    machining_side: front
+    opening_axis:
+      mode: auto
+    pocket_access: open
+
+  rear:
+    setup_id: rear
+    part_step: "96260B_REAR_XR004_PCD PLATE.stp copy"
+    machining_side: back
+    opening_axis:
+      mode: auto
+    pocket_access: closed

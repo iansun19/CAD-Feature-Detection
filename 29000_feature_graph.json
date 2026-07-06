@@ -31,14 +31,7 @@
             ]
           }
         ],
-        "cylindrical_radii": [],
-        "n_faces": 1,
-        "bbox_size_x": 0.0,
-        "bbox_size_y": 0.0,
-        "bbox_size_z": 0.0,
-        "bbox_depth": 0.0,
-        "bbox_width": 0.0,
-        "bbox_length": 0.0
+        "cylindrical_radii": []
       }
     },
     {
@@ -122,15 +115,7 @@
             ]
           }
         ],
-        "cylindrical_radii": [],
-        "n_planar_faces": 6,
-        "bbox_size_x": 28.380191,
-        "bbox_size_y": 18.487562,
-        "bbox_size_z": 3.974943,
-        "bbox_depth": 3.974943,
-        "bbox_width": 18.487562,
-        "bbox_length": 28.380191,
-        "step_height": 3.974943
+        "cylindrical_radii": []
       }
     },
     {
@@ -220,25 +205,6 @@
               0.0
             ]
           }
-        ],
-        "n_planar_faces": 2,
-        "n_cylindrical_faces": 2,
-        "n_walls": 2,
-        "n_planar_walls": 0,
-        "n_cylindrical_walls": 2,
-        "n_opening_faces": 1,
-        "floor_face_index": 13,
-        "bbox_size_x": 3.610185,
-        "bbox_size_y": 0.0,
-        "bbox_size_z": 3.437834,
-        "bbox_depth": 0.0,
-        "bbox_width": 3.437834,
-        "bbox_length": 3.610185,
-        "depth_along_floor_normal": 3.610185,
-        "floor_normal": [
-          1.0,
-          -0.0,
-          0.0
         ]
       }
     },
@@ -350,19 +316,7 @@
             "semi_angle_deg": 67.5
           }
         ],
-        "cylindrical_radii": [],
-        "n_faces": 8,
-        "semi_angle_deg": 45.0,
-        "semi_angles_deg": [
-          45.0,
-          67.5
-        ],
-        "bbox_size_x": 2.993043,
-        "bbox_size_y": 0.365135,
-        "bbox_size_z": 3.071953,
-        "bbox_depth": 0.365135,
-        "bbox_width": 2.993043,
-        "bbox_length": 3.071953
+        "cylindrical_radii": []
       }
     },
     {
@@ -391,26 +345,7 @@
             ]
           }
         ],
-        "cylindrical_radii": [],
-        "n_planar_faces": 1,
-        "n_cylindrical_faces": 0,
-        "n_walls": 0,
-        "n_planar_walls": 0,
-        "n_cylindrical_walls": 0,
-        "n_opening_faces": 0,
-        "floor_face_index": 25,
-        "bbox_size_x": 0.0,
-        "bbox_size_y": 0.0,
-        "bbox_size_z": 0.0,
-        "bbox_depth": 0.0,
-        "bbox_width": 0.0,
-        "bbox_length": 0.0,
-        "depth_along_floor_normal": 0.0,
-        "floor_normal": [
-          0.0,
-          -1.0,
-          -0.0
-        ]
+        "cylindrical_radii": []
       }
     }
   ],
@@ -432,6 +367,6 @@
     }
   ],
   "params_units": "mm",
-  "params_source": "MFCAD++_dataset/step/test/29000.step",
-  "params_notes": "analytic_surfaces/cylindrical_radii/radius/diameter = exact OCC values; n_walls/depth_along_floor_normal/step_height = derived rules (see feature_params.py)"
+  "params_source": "/Users/iansun19/mlcad/MFCAD++_dataset/step/test/29000.step",
+  "params_notes": "Index export: label + face_ids + direct OCC reads (analytic_surfaces, surface_counts, total_area, cylindrical_radii). Heuristic aggregates available via collect_derived_debug()."
 }

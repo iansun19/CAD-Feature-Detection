@@ -42,60 +42,179 @@
       min-height: 0;
     }
     aside {
-      border-right: 1px solid var(--border);
-      background: var(--panel);
+      border-right: 1px solid #d8dce3;
+      background: #f4f5f7;
       overflow-y: auto;
-      padding: 0.75rem;
+      min-height: 0;
     }
-    aside h2 { margin: 0 0 0.5rem; font-size: 0.95rem; }
-    .hint { color: var(--muted); font-size: 0.78rem; line-height: 1.4; margin-bottom: 0.75rem; }
-    .feature-item, .edge-item {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.5rem 0.6rem;
-      margin-bottom: 0.45rem;
-      cursor: pointer;
-      font-size: 0.82rem;
+    .sidebar-inner { padding: 0; }
+    .hint {
+      color: #5f6368;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      margin: 0;
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid #d8dce3;
+      background: #eef0f3;
     }
-    .feature-item:hover { border-color: var(--accent); }
-    .feature-item.selected { background: var(--highlight); border-color: var(--accent); }
-    .feature-item .title { font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
-    .swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
-    .faces { color: var(--muted); margin-top: 0.25rem; word-break: break-all; }
-    pre.params {
-      margin: 0.35rem 0 0;
-      padding: 0.35rem;
-      background: rgba(0,0,0,0.25);
+    .face-search {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid #d8dce3;
+      background: #fff;
+    }
+    .face-search label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #202124;
+      margin-bottom: 0.35rem;
+    }
+    .face-search-row {
+      display: flex;
+      gap: 0.35rem;
+    }
+    .face-search input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #d8dce3;
       border-radius: 4px;
-      font-size: 0.68rem;
-      line-height: 1.35;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: #c9d1d9;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.78rem;
+      color: #202124;
+      background: #fff;
     }
-    .edge-item { cursor: default; color: var(--muted); }
+    .face-search input:focus {
+      outline: none;
+      border-color: #6ea8fe;
+      box-shadow: 0 0 0 2px rgba(110, 168, 254, 0.25);
+    }
+    .face-search button {
+      border: 1px solid #d8dce3;
+      border-radius: 4px;
+      background: #f1f3f4;
+      color: #3c4043;
+      font-size: 0.75rem;
+      padding: 0.4rem 0.55rem;
+      cursor: pointer;
+    }
+    .face-search button:hover { background: #e8f0fe; border-color: #6ea8fe; }
+    .face-search-help {
+      margin-top: 0.35rem;
+      font-size: 0.7rem;
+      color: #80868b;
+      line-height: 1.35;
+    }
+    .face-search-status {
+      margin-top: 0.35rem;
+      font-size: 0.72rem;
+      color: #5f6368;
+      line-height: 1.35;
+    }
+    .face-search-status.error { color: #c5221f; }
+    .feature-groups { display: flex; flex-direction: column; }
+    .feature-group {
+      border-bottom: 1px solid #d8dce3;
+      background: #fff;
+    }
+    .group-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.7rem 0.85rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      color: #3c4043;
+      font: inherit;
+    }
+    .group-header:hover { background: #f1f3f4; }
+    .group-header.selected { background: #e8f0fe; }
+    .group-header-main { flex: 1; min-width: 0; }
+    .group-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1.35;
+      color: #202124;
+    }
+    .group-subtitle {
+      margin-top: 0.2rem;
+      font-size: 0.78rem;
+      color: #5f6368;
+      line-height: 1.35;
+    }
+    .group-chevron {
+      flex-shrink: 0;
+      width: 0.55rem;
+      height: 0.55rem;
+      margin-top: 0.2rem;
+      border-right: 2px solid #5f6368;
+      border-bottom: 2px solid #5f6368;
+      transform: rotate(-45deg);
+      transition: transform 0.15s ease;
+    }
+    .feature-group.expanded .group-chevron { transform: rotate(45deg); margin-top: 0.05rem; }
+    .group-instances {
+      display: none;
+      border-top: 1px solid #e8eaed;
+      background: #fafafa;
+    }
+    .feature-group.expanded .group-instances { display: block; }
+    .instance-item {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 0.85rem 0.55rem 1.15rem;
+      border-top: 1px solid #eceff1;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: #3c4043;
+    }
+    .instance-item:first-child { border-top: none; }
+    .instance-item:hover { background: #f1f3f4; }
+    .instance-item.selected { background: #e8f0fe; }
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .instance-label { flex: 1; min-width: 0; line-height: 1.35; }
+    .instance-meta { color: #80868b; font-size: 0.72rem; }
+    .sidebar-footer {
+      padding: 0.65rem 0.85rem;
+      border-top: 1px solid #d8dce3;
+      background: #eef0f3;
+      font-size: 0.72rem;
+      color: #5f6368;
+    }
+    .sidebar-footer summary {
+      cursor: pointer;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stock-faces {
+      margin-top: 0.35rem;
+      word-break: break-all;
+      line-height: 1.35;
+    }
     .viewer-wrap {
       position: relative;
       min-height: 0;
       background: #ffffff;
     }
-    #canvas-host, #label-host {
+    #canvas-host {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-    }
-    #label-host { pointer-events: none; overflow: hidden; }
-    .face-label {
-      color: #111;
-      font-size: 13px;
-      font-weight: 700;
-      text-shadow:
-        -1px -1px 0 #fff, 1px -1px 0 #fff,
-        -1px 1px 0 #fff, 1px 1px 0 #fff,
-        0 0 4px #fff;
-      user-select: none;
-      transform: translate(-50%, -50%);
     }
     .toolbar {
       position: absolute;
@@ -115,6 +234,51 @@
       cursor: pointer;
     }
     .toolbar button:hover { border-color: var(--accent); }
+    .inspector {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(15, 17, 23, 0.94);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      z-index: 20;
+      min-width: 240px;
+      max-width: min(360px, calc(100% - 120px));
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+    }
+    .inspector.hidden { display: none; }
+    .inspector-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.15rem;
+    }
+    .inspector-class {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 0.45rem;
+    }
+    .inspector-confidence {
+      display: inline-block;
+      background: rgba(110, 168, 254, 0.18);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 0.45rem;
+    }
+    .inspector-detail {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .inspector-detail strong { color: var(--text); }
     .tooltip {
       position: absolute;
       bottom: 10px;
@@ -127,8 +291,6 @@
       max-width: 90%;
       z-index: 10;
     }
-    .stock-section { margin-top: 1rem; }
-    .stock-faces { font-size: 0.78rem; color: var(--muted); word-break: break-all; }
   </style>
 </head>
 <body>
@@ -138,25 +300,46 @@
   </header>
   <div class="layout">
     <aside>
-      <h2>Features</h2>
-      <p class="hint">Colors group faces into feature instances. Numbers on the model are <strong>face indices</strong> (0-based, STEP order). Red lines = feature adjacency edges.</p>
-      <div id="feature-list"></div>
-      <h2 style="margin-top:1rem">Edges</h2>
-      <div id="edge-list"></div>
-      <div class="stock-section">
-        <h2>Stock / unassigned faces</h2>
-        <div class="stock-faces" id="stock-faces"></div>
+      <div class="sidebar-inner">
+        <p class="hint">Click a feature category to highlight all matching faces. Expand a row to select individual instances.</p>
+        <div class="face-search">
+          <label for="face-search-input">Search by face index</label>
+          <div class="face-search-row">
+            <input
+              id="face-search-input"
+              type="text"
+              placeholder="e.g. 105, 117, 129"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <button type="button" id="face-search-go">Go</button>
+            <button type="button" id="face-search-clear">Clear</button>
+          </div>
+          <div class="face-search-help">Comma/space-separated indices; ranges like 105-117. URL: ?faces=105,117</div>
+          <div class="face-search-status" id="face-search-status"></div>
+        </div>
+        <div id="feature-list" class="feature-groups"></div>
+        <div class="sidebar-footer">
+          <details>
+            <summary>Stock / unassigned</summary>
+            <div class="stock-faces" id="stock-faces"></div>
+          </details>
+        </div>
       </div>
     </aside>
     <div class="viewer-wrap" id="viewer-wrap">
       <div id="canvas-host"></div>
-      <div id="label-host"></div>
       <div class="toolbar">
-        <button type="button" id="btn-labels">Hide labels</button>
         <button type="button" id="btn-edges">Hide edges</button>
         <button type="button" id="btn-reset">Reset view</button>
       </div>
-      <div class="tooltip" id="tooltip">Click a face or sidebar feature to inspect.</div>
+      <div id="feature-inspector" class="inspector hidden">
+        <div class="inspector-label">cascade labeled as</div>
+        <div class="inspector-class" id="inspector-class">—</div>
+        <div class="inspector-confidence" id="inspector-confidence"></div>
+        <div class="inspector-detail" id="inspector-detail"></div>
+      </div>
+      <div class="tooltip" id="tooltip">Click a feature on the model or in the sidebar.</div>
     </div>
   </div>
 
@@ -171,7 +354,6 @@
   <script type="module">
   import * as THREE from "three";
   import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-  import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 
   const DATA = __DATA_JSON__;
 
@@ -182,7 +364,6 @@
 
   const wrap = document.getElementById("viewer-wrap");
   const canvasHost = document.getElementById("canvas-host");
-  const labelHost = document.getElementById("label-host");
   const tooltip = document.getElementById("tooltip");
 
   const scene = new THREE.Scene();
@@ -194,12 +375,6 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   canvasHost.appendChild(renderer.domElement);
-
-  const labelRenderer = new CSS2DRenderer();
-  labelRenderer.domElement.style.position = "absolute";
-  labelRenderer.domElement.style.top = "0";
-  labelRenderer.domElement.style.pointerEvents = "none";
-  labelHost.appendChild(labelRenderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -219,11 +394,379 @@
   scene.add(root);
 
   const faceMeshes = [];
-  const labelObjects = [];
+  const faceByIndex = new Map(DATA.faces.map((f) => [f.face_index, f]));
+  const featureById = new Map(DATA.features.map((f) => [f.feature_id, f]));
   let edgeLines = null;
   let selectedFeature = null;
-  let showLabels = true;
+  let selectedClass = null;
+  let selectedFaces = null;
+  let expandedClass = null;
   let showEdges = true;
+  const FACE_SEARCH_HIGHLIGHT = 0xff6600;
+
+  const MM_PER_IN = 25.4;
+  const CLASS_DISPLAY = {
+    contour_surface: "CONTOUR SURFACES",
+    residual_candidate: "CONTOUR SURFACES",
+    flat: "FACES",
+    filleted_blind_hole: "FILLETED BLIND HOLES",
+    blind_hole: "FILLETED BLIND HOLES",
+    open_pocket: "OPEN POCKETS",
+    filleted_open_pocket: "FILLETED OPEN POCKETS",
+    filleted_pocket: "FILLETED POCKETS",
+    pocket: "FILLETED POCKETS",
+    outer_fillet: "OUTER FILLETS",
+    profile: "PROFILES",
+    through_hole: "THROUGH HOLES",
+    wall: "WALLS",
+  };
+  const CLASS_ORDER = [
+    "contour_surface",
+    "flat",
+    "filleted_blind_hole", "blind_hole",
+    "open_pocket",
+    "filleted_open_pocket",
+    "filleted_pocket", "pocket",
+    "outer_fillet",
+    "profile",
+    "through_hole",
+    "wall",
+  ];
+  const FACE_COUNT_CLASSES = new Set(["contour_surface", "wall", "profile"]);
+
+  function displayClassName(className) {
+    return CLASS_DISPLAY[className]
+      || String(className || "unknown").replace(/_/g, " ").toUpperCase();
+  }
+
+  function classSortKey(className) {
+    const idx = CLASS_ORDER.indexOf(className);
+    return idx >= 0 ? idx : CLASS_ORDER.length + className.charCodeAt(0);
+  }
+
+  function formatDiameterInches(diameterMm) {
+    if (diameterMm == null || Number.isNaN(Number(diameterMm))) return null;
+    return `ø${(Number(diameterMm) / MM_PER_IN).toFixed(3).replace(/\.000$/, "")} in`;
+  }
+
+  function instanceSummary(f) {
+    const p = f.params || {};
+    const dia = formatDiameterInches(p.nominal_diameter ?? p.diameter_mm);
+    if (dia) return dia;
+    if (p.subtype) return String(p.subtype).replace(/_/g, " ");
+    if (p.kind && p.kind !== f.class_name) return String(p.kind).replace(/_/g, " ");
+    const n = f.n_faces ?? (f.face_ids || []).length;
+    return `${n} face${n === 1 ? "" : "s"}`;
+  }
+
+  function groupHeaderSubtitle(features) {
+    if (features.length === 1) {
+      const summary = instanceSummary(features[0]);
+      return summary.startsWith("ø") ? `1× ${summary}` : summary;
+    }
+    const allSameDiameter = features.every((f) => {
+      const d = f.params?.nominal_diameter ?? f.params?.diameter_mm;
+      return d != null && Math.abs(d - (features[0].params?.nominal_diameter ?? features[0].params?.diameter_mm)) < 0.01;
+    });
+    if (allSameDiameter && features[0].params) {
+      const dia = formatDiameterInches(features[0].params.nominal_diameter ?? features[0].params.diameter_mm);
+      if (dia) return `${features.length}× ${dia}`;
+    }
+    return null;
+  }
+
+  function groupHeaderCount(group) {
+    if (groupUsesFaceCount(group)) {
+      return group.features.reduce((sum, f) => sum + (f.face_ids || []).length, 0);
+    }
+    return group.features.length;
+  }
+
+  function groupFeaturesByClass() {
+    const groups = new Map();
+    for (const f of DATA.features) {
+      const key = f.class_name || "unknown";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(f);
+    }
+
+    const byDisplay = new Map();
+    for (const [className, items] of groups.entries()) {
+      const label = displayClassName(className);
+      if (!byDisplay.has(label)) {
+        byDisplay.set(label, { classNames: [], features: [] });
+      }
+      const bucket = byDisplay.get(label);
+      bucket.classNames.push(className);
+      bucket.features.push(...items);
+    }
+
+    return [...byDisplay.entries()]
+      .map(([label, bucket]) => {
+        bucket.features.sort((a, b) => {
+          const na = a.n_faces ?? (a.face_ids || []).length;
+          const nb = b.n_faces ?? (b.face_ids || []).length;
+          return nb - na || a.feature_id - b.feature_id;
+        });
+        bucket.classNames.sort((a, b) => classSortKey(a) - classSortKey(b));
+        return [label, bucket];
+      })
+      .sort((a, b) => {
+        const ak = classSortKey(a[1].classNames[0]);
+        const bk = classSortKey(b[1].classNames[0]);
+        return ak - bk || a[0].localeCompare(b[0]);
+      });
+  }
+
+  function featureIdsForGroup(group) {
+    return group.features.map((f) => f.feature_id);
+  }
+
+  function groupUsesFaceCount(group) {
+    return group.classNames.some((name) => FACE_COUNT_CLASSES.has(name));
+  }
+
+  function updateSidebarSelection() {
+    for (const groupEl of document.querySelectorAll(".feature-group")) {
+      const groupKey = groupEl.dataset.groupKey;
+      const header = groupEl.querySelector(".group-header");
+      header.classList.toggle("selected", selectedClass === groupKey && selectedFeature == null);
+      groupEl.classList.toggle("expanded", expandedClass === groupKey);
+      for (const item of groupEl.querySelectorAll(".instance-item")) {
+        item.classList.toggle(
+          "selected",
+          selectedFeature != null && Number(item.dataset.featureId) === selectedFeature,
+        );
+      }
+    }
+  }
+
+  function formatConfidence(value) {
+    if (value == null || Number.isNaN(Number(value))) return null;
+    return `${(Number(value) * 100).toFixed(1)}% confidence`;
+  }
+
+  function showFeatureInfo(f, clickedFaceId = null) {
+    const inspector = document.getElementById("feature-inspector");
+    inspector.classList.remove("hidden");
+    document.getElementById("inspector-class").textContent =
+      displayClassName(f.class_name) || "unknown";
+
+    const confEl = document.getElementById("inspector-confidence");
+    const confText = formatConfidence(f.mean_confidence);
+    if (confText) {
+      confEl.textContent = confText;
+      confEl.style.display = "inline-block";
+    } else {
+      confEl.textContent = "";
+      confEl.style.display = "none";
+    }
+
+    const faceList = (f.face_ids || []).join(", ");
+    document.getElementById("inspector-detail").innerHTML =
+      `<strong>Feature F${f.feature_id}</strong> · class id ${f.class_id}<br>` +
+      `${f.n_faces ?? (f.face_ids || []).length} face(s): [${faceList}]` +
+      (clickedFaceId != null ? `<br>Clicked face: ${clickedFaceId}` : "");
+
+    tooltip.textContent =
+      `Detected: ${f.class_name} (F${f.feature_id})` +
+      (confText ? ` · ${confText}` : "");
+  }
+
+  function parseFaceSearch(raw) {
+    const ids = new Set();
+    for (const part of String(raw || "").split(/[\s,]+/)) {
+      if (!part) continue;
+      const range = part.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (range) {
+        const a = Number.parseInt(range[1], 10);
+        const b = Number.parseInt(range[2], 10);
+        for (let i = Math.min(a, b); i <= Math.max(a, b); i += 1) ids.add(i);
+      } else if (/^\d+$/.test(part)) {
+        ids.add(Number.parseInt(part, 10));
+      }
+    }
+    return [...ids].sort((a, b) => a - b);
+  }
+
+  function setFaceSearchStatus(message, isError = false) {
+    const el = document.getElementById("face-search-status");
+    el.textContent = message;
+    el.classList.toggle("error", isError);
+  }
+
+  function showFaceSearchInfo(faceIds) {
+    const inspector = document.getElementById("feature-inspector");
+    inspector.classList.remove("hidden");
+    document.getElementById("inspector-class").textContent =
+      faceIds.length === 1 ? `FACE ${faceIds[0]}` : `${faceIds.length} FACES`;
+    document.getElementById("inspector-confidence").style.display = "none";
+
+    const lines = faceIds.slice(0, 12).map((faceId) => {
+      const face = faceByIndex.get(faceId);
+      if (!face) return `<strong>${faceId}</strong>: not in model`;
+      const feat = face.feature_id >= 0 ? featureById.get(face.feature_id) : null;
+      const label = feat
+        ? `${displayClassName(feat.class_name)} · F${feat.feature_id}`
+        : (face.class_name || "stock / unassigned");
+      return `<strong>${faceId}</strong>: ${label}`;
+    });
+    const more = faceIds.length > 12
+      ? `<br>…and ${faceIds.length - 12} more`
+      : "";
+    document.getElementById("inspector-detail").innerHTML =
+      `Highlighted ${faceIds.length} face${faceIds.length === 1 ? "" : "s"}<br>` +
+      lines.join("<br>") +
+      more +
+      `<br><br>[${faceIds.join(", ")}]`;
+
+    tooltip.textContent =
+      faceIds.length === 1
+        ? `Face ${faceIds[0]} highlighted`
+        : `${faceIds.length} faces highlighted`;
+  }
+
+  function applyHighlightFaces(faceIndices) {
+    selectedFaces = faceIndices == null ? null : new Set(faceIndices);
+    selectedFeature = null;
+    selectedClass = null;
+    expandedClass = null;
+    updateSidebarSelection();
+
+    const idSet = selectedFaces;
+    for (const mesh of faceMeshes) {
+      const mat = mesh.material;
+      const fi = mesh.userData.faceIndex;
+      if (idSet == null) {
+        mat.color.copy(hexColor(mesh.userData.baseColor));
+        mat.opacity = 1;
+        mat.transparent = false;
+      } else if (idSet.has(fi)) {
+        mat.color.setHex(FACE_SEARCH_HIGHLIGHT);
+        mat.opacity = 1;
+        mat.transparent = false;
+      } else {
+        mat.color.setHex(0xbbbbbb);
+        mat.opacity = 0.35;
+        mat.transparent = true;
+      }
+    }
+  }
+
+  function applyFaceSearch(raw) {
+    const requested = parseFaceSearch(raw);
+    if (!requested.length) {
+      applyHighlightFaces(null);
+      hideFeatureInfo();
+      setFaceSearchStatus("Enter one or more face indices.");
+      return;
+    }
+
+    const found = requested.filter((id) => faceByIndex.has(id));
+    const missing = requested.filter((id) => !faceByIndex.has(id));
+    if (!found.length) {
+      applyHighlightFaces(null);
+      hideFeatureInfo();
+      setFaceSearchStatus(
+        `No matching faces in this model (max index ${DATA.n_faces - 1}).`,
+        true,
+      );
+      return;
+    }
+
+    applyHighlightFaces(found);
+    showFaceSearchInfo(found);
+    if (missing.length) {
+      setFaceSearchStatus(
+        `Highlighted ${found.length} face${found.length === 1 ? "" : "s"}; ` +
+        `not found: ${missing.join(", ")}`,
+        true,
+      );
+    } else {
+      setFaceSearchStatus(
+        `Highlighted ${found.length} face${found.length === 1 ? "" : "s"}.`,
+      );
+    }
+  }
+
+  function clearFaceSearch() {
+    document.getElementById("face-search-input").value = "";
+    setFaceSearchStatus("");
+    applyHighlightFaces(null);
+    hideFeatureInfo();
+  }
+
+  function showStockFaceInfo(face) {
+    const inspector = document.getElementById("feature-inspector");
+    inspector.classList.remove("hidden");
+    const className = face.class_name || "stock / unassigned";
+    document.getElementById("inspector-class").textContent = className;
+
+    const confEl = document.getElementById("inspector-confidence");
+    const confText = formatConfidence(face.confidence);
+    if (confText) {
+      confEl.textContent = confText;
+      confEl.style.display = "inline-block";
+    } else {
+      confEl.textContent = "";
+      confEl.style.display = "none";
+    }
+
+    document.getElementById("inspector-detail").innerHTML =
+      `<strong>Face ${face.face_index}</strong> · not grouped into a feature instance` +
+      (face.class_name ? `<br>Per-face prediction: ${face.class_name}` : "");
+
+    tooltip.textContent =
+      `Face ${face.face_index}: ${className}` +
+      (confText ? ` · ${confText}` : "");
+  }
+
+  function hideFeatureInfo() {
+    document.getElementById("feature-inspector").classList.add("hidden");
+    tooltip.textContent = "Click a feature on the model or in the sidebar.";
+  }
+
+  function showClassInfo(label, features) {
+    const inspector = document.getElementById("feature-inspector");
+    inspector.classList.remove("hidden");
+    document.getElementById("inspector-class").textContent = label;
+    document.getElementById("inspector-confidence").style.display = "none";
+
+    const faceCount = features.reduce((sum, f) => sum + (f.face_ids || []).length, 0);
+    const subtitle = groupHeaderSubtitle(features);
+    document.getElementById("inspector-detail").innerHTML =
+      `<strong>${features.length}</strong> instance${features.length === 1 ? "" : "s"} · ` +
+      `<strong>${faceCount}</strong> face${faceCount === 1 ? "" : "s"}` +
+      (subtitle ? `<br>${subtitle}` : "");
+
+    tooltip.textContent = `${label} · ${features.length} instances`;
+  }
+
+  function selectClass(label, group) {
+    selectedClass = label;
+    selectedFeature = null;
+    selectedFaces = null;
+    document.getElementById("face-search-input").value = "";
+    setFaceSearchStatus("");
+    expandedClass = label;
+    applyHighlightFeatures(featureIdsForGroup(group));
+    showClassInfo(label, group.features);
+    updateSidebarSelection();
+  }
+
+  function selectFeature(featureId, clickedFaceId = null) {
+    const feat = featureById.get(featureId);
+    if (!feat) return;
+    selectedFeature = featureId;
+    selectedClass = displayClassName(feat.class_name || "unknown");
+    selectedFaces = null;
+    document.getElementById("face-search-input").value = "";
+    setFaceSearchStatus("");
+    expandedClass = selectedClass;
+    applyHighlightFeatures([featureId]);
+    showFeatureInfo(feat, clickedFaceId);
+    updateSidebarSelection();
+  }
 
   function hexColor(hex) {
     return new THREE.Color(hex);
@@ -253,14 +796,6 @@
       };
       root.add(mesh);
       faceMeshes.push(mesh);
-
-      const div = document.createElement("div");
-      div.className = "face-label";
-      div.textContent = String(face.face_index);
-      const label = new CSS2DObject(div);
-      label.position.set(face.centroid[0], face.centroid[1], face.centroid[2]);
-      root.add(label);
-      labelObjects.push(label);
     }
   }
 
@@ -321,19 +856,17 @@
     controls.update();
   }
 
-  function applyHighlight(featureId) {
-    selectedFeature = featureId;
-    for (const item of document.querySelectorAll(".feature-item")) {
-      item.classList.toggle("selected", Number(item.dataset.featureId) === featureId);
-    }
+  function applyHighlightFeatures(featureIds) {
+    selectedFaces = null;
+    const idSet = featureIds == null ? null : new Set(featureIds);
     for (const mesh of faceMeshes) {
       const mat = mesh.material;
       const fid = mesh.userData.featureId;
-      if (featureId == null) {
+      if (idSet == null) {
         mat.color.copy(hexColor(mesh.userData.baseColor));
         mat.opacity = 1;
         mat.transparent = false;
-      } else if (fid === featureId) {
+      } else if (idSet.has(fid)) {
         mat.color.copy(hexColor(mesh.userData.baseColor));
         mat.opacity = 1;
         mat.transparent = false;
@@ -345,36 +878,77 @@
     }
   }
 
+  function applyHighlight(featureId) {
+    if (featureId == null) {
+      selectedFeature = null;
+      selectedClass = null;
+      selectedFaces = null;
+      expandedClass = null;
+      applyHighlightFeatures(null);
+      updateSidebarSelection();
+      return;
+    }
+    selectFeature(featureId);
+  }
+
   function renderSidebar() {
     const fl = document.getElementById("feature-list");
     fl.innerHTML = "";
-    for (const f of DATA.features) {
-      const el = document.createElement("div");
-      el.className = "feature-item";
-      el.dataset.featureId = f.feature_id;
-        el.innerHTML = `
-        <div class="title">
-          <span class="swatch" style="background:${f.color}"></span>
-          F${f.feature_id} · ${f.class_name} (${f.class_id})
-        </div>
-        <div class="faces">faces: [${f.face_ids.join(", ")}]</div>
-        ${f.params ? `<pre class="params">${JSON.stringify(f.params, null, 2)}</pre>` : ""}
-      `;
-      el.addEventListener("click", () => {
-        applyHighlight(f.feature_id);
-        tooltip.textContent =
-          `Feature ${f.feature_id} · ${f.class_name} · faces [${f.face_ids.join(", ")}]`;
-      });
-      fl.appendChild(el);
-    }
 
-    const el = document.getElementById("edge-list");
-    el.innerHTML = "";
-    for (const e of DATA.edges) {
-      const div = document.createElement("div");
-      div.className = "edge-item";
-      div.textContent = `F${e.source} ↔ F${e.target} (${e.type || "adjacent"})`;
-      el.appendChild(div);
+    for (const [label, group] of groupFeaturesByClass()) {
+      const features = group.features;
+      const groupEl = document.createElement("div");
+      groupEl.className = "feature-group";
+      groupEl.dataset.groupKey = label;
+
+      const count = groupHeaderCount(group);
+      const subtitle = groupHeaderSubtitle(features);
+      const header = document.createElement("button");
+      header.type = "button";
+      header.className = "group-header";
+      header.innerHTML = `
+        <div class="group-header-main">
+          <div class="group-title">${label} (${count})</div>
+          ${subtitle ? `<div class="group-subtitle">${subtitle}</div>` : ""}
+        </div>
+        <span class="group-chevron" aria-hidden="true"></span>
+      `;
+      header.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (expandedClass === label && selectedClass === label && selectedFeature == null) {
+          expandedClass = null;
+          applyHighlight(null);
+          hideFeatureInfo();
+          updateSidebarSelection();
+          return;
+        }
+        selectClass(label, group);
+      });
+
+      const instances = document.createElement("div");
+      instances.className = "group-instances";
+      features.forEach((f, idx) => {
+        const item = document.createElement("div");
+        item.className = "instance-item";
+        item.dataset.featureId = f.feature_id;
+        const summary = instanceSummary(f);
+        item.innerHTML = `
+          <span class="swatch" style="background:${f.color}"></span>
+          <span class="instance-label">
+            ${features.length > 1 ? `#${idx + 1} · ` : ""}${summary}
+            <div class="instance-meta">F${f.feature_id} · ${(f.face_ids || []).length} faces</div>
+          </span>
+        `;
+        item.addEventListener("click", (event) => {
+          event.stopPropagation();
+          selectFeature(f.feature_id);
+        });
+        instances.appendChild(item);
+      });
+
+      groupEl.appendChild(header);
+      groupEl.appendChild(instances);
+      fl.appendChild(groupEl);
     }
 
     const stock = DATA.faces
@@ -395,24 +969,24 @@
     const hits = raycaster.intersectObjects(faceMeshes, false);
     if (!hits.length) {
       applyHighlight(null);
-      tooltip.textContent = "Click a face or sidebar feature to inspect.";
+      clearFaceSearch();
       return;
     }
     const mesh = hits[0].object;
     const fi = mesh.userData.faceIndex;
     const fid = mesh.userData.featureId;
-    if (fid >= 0) applyHighlight(fid);
-    const feat = DATA.features.find((f) => f.feature_id === fid);
-    tooltip.textContent = feat
-      ? `Face ${fi} → Feature ${fid} (${feat.class_name}) · neighbors in sidebar edges`
-      : `Face ${fi} · stock / unassigned (not in any feature node)`;
-  });
-
-  document.getElementById("btn-labels").addEventListener("click", () => {
-    showLabels = !showLabels;
-    for (const l of labelObjects) l.visible = showLabels;
-    document.getElementById("btn-labels").textContent =
-      showLabels ? "Hide labels" : "Show labels";
+    const faceData = DATA.faces.find((f) => f.face_index === fi);
+    if (fid >= 0) {
+      selectFeature(fid, fi);
+      return;
+    }
+    applyHighlight(null);
+    if (faceData) {
+      showStockFaceInfo(faceData);
+    } else {
+      hideFeatureInfo();
+      tooltip.textContent = `Face ${fi} · stock / unassigned`;
+    }
   });
 
   document.getElementById("btn-edges").addEventListener("click", () => {
@@ -423,9 +997,28 @@
   });
 
   document.getElementById("btn-reset").addEventListener("click", () => {
-    applyHighlight(null);
+    selectedFeature = null;
+    selectedClass = null;
+    selectedFaces = null;
+    expandedClass = null;
+    clearFaceSearch();
+    applyHighlightFeatures(null);
+    hideFeatureInfo();
+    updateSidebarSelection();
     fitCamera();
-    tooltip.textContent = "Click a face or sidebar feature to inspect.";
+  });
+
+  document.getElementById("face-search-go").addEventListener("click", () => {
+    applyFaceSearch(document.getElementById("face-search-input").value);
+  });
+  document.getElementById("face-search-clear").addEventListener("click", () => {
+    clearFaceSearch();
+  });
+  document.getElementById("face-search-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applyFaceSearch(event.target.value);
+    }
   });
 
   function resize() {
@@ -434,7 +1027,6 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
-    labelRenderer.setSize(w, h);
   }
 
   new ResizeObserver(resize).observe(wrap);
@@ -447,11 +1039,16 @@
   renderSidebar();
   resize();
 
+  const initialFaces = new URLSearchParams(window.location.search).get("faces");
+  if (initialFaces) {
+    document.getElementById("face-search-input").value = initialFaces;
+    applyFaceSearch(initialFaces);
+  }
+
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
-    labelRenderer.render(scene, camera);
   }
   animate();
   </script>

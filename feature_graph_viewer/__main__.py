@@ -4,10 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from feature_graph_viewer.build import build_viewer
-
-PKG_DIR = Path(__file__).resolve().parent
-DEFAULT_TEMPLATE = PKG_DIR / "template.html"
+from feature_graph_viewer.build import DEFAULT_TEMPLATE, build_viewer
 
 
 def main():
@@ -47,8 +44,7 @@ def main():
         open_browser=args.open,
     )
     print(f"wrote {out.resolve()}")
-    print("  Open in a browser. Each face shows its index; colors = feature instance.")
-    print("  Red lines connect adjacent features. Click a feature in the sidebar to highlight.")
+    print("  Open in a browser. Click features on the model or in the sidebar to inspect detections.")
 
 
 if __name__ == "__main__":

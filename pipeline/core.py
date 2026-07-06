@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from feature_graph import build_feature_graph, summarize_graph, write_feature_graph
+from feature_params import strip_heuristic_params
 from feature_instances import union_find_instances
 from taxonomy import NEW_NAMES
 
@@ -50,6 +51,8 @@ def write_face_predictions(
             }
             if entity_ids is not None:
                 rec["entity_id"] = int(entity_ids[i])
+            if "params" in rec:
+                rec["params"] = strip_heuristic_params(rec["params"])
             f.write(json.dumps(rec) + "\n")
 
 

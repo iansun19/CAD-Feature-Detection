@@ -1,0 +1,60 @@
+# Ground-truth template for eval_cascade.py
+# Copy to eval/gt/{part_name}.yaml and fill counts from the Toolpath feature list panel.
+# Paths are relative to the repo root unless absolute.
+
+part_id: "PART_NAME"
+part_step: "path/to/part.step"
+graph_npz: "path/to/graph.npz"
+
+# REQUIRED for filleted-pocket open/closed on split-panel parts (96260B family).
+# Open/closed is setup-scoped — not inferrable from single-STEP geometry alone.
+#   machining_side: front  → access open  → filleted_open_pocket
+#   machining_side: back   → access closed → filleted_pocket
+# Optional override: pocket_access: open | closed
+# Unset fallback at emit: closed (filleted_pocket) + warning — never geometry guess.
+setup:
+  machining_side: front   # or: back
+  # pocket_access: open    # optional explicit override
+
+# ALWAYS fill from Toolpath feature list panel (instance counts, not face counts).
+counts:
+  filleted_pocket: 0
+  filleted_open_pocket: 0   # Toolpath "FILLETED OPEN POCKETS" (distinct from open_pocket)
+  through_hole: 0
+  filleted_blind_hole: 0
+  flat: 0                   # Toolpath "FACES"
+  contour_surface: 0
+  outer_fillet: 0
+  profile: 0
+  open_pocket: 0            # unfilleted open pocket (back side on 96260B)
+  # wall: 0                 # optional — include if Toolpath lists wall features separately
+
+# OPTIONAL — per-feature attributes from Toolpath Feature Details (deep mode).
+# Omit entirely, or list only the features you clicked into. Harness runs fine counts-only.
+# features:
+#   - class: filleted_pocket
+#     depth_below_top: 0.0      # inches — HARD match dim
+#     fillet_radius: 0.0        # inches — HARD match dim
+#     3d_surface: false         # exact — HARD match dim
+#     diameter: 0.0             # inches (primary wall / hole dia) — HARD match dim
+#     feature_depth: 0.0        # inches — INFO only (soft, not a match gate)
+#     ld: 0.0                   # INFO only (soft, not a match gate)
+#   - class: through_hole
+#     diameter: 0.0
+#     depth_below_top: 0.0
+#     3d_surface: false
+#   - class: contour_surface
+#     depth_below_top: 0.0
+#     3d_surface: true
+
+# OPTIONAL — reference-plate face-level hand truth for rigorous IoU baseline.
+# One entry per feature instance; faces are B-rep face indices (0-based, analyze_step order).
+# face_truth:
+#   filleted_pocket:
+#     - faces: [0, 1, 2]
+#   through_hole:
+#     - faces: [10, 11]
+#   filleted_blind_hole:
+#     - faces: [20, 21, 22]
+#   flat:
+#     - faces: [30]

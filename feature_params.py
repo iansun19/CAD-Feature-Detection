@@ -7,6 +7,7 @@ in each helper.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -428,16 +429,22 @@ def enrich_graph_with_params(graph: dict[str, Any],
 
     for node in graph.get("nodes", []):
         face_ids = [int(i) for i in node.get("face_ids", [])]
-        node["params"] = extract_feature_params(
-            int(node["class_id"]), face_ids, records,
+        class_id = int(node["class_id"])
+        full_params = extract_feature_params(class_id, face_ids, records)
+        faces = [records[i] for i in face_ids if 0 <= i < len(records)]
+        index_params, _ = split_params_for_cam(full_params, class_id, faces)
+        _apply_face_index_validation(
+            node, face_ids, n_step, records=records, step_path=step_path,
         )
+        node["params"] = index_params
 
     graph["schema_version"] = 2
     graph["params_units"] = "mm"
     graph["params_source"] = str(step_path)
     graph["params_notes"] = (
-        "analytic_surfaces/cylindrical_radii/radius/diameter = exact OCC values; "
-        "n_walls/depth_along_floor_normal/step_height = derived rules (see feature_params.py)"
+        "Index export: label + face_ids + direct OCC reads "
+        "(analytic_surfaces, surface_counts, total_area, cylindrical_radii). "
+        "Heuristic aggregates available via collect_derived_debug()."
     )
     return graph
 
@@ -446,3 +453,368 @@ def default_step_path(part_id: str, step_dir: str | Path | None = None) -> Path:
     root = Path(__file__).resolve().parent
     base = Path(step_dir) if step_dir else root / "MFCAD++_dataset" / "step" / "test"
     return base / f"{part_id}.step"
+
+
+# ---------------------------------------------------------------------------
+# CAM export profile (schema v2) — kernel-trusted geometry only
+# ---------------------------------------------------------------------------
+
+CAM_SCHEMA_VERSION = 2
+
+# Params kept on the index export (direct STEP/OCC reads + tallies only).
+INDEX_EXPORT_PARAM_KEYS: frozenset[str] = frozenset({
+    "analytic_surfaces", "surface_counts", "total_area", "cylindrical_radii",
+})
+
+# Heuristic / cross-face aggregates stripped from the index export.
+REMOVED_HEURISTIC_KEYS: frozenset[str] = frozenset({
+    "step_height",
+    "floor_face_index", "floor_normal",
+    "depth_along_floor_normal", "length_along_axis",
+    "bbox_size_x", "bbox_size_y", "bbox_size_z",
+    "bbox_depth", "bbox_width", "bbox_length",
+    "n_walls", "n_planar_walls", "n_cylindrical_walls", "n_opening_faces",
+    "semi_angle_deg", "semi_angles_deg",
+})
+
+DERIVED_DEBUG_KEYS: frozenset[str] = REMOVED_HEURISTIC_KEYS | frozenset({
+    "n_faces", "n_planar_faces", "n_cylindrical_faces",
+    "radius", "diameter", "axis", "primary_cylinder_face_index",
+    "fillet_radius", "fillet_radii",
+    "groove_major_radius", "groove_minor_radius", "primary_torus_face_index",
+    "torus_minor_radius", "torus_minor_radii",
+    "machined_extents",
+})
+
+
+def brep_extent_along_direction(
+    face_ids: list[int],
+    direction: np.ndarray,
+    step_path: str | Path,
+    *,
+    expected_n_faces: int | None = None,
+) -> Any:
+    """OCC B-rep extent along *direction* for indexed faces (not centroid span)."""
+    from brep_extents import axis_extent, resolve_occ_faces
+
+    _, resolved = resolve_occ_faces(
+        step_path, face_ids, expected_n_faces=expected_n_faces,
+    )
+    occ_map = {fid: face for fid, face in resolved}
+    return axis_extent(occ_map, face_ids, direction, method="brep_extent_along_direction")
+
+
+def brep_boundary_extents(
+    face_ids: list[int],
+    step_path: str | Path,
+    *,
+    expected_n_faces: int | None = None,
+) -> dict[str, Any]:
+    """OCC axis-aligned envelope extents for the indexed face group."""
+    from brep_extents import feature_aabb, resolve_occ_faces
+
+    _, resolved = resolve_occ_faces(
+        step_path, face_ids, expected_n_faces=expected_n_faces,
+    )
+    occ_map = {fid: face for fid, face in resolved}
+    return feature_aabb(occ_map, face_ids).to_dict()
+
+
+def split_params_for_cam(
+    full_params: dict[str, Any],
+    class_id: int,
+    faces: list[FaceGeom],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split full params into index-export params and derived_debug sidecar."""
+    derived_debug: dict[str, Any] = {}
+    index_params: dict[str, Any] = {}
+
+    for key, value in full_params.items():
+        if key in INDEX_EXPORT_PARAM_KEYS:
+            index_params[key] = value
+        else:
+            derived_debug[key] = value
+
+    if "analytic_surfaces" not in index_params and faces:
+        index_params["analytic_surfaces"] = analytic_surfaces(faces)
+    if "surface_counts" not in index_params and faces:
+        index_params["surface_counts"] = _surface_counts(faces)
+    if "total_area" not in index_params and faces:
+        index_params["total_area"] = _r(sum(f.area for f in faces))
+    if "cylindrical_radii" not in index_params and faces:
+        index_params["cylindrical_radii"] = cylindrical_radii(faces)
+
+    return index_params, derived_debug
+
+
+def strip_heuristic_params(params: dict[str, Any]) -> dict[str, Any]:
+    """Remove heuristic keys from a flat params dict (top-level only)."""
+    return {k: v for k, v in params.items() if k not in REMOVED_HEURISTIC_KEYS}
+
+
+def node_face_count(node: dict[str, Any]) -> int:
+    """Resolvable face count from node fields."""
+    if "n_faces" in node:
+        return int(node["n_faces"])
+    face_ids = node.get("face_ids", [])
+    if face_ids:
+        return len(face_ids)
+    counts = node.get("params", {}).get("surface_counts", {})
+    if counts:
+        return int(sum(counts.values()))
+    return 0
+
+
+def validate_face_indices(
+    face_ids: list[int],
+    n_faces: int,
+    *,
+    records: list[FaceGeom] | None = None,
+    step_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """
+    Face-index integrity check (the only index-export rejection path).
+
+    Returns {valid, errors, invalid_indices}. Raises FaceIndexError only when
+    called with raise_on_error=True (used in unit tests).
+    """
+    from brep_extents import FaceIndexError
+
+    errors: list[str] = []
+    invalid_indices: list[int] = []
+
+    if not face_ids:
+        errors.append("face_ids is empty")
+
+    seen: set[int] = set()
+    for fid in face_ids:
+        if fid in seen:
+            errors.append(f"duplicate face index {fid}")
+            invalid_indices.append(fid)
+        seen.add(fid)
+        if fid < 0 or fid >= n_faces:
+            errors.append(f"face index {fid} out of range [0, {n_faces})")
+            invalid_indices.append(fid)
+
+    if step_path is not None and face_ids and not errors:
+        try:
+            _, resolved = _resolve_occ_faces(step_path, face_ids, expected_n_faces=n_faces)
+            if len(resolved) != len(face_ids):
+                errors.append(
+                    f"partial_face_resolution: {len(resolved)}/{len(face_ids)} faces resolved",
+                )
+        except FaceIndexError as exc:
+            errors.append(str(exc))
+            if exc.face_ids:
+                invalid_indices.extend(exc.face_ids)
+
+    if records is not None and face_ids and not errors:
+        resolved = [records[i] for i in face_ids if 0 <= i < len(records)]
+        if len(resolved) != len(face_ids):
+            bad = [i for i in face_ids if i < 0 or i >= len(records)]
+            errors.append(f"unresolvable face indices: {bad}")
+            invalid_indices.extend(bad)
+        elif len(resolved) != len(set(face_ids)):
+            errors.append("duplicate face indices in face_ids")
+
+    invalid_indices = sorted(set(invalid_indices))
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "invalid_indices": invalid_indices,
+    }
+
+
+def _resolve_occ_faces(step_path, face_ids, *, expected_n_faces):
+    from brep_extents import resolve_occ_faces
+    return resolve_occ_faces(step_path, face_ids, expected_n_faces=expected_n_faces)
+
+
+def _apply_face_index_validation(
+    node: dict[str, Any],
+    face_ids: list[int],
+    n_faces: int,
+    *,
+    records: list[FaceGeom] | None = None,
+    step_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate face indices and mark node invalid on failure."""
+    from brep_extents import FaceIndexError
+
+    validation = validate_face_indices(
+        face_ids, n_faces, records=records, step_path=step_path,
+    )
+    node.pop("invalid", None)
+    node.pop("face_index_error", None)
+    if validation["valid"]:
+        return validation
+
+    node["invalid"] = True
+    node["face_index_error"] = {
+        "type": FaceIndexError.__name__,
+        "message": "; ".join(validation["errors"]),
+        "indices": validation["invalid_indices"],
+    }
+    return validation
+
+
+def collect_derived_debug(
+    graph: dict[str, Any],
+    records: list[FaceGeom] | None = None,
+    *,
+    step_path: str | Path | None = None,
+) -> dict[int, dict[str, Any]]:
+    """Per-feature derived/heuristic params (not consumed by index export)."""
+    if records is None and step_path is not None:
+        records = analyze_step(step_path)
+
+    out: dict[int, dict[str, Any]] = {}
+    for node in graph.get("nodes", []):
+        face_ids = [int(i) for i in node.get("face_ids", [])]
+        class_id = int(node["class_id"])
+        if records is not None:
+            full = extract_feature_params(class_id, face_ids, records)
+        else:
+            full = node.get("params", {})
+        faces = [records[i] for i in face_ids if 0 <= i < len(records)] if records else []
+        _, derived = split_params_for_cam(full, class_id, faces)
+        if derived:
+            out[int(node["feature_id"])] = derived
+    return out
+
+
+def _filter_cam_edges(edges: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    safe: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for edge in edges:
+        etype = edge.get("type", "adjacent")
+        if etype != "adjacent":
+            warnings.append(
+                f"excluded non-brep edge {edge.get('source')}–{edge.get('target')} "
+                f"(type={etype!r})"
+            )
+            continue
+        safe.append({
+            "source": int(edge["source"]),
+            "target": int(edge["target"]),
+            "type": "adjacent",
+        })
+    return safe, warnings
+
+
+def print_index_export_summary(graph: dict[str, Any]) -> None:
+    """Print per-part index export confirmation (node count, stripped fields, failures)."""
+    part_id = graph.get("part_id", "?")
+    nodes = graph.get("nodes", [])
+    print(f"part {part_id}: {len(nodes)} nodes")
+
+    removed_found: list[str] = []
+    for node in nodes:
+        params = node.get("params", {})
+        for key in REMOVED_HEURISTIC_KEYS:
+            if key in params:
+                removed_found.append(f"feature_id={node['feature_id']}:{key}")
+    if removed_found:
+        print(f"  WARNING: removed heuristic fields still present: {removed_found}")
+    else:
+        print("  removed heuristic fields: absent from all nodes")
+
+    invalid = [
+        n for n in nodes
+        if n.get("invalid") or n.get("face_index_error")
+    ]
+    if invalid:
+        for node in invalid:
+            err = node.get("face_index_error", {})
+            print(
+                f"  face-index failure feature_id={node['feature_id']}: "
+                f"{err.get('message', 'invalid')} indices={err.get('indices', [])}",
+            )
+    else:
+        print("  face-index integrity: all nodes pass")
+
+    if nodes:
+        sample = nodes[0]
+        retained = sorted(sample.get("params", {}).keys())
+        top_level = [
+            k for k in ("class_name", "face_ids", "mean_confidence", "n_faces")
+            if k in sample
+        ]
+        print(f"  sample node top-level: {top_level}")
+        print(f"  sample node params keys: {retained}")
+
+
+def export_cam_params(
+    graph: dict[str, Any],
+    step_path: str | Path,
+    *,
+    enrich_if_needed: bool = True,
+) -> dict[str, Any]:
+    """
+    Emit index-safe feature params JSON (schema v2).
+
+    Heuristic / derived measures are stripped from node params and are available
+    separately via collect_derived_debug(); they are not included in this output.
+    """
+    require_occ()
+    step_path = Path(step_path)
+    if not step_path.is_file():
+        raise FileNotFoundError(f"STEP not found: {step_path}")
+
+    work = json.loads(json.dumps(graph)) if enrich_if_needed else graph
+    needs_enrich = enrich_if_needed or not any(
+        n.get("params") for n in work.get("nodes", [])
+    )
+    if needs_enrich:
+        enrich_graph_with_params(work, step_path)
+
+    records = analyze_step(step_path)
+    n_faces = len(records)
+    graph_n_faces = work.get("n_faces")
+    if graph_n_faces is not None and int(graph_n_faces) != n_faces:
+        raise ValueError(
+            f"Face count mismatch: STEP has {n_faces}, graph has {graph_n_faces}"
+        )
+
+    index_nodes: list[dict[str, Any]] = []
+    for node in work.get("nodes", []):
+        face_ids = [int(i) for i in node.get("face_ids", [])]
+        class_id = int(node["class_id"])
+        faces = [records[i] for i in face_ids if 0 <= i < len(records)]
+        full_params = extract_feature_params(class_id, face_ids, records)
+        index_params, _derived = split_params_for_cam(full_params, class_id, faces)
+        validation = validate_face_indices(
+            face_ids, n_faces, records=records, step_path=step_path,
+        )
+        out_node: dict[str, Any] = {
+            "feature_id": int(node["feature_id"]),
+            "class_id": class_id,
+            "class_name": node["class_name"],
+            "face_ids": face_ids,
+            "n_faces": node_face_count(node),
+            "mean_confidence": node.get("mean_confidence"),
+            "params": index_params,
+        }
+        if not validation["valid"]:
+            out_node["invalid"] = True
+            out_node["face_index_error"] = {
+                "type": "FaceIndexError",
+                "message": "; ".join(validation["errors"]),
+                "indices": validation["invalid_indices"],
+            }
+        index_nodes.append(out_node)
+
+    index_edges, edge_warnings = _filter_cam_edges(work.get("edges", []))
+
+    out: dict[str, Any] = {
+        "schema_version": CAM_SCHEMA_VERSION,
+        "part_id": work.get("part_id"),
+        "n_faces": n_faces,
+        "params_units": "mm",
+        "params_source": str(step_path),
+        "nodes": index_nodes,
+        "edges": index_edges,
+    }
+    if edge_warnings:
+        out["edge_exclusion_warnings"] = edge_warnings
+    return out

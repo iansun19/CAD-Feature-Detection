@@ -1,0 +1,26 @@
+# Exact copy of eval/gt/96260B_front.yaml — duplicate STEP for reproducibility check.
+
+part_id: "96260B_front_copy"
+part_step: "96260B_FRONT_copy.stp"
+graph_npz: "pipeline_out/96260B_front_copy/graph.npz"
+
+setup:
+  machining_side: front
+
+counts:
+  contour_surface: 37
+  flat: 2
+  filleted_blind_hole: 1
+  filleted_open_pocket: 7
+  filleted_pocket: 7
+  open_pocket: 1
+  outer_fillet: 2
+  profile: 1
+  through_hole: 1
+  wall: 14
+
+features:
+  - class: filleted_blind_hole
+    diameter: 4.006
+  - class: through_hole
+    diameter: 3.2

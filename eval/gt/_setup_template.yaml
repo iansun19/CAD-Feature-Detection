@@ -1,0 +1,55 @@
+# Setup descriptor template for run_cascade.py
+# Copy to eval/gt/{part_id}_setup.yaml and fill one entry per machining setup.
+# Paths are relative to the repo root unless absolute.
+#
+# Scope: geometrically-unrecoverable setup facts ONLY — not detection thresholds,
+# reference face sets, or Toolpath count ground truth (those live elsewhere).
+#
+# part_id is explicit here; do NOT rely on STEP filename normalization (96260B-specific).
+
+part_id: "PART_NAME"
+
+# FALLBACK when no descriptor file is loaded, or when a setup field is omitted.
+# Degraded run: auto opening axis (errors if low-confidence), access unknown.
+defaults:
+  setup_id: default
+  opening_axis:
+    mode: auto
+    min_confidence: 0.85   # auto mode only — below this ? error, ask for explicit vector
+  pocket_access: unknown     # all filleted pockets unless overridden per setup / per seed
+
+# One block per named machining setup (setup_id is arbitrary — front/rear are conventional).
+setups:
+  front:
+    setup_id: front
+    part_step: "path/to/front_panel.step"   # links this setup to a split-panel STEP
+    machining_side: front                   # front/back only; for any other setup, omit machining_side and set pocket_access
+    opening_axis:
+      mode: auto                            # or: explicit
+      # vector: [0.0, 1.0, 0.0]             # required when mode: explicit
+      # min_confidence: 0.85                # optional override (auto mode only)
+    pocket_access: open                     # setup-wide label for all filleted pockets
+    # Per-pocket overrides when lobes disagree within one setup (rare).
+    # Key = B-rep face id of a floor/sphere seed (stable for a fixed STEP; discover via dry run).
+    # Tradeoff vs dry-run ordinal: seed ids survive reordering but shift if topology changes.
+    # pockets:
+    #   by_seed_face:
+    #     12: open
+    #     255: closed
+
+  rear:
+    setup_id: rear
+    part_step: "path/to/rear_panel.step"
+    machining_side: back
+    opening_axis:
+      mode: auto
+    pocket_access: closed
+
+  # Example non-front/rear setup name (same schema):
+  # op10_top:
+  #   setup_id: op10_top
+  #   part_step: "parts/widget_op10.step"
+  #   opening_axis:
+  #     mode: explicit
+  #     vector: [0.0, 0.0, 1.0]
+  #   pocket_access: open

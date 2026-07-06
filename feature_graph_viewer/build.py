@@ -7,6 +7,9 @@ from pathlib import Path
 
 from feature_graph_viewer.geometry import triangulate_step_part
 
+PKG_DIR = Path(__file__).resolve().parent
+DEFAULT_TEMPLATE = PKG_DIR / "template.html"
+
 # Distinct palette for feature instances (stock uses STOCK_COLOR).
 FEATURE_COLORS = [
     "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
@@ -21,6 +24,21 @@ EDGE_COLOR = "#ff4444"
 def load_feature_graph(path: Path) -> dict:
     with open(path) as f:
         return json.load(f)
+
+
+def load_face_predictions(graph_path: Path) -> dict[int, dict] | None:
+    """Optional per-face predictions from face_predictions.jsonl alongside the graph."""
+    pred_path = graph_path.parent / "face_predictions.jsonl"
+    if not pred_path.is_file():
+        return None
+    out: dict[int, dict] = {}
+    for line in pred_path.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        rec = json.loads(line)
+        out[int(rec["face_id"])] = rec
+    return out or None
 
 
 def face_feature_maps(graph: dict, n_faces: int) -> tuple[dict[int, int], dict[int, str]]:
@@ -39,6 +57,7 @@ def face_feature_maps(graph: dict, n_faces: int) -> tuple[dict[int, int], dict[i
 
 def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
     graph = load_feature_graph(graph_path)
+    face_preds = load_face_predictions(graph_path)
     faces = triangulate_step_part(step_path)
     n_faces = len(faces)
 
@@ -70,6 +89,7 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
             "class_name": node.get("class_name"),
             "face_ids": node.get("face_ids", []),
             "n_faces": node.get("n_faces"),
+            "mean_confidence": node.get("mean_confidence"),
             "color": feature_colors[fid],
             "centroid": centroid,
             "params": node.get("params"),
@@ -80,6 +100,11 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
         feat = face_to_feature[idx]
         face["feature_id"] = feat
         face["color"] = feature_colors[feat] if feat >= 0 else STOCK_COLOR
+        if face_preds and idx in face_preds:
+            pred = face_preds[idx]
+            face["class_id"] = pred.get("class_id")
+            face["class_name"] = pred.get("class_name")
+            face["confidence"] = pred.get("confidence")
 
     return {
         "part_id": part_id,

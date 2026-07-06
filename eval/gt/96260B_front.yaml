@@ -1,0 +1,35 @@
+# Toolpath ground truth — 96260B FRONT XR004 PCD PLATE (front panel only)
+# Transcribed from Toolpath Feature List panel (screenshots 2026-07-03, images 1-8).
+# Instance counts, NOT face counts. Toolpath "FACES" → flat in eval_cascade vocabulary.
+# This yaml matches the FRONT STEP only — do not merge back-side counts here.
+
+part_id: "96260B_front"
+part_step: "96260B_FRONT_XR004_PCD PLATE.stp copy"
+graph_npz: "pipeline_out/96260B_front/graph.npz"
+
+# Setup-scoped pocket access (see eval/pocket_openclosed_findings.md).
+# front → filleted_open_pocket; back → filleted_pocket. Not inferrable from geometry.
+setup:
+  machining_side: front
+
+counts:
+  contour_surface: 37
+  flat: 2                   # Toolpath FACES (1) — front panel
+  filleted_blind_hole: 1
+  filleted_open_pocket: 7   # all 7 lobes open toward central bore on front STEP
+  filleted_pocket: 7
+  open_pocket: 1            # central hub stepped pocket (Toolpath OPEN POCKETS panel)
+  outer_fillet: 2           # opening-tier torus at blind-hole stack cap (faces 96, 287)
+  profile: 1
+  through_hole: 1
+  wall: 14                  # exterior OD notch segments (Toolpath WALLS panel)
+
+
+# Deep-mode attributes from Toolpath Feature Details (inches).
+features:
+  - class: filleted_blind_hole
+    diameter: 4.006
+  - class: through_hole
+    diameter: 3.2
+
+

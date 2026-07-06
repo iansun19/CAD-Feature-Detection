@@ -1,6 +1,8 @@
 """Unit tests for feature_params pure logic (no pythonocc required)."""
 from __future__ import annotations
 
+import copy
+import json
 import os
 import sys
 import unittest
@@ -12,6 +14,7 @@ sys.path.insert(0, ROOT)
 
 from feature_params import (  # noqa: E402
     FaceGeom,
+    REMOVED_HEURISTIC_KEYS,
     analytic_surfaces,
     bbox_params,
     classify_planar_roles,
@@ -20,6 +23,11 @@ from feature_params import (  # noqa: E402
     cylindrical_radii,
     pick_floor_plane,
     span_along_direction,
+    split_params_for_cam,
+    strip_heuristic_params,
+    validate_face_indices,
+    DERIVED_DEBUG_KEYS,
+    INDEX_EXPORT_PARAM_KEYS,
 )
 
 
@@ -39,6 +47,100 @@ def _cylinder(index, radius, area, xyz, axis=(0, 0, 1)):
         radius=radius,
         axis=np.array(axis, dtype=np.float64),
     )
+
+
+def _cone(index, area, xyz, semi_angle_deg=45.0, axis=(0, 0, 1)):
+    return FaceGeom(
+        index=index, surface_type="cone", area=area,
+        centroid=np.array(xyz, dtype=np.float64),
+        normal=np.array([0, 0, 1], dtype=np.float64),
+        semi_angle_rad=float(np.radians(semi_angle_deg)),
+        axis=np.array(axis, dtype=np.float64),
+    )
+
+
+class TestIndexExport(unittest.TestCase):
+    def test_split_keeps_only_direct_occ_reads(self):
+        faces = [
+            _cone(17, 4.0, [0, 0, 0], 45.0),
+            _plane(19, 1.0, [0, 1, 0], [0, 1, 0]),
+        ]
+        full_params = {
+            "analytic_surfaces": analytic_surfaces(faces),
+            "surface_counts": {"cone": 1, "plane": 1},
+            "total_area": 5.0,
+            "cylindrical_radii": [],
+            "semi_angle_deg": 45.0,
+            "bbox_depth": 1.0,
+            "n_walls": 1,
+            "radius": 3.5,
+            "depth_along_floor_normal": 2.0,
+        }
+        index_params, derived = split_params_for_cam(full_params, 9, faces)
+        self.assertEqual(set(index_params.keys()), INDEX_EXPORT_PARAM_KEYS)
+        self.assertNotIn("bbox_depth", index_params)
+        self.assertNotIn("semi_angle_deg", index_params)
+        self.assertNotIn("radius", index_params)
+        self.assertIn("bbox_depth", derived)
+        self.assertIn("semi_angle_deg", derived)
+        self.assertIn("analytic_surfaces", index_params)
+        self.assertTrue(
+            any("semi_angle_deg" in s for s in index_params["analytic_surfaces"]),
+        )
+
+    def test_derived_debug_keys_routed(self):
+        full = {
+            "analytic_surfaces": [],
+            "surface_counts": {"plane": 1},
+            "total_area": 1.0,
+            "cylindrical_radii": [],
+            "bbox_depth": 1.0,
+            "semi_angle_deg": 45.0,
+            "step_height": 3.0,
+        }
+        index_params, derived = split_params_for_cam(full, 9, [])
+        for key in ("bbox_depth", "semi_angle_deg", "step_height"):
+            self.assertNotIn(key, index_params)
+            self.assertIn(key, derived)
+            self.assertIn(key, DERIVED_DEBUG_KEYS)
+        for key in ("surface_counts", "total_area", "cylindrical_radii"):
+            self.assertIn(key, index_params)
+
+    def test_strip_heuristic_params(self):
+        params = {
+            "analytic_surfaces": [],
+            "step_height": 1.0,
+            "bbox_depth": 2.0,
+            "surface_counts": {"plane": 1},
+        }
+        stripped = strip_heuristic_params(params)
+        self.assertNotIn("step_height", stripped)
+        self.assertNotIn("bbox_depth", stripped)
+        self.assertIn("surface_counts", stripped)
+        for key in REMOVED_HEURISTIC_KEYS:
+            self.assertNotIn(key, stripped)
+
+    def test_validate_face_indices_clean(self):
+        records = [_plane(i, 1.0, [0, 0, 0], [0, 0, 1]) for i in range(10)]
+        out = validate_face_indices([2, 5], len(records), records=records)
+        self.assertTrue(out["valid"], out["errors"])
+
+    def test_validate_face_indices_duplicate(self):
+        records = [_plane(i, 1.0, [0, 0, 0], [0, 0, 1]) for i in range(10)]
+        out = validate_face_indices([2, 2], len(records), records=records)
+        self.assertFalse(out["valid"])
+        self.assertTrue(any("duplicate" in e for e in out["errors"]))
+
+    def test_validate_face_indices_out_of_range(self):
+        records = [_plane(i, 1.0, [0, 0, 0], [0, 0, 1]) for i in range(10)]
+        out = validate_face_indices([99], len(records), records=records)
+        self.assertFalse(out["valid"])
+        self.assertIn(99, out["invalid_indices"])
+
+    def test_validate_face_indices_empty(self):
+        out = validate_face_indices([], 10, records=[])
+        self.assertFalse(out["valid"])
+        self.assertTrue(any("empty" in e for e in out["errors"]))
 
 
 class TestFeatureParams(unittest.TestCase):
@@ -95,6 +197,88 @@ class TestFeatureParams(unittest.TestCase):
         surf = analytic_surfaces(faces)
         self.assertEqual(len(surf), 1)
         self.assertIn("normal", surf[0])
+
+
+@unittest.skipUnless(
+    os.path.isfile(os.path.join(ROOT, "MFCAD++_dataset", "step", "test", "29000.step")),
+    "missing 29000.step",
+)
+class Test29000IndexExport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        try:
+            from OCC.Core.STEPControl import STEPControl_Reader  # noqa: F401
+            from feature_params import HAS_OCC
+        except ImportError:
+            raise unittest.SkipTest("pythonocc-core not installed")
+        if not HAS_OCC:
+            raise unittest.SkipTest("pythonocc-core not installed")
+
+        cls.step = os.path.join(ROOT, "MFCAD++_dataset", "step", "test", "29000.step")
+        cls.graph_path = os.path.join(ROOT, "29000_feature_graph.json")
+        if not os.path.isfile(cls.graph_path):
+            raise unittest.SkipTest("missing 29000_feature_graph.json")
+
+        with open(cls.graph_path) as f:
+            cls.base_graph = json.load(f)
+
+        from feature_params import analyze_step, enrich_graph_with_params, extract_feature_params
+
+        cls.analyze_step = analyze_step
+        cls.enrich_graph_with_params = enrich_graph_with_params
+        cls.extract_feature_params = extract_feature_params
+        cls.records = analyze_step(cls.step)
+
+        cls.full_surfaces = {}
+        for node in cls.base_graph["nodes"]:
+            fid = int(node["feature_id"])
+            face_ids = [int(i) for i in node["face_ids"]]
+            full = extract_feature_params(int(node["class_id"]), face_ids, cls.records)
+            cls.full_surfaces[fid] = copy.deepcopy(full.get("analytic_surfaces", []))
+
+        cls.graph = copy.deepcopy(cls.base_graph)
+        for node in cls.graph["nodes"]:
+            node.pop("params", None)
+            node.pop("invalid", None)
+            node.pop("face_index_error", None)
+        enrich_graph_with_params(cls.graph, cls.step)
+
+    def test_no_removed_heuristic_fields_in_nodes(self):
+        for node in self.graph["nodes"]:
+            params = node.get("params", {})
+            for key in REMOVED_HEURISTIC_KEYS:
+                self.assertNotIn(
+                    key, params,
+                    f"feature_id={node['feature_id']} still has {key}",
+                )
+
+    def test_every_node_has_required_fields(self):
+        for node in self.graph["nodes"]:
+            self.assertIn("class_name", node)
+            self.assertTrue(node.get("face_ids"))
+            params = node.get("params", {})
+            self.assertIn("analytic_surfaces", params)
+            face_count = node.get("n_faces") or len(node["face_ids"])
+            counts = params.get("surface_counts", {})
+            if counts:
+                self.assertEqual(sum(counts.values()), face_count)
+            self.assertFalse(node.get("invalid"), node.get("face_index_error"))
+
+    def test_analytic_surfaces_unchanged(self):
+        for node in self.graph["nodes"]:
+            fid = int(node["feature_id"])
+            expected = self.full_surfaces[fid]
+            actual = node["params"]["analytic_surfaces"]
+            self.assertEqual(actual, expected, f"feature_id={fid} analytic_surfaces changed")
+
+    def test_face_index_error_on_bad_indices(self):
+        from brep_extents import FaceIndexError, resolve_occ_faces
+
+        with self.assertRaises(FaceIndexError):
+            resolve_occ_faces(self.step, [0, 0], expected_n_faces=26)
+
+        out = validate_face_indices([0, 0], 26, records=self.records)
+        self.assertFalse(out["valid"])
 
 
 if __name__ == "__main__":
