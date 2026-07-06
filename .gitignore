@@ -31,3 +31,4 @@ nist_ctc_01_stage_a.npz
 .vscode/
 # Pipeline outputs (Phase 4)
 pipeline_out/
+*.parquet
