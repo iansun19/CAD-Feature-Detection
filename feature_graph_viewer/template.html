@@ -234,6 +234,79 @@
       cursor: pointer;
     }
     .toolbar button:hover { border-color: var(--accent); }
+    .section-panel {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 10;
+      background: rgba(15, 17, 23, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.65rem;
+      min-width: 210px;
+      font-size: 0.78rem;
+      color: #fff;
+    }
+    .section-panel .section-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .section-panel .section-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .section-panel button,
+    .section-panel select {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .section-panel button:hover,
+    .section-panel select:hover { border-color: var(--accent); }
+    .section-panel select { flex: 1; min-width: 0; }
+    .section-panel input[type="range"] {
+      flex: 1;
+      min-width: 0;
+      accent-color: var(--accent);
+    }
+    .section-panel .section-depth-label {
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: 0.72rem;
+      min-width: 2.5rem;
+    }
+    .section-panel.disabled { opacity: 0.55; }
+    .section-panel.disabled input[type="range"],
+    .section-panel.disabled select { pointer-events: none; }
+    .view-toolbar {
+      position: absolute;
+      top: 8px;
+      right: 230px;
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+    }
+    .view-toolbar button {
+      background: rgba(15, 17, 23, 0.85);
+      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .view-toolbar button:hover { border-color: var(--accent); }
     .inspector {
       position: absolute;
       top: 10px;
@@ -321,7 +394,7 @@
         <div id="feature-list" class="feature-groups"></div>
         <div class="sidebar-footer">
           <details>
-            <summary>Stock / unassigned</summary>
+            <summary>Unassigned / pre-cascade excluded</summary>
             <div class="stock-faces" id="stock-faces"></div>
           </details>
         </div>
@@ -329,9 +402,31 @@
     </aside>
     <div class="viewer-wrap" id="viewer-wrap">
       <div id="canvas-host"></div>
-      <div class="toolbar">
+      <div class="view-toolbar">
         <button type="button" id="btn-edges">Hide edges</button>
         <button type="button" id="btn-reset">Reset view</button>
+      </div>
+      <div class="section-panel" id="section-panel">
+        <div class="section-title">Section plane</div>
+        <div class="section-row">
+          <button type="button" id="btn-section-toggle">Section</button>
+          <select id="section-axis" aria-label="Section axis">
+            <option value="Z" selected>Z</option>
+            <option value="Y">Y</option>
+            <option value="X">X</option>
+          </select>
+        </div>
+        <div class="section-row">
+          <span class="section-depth-label" id="section-depth-label">Depth</span>
+          <input
+            type="range"
+            id="section-depth"
+            min="0"
+            max="1000"
+            value="900"
+            aria-label="Section depth"
+          />
+        </div>
       </div>
       <div id="feature-inspector" class="inspector hidden">
         <div class="inspector-label">cascade labeled as</div>
@@ -374,6 +469,7 @@
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.localClippingEnabled = true;
   canvasHost.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -403,6 +499,18 @@
   let expandedClass = null;
   let showEdges = true;
   const FACE_SEARCH_HIGHLIGHT = 0xff6600;
+
+  const clippingPlane = new THREE.Plane();
+  let modelBox = new THREE.Box3();
+  let sectionEnabled = true;
+  let sectionAxis = "Z";
+  let sectionT = 0.9;
+  const AXIS_INDEX = { X: 0, Y: 1, Z: 2 };
+  const AXIS_VECTOR = {
+    X: new THREE.Vector3(1, 0, 0),
+    Y: new THREE.Vector3(0, 1, 0),
+    Z: new THREE.Vector3(0, 0, 1),
+  };
 
   const MM_PER_IN = 25.4;
   const CLASS_DISPLAY = {
@@ -563,10 +671,12 @@
     }
 
     const faceList = (f.face_ids || []).join(", ");
+    const clickedFace = clickedFaceId != null ? faceByIndex.get(clickedFaceId) : null;
     document.getElementById("inspector-detail").innerHTML =
       `<strong>Feature F${f.feature_id}</strong> · class id ${f.class_id}<br>` +
       `${f.n_faces ?? (f.face_ids || []).length} face(s): [${faceList}]` +
-      (clickedFaceId != null ? `<br>Clicked face: ${clickedFaceId}` : "");
+      (clickedFaceId != null ? `<br>Clicked face: ${clickedFaceId}` : "") +
+      (clickedFace ? labeledByDetailHtml(clickedFace) : "");
 
     tooltip.textContent =
       `Detected: ${f.class_name} (F${f.feature_id})` +
@@ -608,7 +718,7 @@
       const feat = face.feature_id >= 0 ? featureById.get(face.feature_id) : null;
       const label = feat
         ? `${displayClassName(feat.class_name)} · F${feat.feature_id}`
-        : (face.class_name || "stock / unassigned");
+        : unassignedFaceLabel(face);
       return `<strong>${faceId}</strong>: ${label}`;
     });
     const more = faceIds.length > 12
@@ -696,11 +806,38 @@
     hideFeatureInfo();
   }
 
+  function formatLabeledBy(face) {
+    if (!face || !face.labeled_by) return null;
+    let text = String(face.labeled_by).replace(/_/g, " ");
+    if (face.labeled_by === "pre_cascade_gate" && face.gate_rule) {
+      text += ` · gate: ${face.gate_rule}`;
+    }
+    return text;
+  }
+
+  function unassignedFaceLabel(face) {
+    const labeledBy = formatLabeledBy(face);
+    if (labeledBy) return labeledBy;
+    if (face.class_name) {
+      return `unassigned · per-face: ${face.class_name}`;
+    }
+    return "unassigned (no cascade feature)";
+  }
+
+  function labeledByDetailHtml(face) {
+    const labeledBy = formatLabeledBy(face);
+    if (!labeledBy) return "";
+    const stockCut = face.stock_cut_label
+      ? `<br>STOCK/CUT: ${face.stock_cut_label}`
+      : "";
+    return `<br>labeled_by: ${labeledBy}${stockCut}`;
+  }
+
   function showStockFaceInfo(face) {
     const inspector = document.getElementById("feature-inspector");
     inspector.classList.remove("hidden");
-    const className = face.class_name || "stock / unassigned";
-    document.getElementById("inspector-class").textContent = className;
+    const label = unassignedFaceLabel(face);
+    document.getElementById("inspector-class").textContent = label;
 
     const confEl = document.getElementById("inspector-confidence");
     const confText = formatConfidence(face.confidence);
@@ -712,12 +849,17 @@
       confEl.style.display = "none";
     }
 
+    const gateNote = face.labeled_by === "pre_cascade_gate"
+      ? "<br>Excluded from cascade pool (pre-cascade STOCK gate)."
+      : "";
     document.getElementById("inspector-detail").innerHTML =
-      `<strong>Face ${face.face_index}</strong> · not grouped into a feature instance` +
+      `<strong>Face ${face.face_index}</strong> · not in any cascade feature instance` +
+      labeledByDetailHtml(face) +
+      gateNote +
       (face.class_name ? `<br>Per-face prediction: ${face.class_name}` : "");
 
     tooltip.textContent =
-      `Face ${face.face_index}: ${className}` +
+      `Face ${face.face_index}: ${label}` +
       (confText ? ` · ${confText}` : "");
   }
 
@@ -787,6 +929,8 @@
         metalness: 0.05,
         roughness: 0.72,
         side: THREE.DoubleSide,
+        clippingPlanes: sectionEnabled ? [clippingPlane] : [],
+        clipIntersection: true,
       });
       const mesh = new THREE.Mesh(geom, mat);
       mesh.userData = {
@@ -824,6 +968,47 @@
     return new THREE.LineSegments(geom, mat);
   }
 
+  function refreshModelBox() {
+    modelBox.setFromObject(root);
+  }
+
+  function axisBounds(axis) {
+    const idx = AXIS_INDEX[axis];
+    const min = [modelBox.min.x, modelBox.min.y, modelBox.min.z][idx];
+    const max = [modelBox.max.x, modelBox.max.y, modelBox.max.z][idx];
+    return { min, max, span: Math.max(max - min, 1e-9) };
+  }
+
+  function sectionPlanePoint() {
+    const { min, span } = axisBounds(sectionAxis);
+    const point = new THREE.Vector3();
+    point.setComponent(AXIS_INDEX[sectionAxis], min + sectionT * span);
+    return point;
+  }
+
+  function applySectionClipping() {
+    clippingPlane.setFromNormalAndCoplanarPoint(
+      AXIS_VECTOR[sectionAxis],
+      sectionPlanePoint(),
+    );
+    const planes = sectionEnabled ? [clippingPlane] : [];
+    for (const mesh of faceMeshes) {
+      mesh.material.clippingPlanes = planes;
+    }
+    document.getElementById("section-panel").classList.toggle("disabled", !sectionEnabled);
+    document.getElementById("btn-section-toggle").textContent =
+      sectionEnabled ? "Section" : "Whole";
+    document.getElementById("section-depth").disabled = !sectionEnabled;
+    document.getElementById("section-axis").disabled = !sectionEnabled;
+  }
+
+  function syncSectionDepthUi() {
+    const slider = document.getElementById("section-depth");
+    slider.value = String(Math.round(sectionT * 1000));
+    document.getElementById("section-depth-label").textContent =
+      `${Math.round(sectionT * 100)}%`;
+  }
+
   function centerAndScale() {
     const box = new THREE.Box3().setFromObject(root);
     const center = box.getCenter(new THREE.Vector3());
@@ -831,10 +1016,11 @@
     const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
     root.position.sub(center);
     root.scale.setScalar(100 / maxDim);
+    refreshModelBox();
   }
 
   function fitCamera() {
-    const box = new THREE.Box3().setFromObject(root);
+    const box = modelBox.isEmpty() ? new THREE.Box3().setFromObject(root) : modelBox;
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
@@ -843,11 +1029,25 @@
     const fitWidth = fitHeight * camera.aspect;
     const distance = Math.max(fitHeight, fitWidth) * 1.35;
     controls.target.copy(center);
-    camera.position.set(
-      center.x + distance * 0.75,
-      center.y + distance * 0.55,
-      center.z + distance * 0.75,
-    );
+
+    if (sectionEnabled && sectionAxis === "Z") {
+      camera.up.set(0, 1, 0);
+      camera.position.set(center.x, center.y - distance * 0.15, center.z + distance * 0.95);
+    } else if (sectionEnabled && sectionAxis === "Y") {
+      camera.up.set(0, 0, 1);
+      camera.position.set(center.x, center.y + distance * 0.95, center.z + distance * 0.15);
+    } else if (sectionEnabled && sectionAxis === "X") {
+      camera.up.set(0, 1, 0);
+      camera.position.set(center.x + distance * 0.95, center.y - distance * 0.15, center.z);
+    } else {
+      camera.up.set(0, 1, 0);
+      camera.position.set(
+        center.x + distance * 0.75,
+        center.y + distance * 0.55,
+        center.z + distance * 0.75,
+      );
+    }
+
     controls.minDistance = maxDim * 0.02;
     controls.maxDistance = maxDim * 80;
     camera.near = Math.max(maxDim / 500, 0.001);
@@ -951,14 +1151,26 @@
       fl.appendChild(groupEl);
     }
 
-    const stock = DATA.faces
-      .filter((f) => f.feature_id < 0)
-      .map((f) => f.face_index);
+    const unassigned = DATA.faces.filter((f) => f.feature_id < 0);
+    const gate = unassigned.filter((f) => f.excluded_by_stock_gate);
+    const other = unassigned.filter((f) => !f.excluded_by_stock_gate);
+    const lines = [];
+    if (gate.length) {
+      lines.push(
+        `STOCK gate (${gate.length}): [${gate.map((f) => f.face_index).join(", ")}]`,
+      );
+    }
+    if (other.length) {
+      lines.push(
+        `Other unassigned (${other.length}): [${other.map((f) => f.face_index).join(", ")}]`,
+      );
+    }
     document.getElementById("stock-faces").textContent =
-      stock.length ? `[${stock.join(", ")}]` : "(none)";
+      lines.length ? lines.join("\n") : "(none)";
   }
 
   const raycaster = new THREE.Raycaster();
+  raycaster.params.Mesh.clipIntersection = true;
   const pointer = new THREE.Vector2();
 
   renderer.domElement.addEventListener("pointerdown", (event) => {
@@ -985,7 +1197,7 @@
       showStockFaceInfo(faceData);
     } else {
       hideFeatureInfo();
-      tooltip.textContent = `Face ${fi} · stock / unassigned`;
+      tooltip.textContent = `Face ${fi} · unassigned`;
     }
   });
 
@@ -1006,6 +1218,24 @@
     hideFeatureInfo();
     updateSidebarSelection();
     fitCamera();
+  });
+
+  document.getElementById("btn-section-toggle").addEventListener("click", () => {
+    sectionEnabled = !sectionEnabled;
+    applySectionClipping();
+    if (sectionEnabled) fitCamera();
+  });
+
+  document.getElementById("section-axis").addEventListener("change", (event) => {
+    sectionAxis = event.target.value;
+    applySectionClipping();
+    if (sectionEnabled) fitCamera();
+  });
+
+  document.getElementById("section-depth").addEventListener("input", (event) => {
+    sectionT = Number(event.target.value) / 1000;
+    syncSectionDepthUi();
+    applySectionClipping();
   });
 
   document.getElementById("face-search-go").addEventListener("click", () => {
@@ -1035,6 +1265,8 @@
   edgeLines = buildEdgeLines();
   if (edgeLines) root.add(edgeLines);
   centerAndScale();
+  applySectionClipping();
+  syncSectionDepthUi();
   fitCamera();
   renderSidebar();
   resize();

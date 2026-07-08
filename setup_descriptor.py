@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, Mapping, Sequence
 
 import numpy as np
 
@@ -24,6 +24,8 @@ REPO_ROOT = Path(__file__).resolve().parent
 OpeningAxisMode = Literal["auto", "explicit"]
 PocketAccessLabel = Literal["open", "closed", "unknown"]
 ConventionalMachiningSide = Literal["front", "back"]
+SetupScopeMode = Literal["full", "filtered"]
+STOCK_BOUNDARY_SCOPE_TOKENS = frozenset({"facing", "stock_face"})
 
 DEFAULT_MIN_AXIS_CONFIDENCE = 0.85
 
@@ -88,6 +90,44 @@ class OpeningAxisSpec:
             )
 
 
+@dataclass(frozen=True)
+class SetupScope:
+    """Declared machinable feature scope for one setup (Phase 1: explicit input only)."""
+
+    mode: SetupScopeMode = "full"
+    classes: tuple[str, ...] = ()
+    feature_ids: tuple[str, ...] = ()
+
+    @property
+    def is_full(self) -> bool:
+        return self.mode == "full"
+
+    @property
+    def stock_boundary_only(self) -> bool:
+        return bool(STOCK_BOUNDARY_SCOPE_TOKENS.intersection(self.classes))
+
+    def to_dict(self) -> dict[str, Any]:
+        if self.is_full:
+            return {"mode": "full"}
+        payload: dict[str, Any] = {"mode": "filtered"}
+        if self.classes:
+            payload["classes"] = list(self.classes)
+        if self.feature_ids:
+            payload["feature_ids"] = list(self.feature_ids)
+        return payload
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, Any] | None) -> SetupScope:
+        if raw is None:
+            return cls()
+        mode = str(raw.get("mode") or "full")
+        if mode == "full":
+            return cls()
+        classes = tuple(str(c) for c in (raw.get("classes") or ()))
+        feature_ids = tuple(str(i) for i in (raw.get("feature_ids") or ()))
+        return cls(mode="filtered", classes=classes, feature_ids=feature_ids)
+
+
 @dataclass
 class SetupDefaults:
     """Fallback values when no descriptor file exists or a setup field is omitted."""
@@ -95,6 +135,7 @@ class SetupDefaults:
     setup_id: str = "default"
     opening_axis: OpeningAxisSpec = field(default_factory=OpeningAxisSpec)
     pocket_access: PocketAccessLabel = "unknown"
+    scope: SetupScope = field(default_factory=SetupScope)
 
 
 @dataclass
@@ -107,6 +148,10 @@ class SetupEntry:
     opening_axis: OpeningAxisSpec | None = None
     pocket_access: PocketAccessLabel | None = None
     pockets_by_seed_face: dict[int, PocketAccessLabel] = field(default_factory=dict)
+    scope: SetupScope | None = None
+
+    def effective_scope(self, defaults: SetupDefaults) -> SetupScope:
+        return self.scope if self.scope is not None else defaults.scope
 
     def effective_opening_axis(self, defaults: SetupDefaults) -> OpeningAxisSpec:
         spec = self.opening_axis or defaults.opening_axis
@@ -146,6 +191,7 @@ class ResolvedSetup:
     opening_axis: OpeningAxisSpec
     pocket_access: PocketAccessLabel
     pockets_by_seed_face: dict[int, PocketAccessLabel]
+    scope: SetupScope = field(default_factory=SetupScope)
 
 
 def default_setup_descriptor(part_id: str = "unknown") -> PartSetupDescriptor:
@@ -214,6 +260,46 @@ def _parse_pocket_access(raw: Any, *, where: str) -> PocketAccessLabel | None:
     return label  # type: ignore[return-value]
 
 
+def _parse_setup_scope(raw: Any, *, where: str) -> SetupScope:
+    if raw is None:
+        return SetupScope()
+    if isinstance(raw, str):
+        label = raw.strip().lower()
+        if label == "full":
+            return SetupScope()
+        if label in STOCK_BOUNDARY_SCOPE_TOKENS:
+            return SetupScope(mode="filtered", classes=(label,))
+        raise SetupDescriptorError(
+            f"{where}.scope must be 'full', a class list, or a mapping; got {raw!r}"
+        )
+    if isinstance(raw, list):
+        if not raw:
+            raise SetupDescriptorError(f"{where}.scope list must not be empty")
+        classes = tuple(str(item).strip().lower() for item in raw)
+        return SetupScope(mode="filtered", classes=classes)
+    if isinstance(raw, dict):
+        classes_raw = raw.get("classes")
+        feature_ids_raw = raw.get("feature_ids")
+        classes = (
+            tuple(str(item).strip().lower() for item in classes_raw)
+            if classes_raw is not None
+            else ()
+        )
+        feature_ids = (
+            tuple(str(item) for item in feature_ids_raw)
+            if feature_ids_raw is not None
+            else ()
+        )
+        if not classes and not feature_ids:
+            raise SetupDescriptorError(
+                f"{where}.scope mapping requires classes and/or feature_ids"
+            )
+        return SetupScope(mode="filtered", classes=classes, feature_ids=feature_ids)
+    raise SetupDescriptorError(
+        f"{where}.scope must be 'full', a class list, or a mapping; got {type(raw).__name__}"
+    )
+
+
 def _parse_pockets_by_seed_face(raw: Any, *, where: str) -> dict[int, PocketAccessLabel]:
     if raw is None:
         return {}
@@ -254,6 +340,7 @@ def parse_setup_descriptor(data: dict[str, Any] | None) -> PartSetupDescriptor:
         opening_axis=_parse_opening_axis(defaults_raw.get("opening_axis"), where="defaults"),
         pocket_access=_parse_pocket_access(defaults_raw.get("pocket_access"), where="defaults")
         or "unknown",
+        scope=_parse_setup_scope(defaults_raw.get("scope"), where="defaults"),
     )
 
     setups_raw = data.get("setups") or {}
@@ -282,6 +369,9 @@ def parse_setup_descriptor(data: dict[str, Any] | None) -> PartSetupDescriptor:
             pockets_by_seed_face=_parse_pockets_by_seed_face(
                 entry_raw.get("pockets"), where=f"setups[{key}]"
             ),
+            scope=_parse_setup_scope(entry_raw.get("scope"), where=f"setups[{key}]")
+            if entry_raw.get("scope") is not None
+            else None,
         )
     return PartSetupDescriptor(part_id=part_id, defaults=defaults, setups=setups)
 
@@ -345,6 +435,7 @@ def resolve_setup_entry(
             opening_axis=defaults.opening_axis,
             pocket_access=defaults.pocket_access,
             pockets_by_seed_face={},
+            scope=defaults.scope,
         )
 
     return ResolvedSetup(
@@ -355,6 +446,7 @@ def resolve_setup_entry(
         opening_axis=entry.effective_opening_axis(descriptor.defaults),
         pocket_access=entry.effective_pocket_access(descriptor.defaults),
         pockets_by_seed_face=dict(entry.pockets_by_seed_face),
+        scope=entry.effective_scope(descriptor.defaults),
     )
 
 

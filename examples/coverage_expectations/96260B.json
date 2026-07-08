@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.1.0",
+  "part_id": "96260B",
+  "description": "Per-setup strategy coverage expectations for 96260B split-panel multi-setup",
+  "setups": {
+    "rear": {
+      "expected_present": {
+        "strategies": [
+          "roughing",
+          "finishing_floor",
+          "finishing_wall",
+          "finishing",
+          "finishing_fillet"
+        ]
+      },
+      "expected_absent": {
+        "strategies": [
+          {
+            "name": "facing",
+            "reason": "rear panel not faced"
+          }
+        ]
+      }
+    },
+    "front": {
+      "expected_present": {
+        "strategies": [
+          "facing"
+        ]
+      },
+      "expected_absent": {
+        "strategies": [
+          {
+            "name": "roughing",
+            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+          },
+          {
+            "name": "finishing_floor",
+            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+          },
+          {
+            "name": "finishing_wall",
+            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+          },
+          {
+            "name": "finishing",
+            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+          },
+          {
+            "name": "finishing_fillet",
+            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+          }
+        ]
+      }
+    }
+  }
+}

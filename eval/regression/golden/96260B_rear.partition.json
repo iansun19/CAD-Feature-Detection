@@ -1,0 +1,2292 @@
+{
+  "schema_version": 1,
+  "kind": "cascade_face_partition",
+  "fixture_id": "96260B_rear",
+  "face_index_scheme": "analyze_step_v1",
+  "n_faces": 348,
+  "run_config": {
+    "stock_classifier": "new",
+    "max_diameter_mm": 150.0,
+    "machining_side": "back",
+    "pocket_access": "closed",
+    "wall_attach_dist": null
+  },
+  "bless_meta": {
+    "blessed_at": "2026-07-08T02:22:42.444366+00:00",
+    "reason": "Initial golden bless for 96260B_rear cascade regression fixture",
+    "git_sha": "61154f2",
+    "git_dirty": true
+  },
+  "face_fingerprints": [
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.59
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.59
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.59
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.59
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.59
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 435.277
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.59
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.603
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.424
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 30.469
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.628
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 110.588
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 10.426
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 73.554
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 15.751
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.927
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 20.766
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 1016.474
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 2701.215
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 190.27
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 296.816
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 192.352
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 844.377
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 152.775
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 240.993
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 4.727
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.219
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 65.627
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 84.413
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 178.33
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 121.551
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.8
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 103.89
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 6.032
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.609
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 35.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 105.168
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.005
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.351
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3.353
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 4.429
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 0.495
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 74.822
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 57.684
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 7875.115
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 1351.011
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 1676.771
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 1444.317
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 2463.389
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 1495.0
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 2895.049
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3236.387
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 49.909
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 73.097
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 49.91
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 1016.474
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 190.27
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 296.816
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 192.352
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 152.775
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 38.375
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 1487.063
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 2895.048
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 3236.387
+    }
+  ],
+  "instances": [
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        4
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        8
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        13
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        16
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        21
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        25
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        28
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        31
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        36
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        40
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        43
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        46
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        51
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        55
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        58
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        61
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        66
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        70
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        73
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        76
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        81
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        85
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        88
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        91
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        94
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        98
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        101
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        104
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        106,
+        333
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        107
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        114
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        115
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        121
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        131
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        133
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        137
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        145
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        146
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        147
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        153
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        163
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        167
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        175
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        177
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        183
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        193
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        197
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        205
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        206,
+        253
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        207
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        213
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        223
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        227
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        235
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        236
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        237
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        243
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        257
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        265
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        266,
+        267
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        273
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        283
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        287
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        295
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        301
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        311
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        315
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        323
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        324,
+        325
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        330,
+        331
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        332
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        345
+      ]
+    },
+    {
+      "class_name": "filleted_blind_hole",
+      "face_ids": [
+        108,
+        109,
+        110,
+        334,
+        335
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        14,
+        105,
+        116,
+        117,
+        118,
+        119,
+        120,
+        135,
+        136
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        23,
+        29,
+        144,
+        151,
+        152,
+        165,
+        166
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        38,
+        174,
+        178,
+        180,
+        181,
+        182,
+        194,
+        195,
+        196
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        52,
+        53,
+        59,
+        208,
+        210,
+        211,
+        212,
+        224,
+        225,
+        226
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        67,
+        74,
+        234,
+        238,
+        240,
+        242,
+        254,
+        255,
+        256
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        82,
+        83,
+        264,
+        268,
+        269,
+        270,
+        271,
+        272,
+        286
+      ]
+    },
+    {
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        95,
+        96,
+        102,
+        296,
+        297,
+        298,
+        299,
+        300,
+        313,
+        314
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        122,
+        123,
+        124,
+        127,
+        128,
+        129,
+        130,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        338
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        154,
+        155,
+        156,
+        159,
+        160,
+        161,
+        162,
+        168,
+        172,
+        173,
+        339
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        198,
+        202,
+        203,
+        340
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        214,
+        215,
+        216,
+        220,
+        221,
+        222,
+        228,
+        230,
+        231,
+        232,
+        233,
+        341
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251,
+        252,
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        342
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        274,
+        275,
+        276,
+        277,
+        278,
+        279,
+        280,
+        281,
+        282,
+        288,
+        289,
+        290,
+        291,
+        292,
+        293,
+        343
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        302,
+        303,
+        304,
+        306,
+        307,
+        308,
+        309,
+        310,
+        316,
+        319,
+        320,
+        321,
+        344
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        112
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        326
+      ]
+    },
+    {
+      "class_name": "outer_fillet",
+      "face_ids": [
+        111,
+        336
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        329,
+        347
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        3
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        12
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        20
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        27
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        35
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        42
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        50
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        57
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        65
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        72
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        80
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        87
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        93
+      ]
+    },
+    {
+      "class_name": "wall",
+      "face_ids": [
+        100
+      ]
+    }
+  ],
+  "stock_face_ids": [
+    0,
+    1,
+    2,
+    5,
+    6,
+    7,
+    9,
+    10,
+    11,
+    15,
+    17,
+    18,
+    19,
+    22,
+    24,
+    26,
+    30,
+    32,
+    33,
+    34,
+    37,
+    39,
+    41,
+    44,
+    45,
+    47,
+    48,
+    49,
+    54,
+    56,
+    60,
+    62,
+    63,
+    64,
+    68,
+    69,
+    71,
+    75,
+    77,
+    78,
+    79,
+    84,
+    86,
+    89,
+    90,
+    92,
+    97,
+    99,
+    103,
+    113,
+    125,
+    126,
+    132,
+    134,
+    148,
+    149,
+    150,
+    157,
+    158,
+    164,
+    169,
+    170,
+    171,
+    176,
+    179,
+    199,
+    200,
+    201,
+    204,
+    209,
+    217,
+    218,
+    219,
+    229,
+    239,
+    241,
+    284,
+    285,
+    294,
+    305,
+    312,
+    317,
+    318,
+    322,
+    327,
+    328,
+    337,
+    346
+  ],
+  "unclaimed_face_ids": []
+}

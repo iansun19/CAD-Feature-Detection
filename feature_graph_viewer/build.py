@@ -10,7 +10,7 @@ from feature_graph_viewer.geometry import triangulate_step_part
 PKG_DIR = Path(__file__).resolve().parent
 DEFAULT_TEMPLATE = PKG_DIR / "template.html"
 
-# Distinct palette for feature instances (stock uses STOCK_COLOR).
+# Distinct palette for feature instances (gray = not in any cascade feature).
 FEATURE_COLORS = [
     "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
     "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990",
@@ -42,7 +42,7 @@ def load_face_predictions(graph_path: Path) -> dict[int, dict] | None:
 
 
 def face_feature_maps(graph: dict, n_faces: int) -> tuple[dict[int, int], dict[int, str]]:
-    """face_index -> feature_id (-1 stock/unassigned), feature_id -> hex color."""
+    """face_index -> feature_id (-1 unassigned), feature_id -> hex color."""
     face_to_feature: dict[int, int] = {i: -1 for i in range(n_faces)}
     feature_colors: dict[int, str] = {}
 
@@ -53,6 +53,34 @@ def face_feature_maps(graph: dict, n_faces: int) -> tuple[dict[int, int], dict[i
             face_to_feature[int(face_idx)] = fid
 
     return face_to_feature, feature_colors
+
+
+def cascade_face_ids_for_labeling(graph: dict) -> set[int] | None:
+    """Cascade feature face ids when graph carries stock-gate metadata."""
+    if graph.get("source") != "cascade" and "stock_face_ids" not in graph:
+        return None
+    ids: set[int] = set()
+    for node in graph.get("nodes", []):
+        for face_idx in node.get("face_ids", []):
+            ids.add(int(face_idx))
+    return ids
+
+
+def classification_by_face(
+    step_path: Path,
+    graph: dict,
+) -> dict[int, dict]:
+    """Per-face STOCK/CUT classification metadata for viewer annotation."""
+    from stock_cut_classification import classify_report
+
+    classifier = graph.get("stock_classifier", "new")
+    cascade_ids = cascade_face_ids_for_labeling(graph)
+    records = classify_report(
+        step_path,
+        classifier=classifier,  # type: ignore[arg-type]
+        cascade_face_ids=cascade_ids,
+    )
+    return {r.face_id: r.to_dict() for r in records}
 
 
 def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
@@ -67,6 +95,8 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
         )
 
     face_to_feature, feature_colors = face_feature_maps(graph, n_faces)
+    stock_face_ids = set(int(i) for i in graph.get("stock_face_ids", []))
+    class_meta = classification_by_face(step_path, graph)
 
     feature_meta = []
     for node in graph.get("nodes", []):
@@ -100,11 +130,18 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
         feat = face_to_feature[idx]
         face["feature_id"] = feat
         face["color"] = feature_colors[feat] if feat >= 0 else STOCK_COLOR
-        if face_preds and idx in face_preds:
+        if idx in stock_face_ids:
+            face["excluded_by_stock_gate"] = True
+        elif face_preds and idx in face_preds:
             pred = face_preds[idx]
             face["class_id"] = pred.get("class_id")
             face["class_name"] = pred.get("class_name")
             face["confidence"] = pred.get("confidence")
+        if idx in class_meta:
+            meta = class_meta[idx]
+            face["stock_cut_label"] = meta.get("label")
+            face["labeled_by"] = meta.get("labeled_by")
+            face["gate_rule"] = meta.get("gate_rule")
 
     return {
         "part_id": part_id,
@@ -114,6 +151,9 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
         "edges": graph.get("edges", []),
         "edge_color": EDGE_COLOR,
         "stock_color": STOCK_COLOR,
+        "graph_source": graph.get("source"),
+        "stock_face_ids": sorted(stock_face_ids),
+        "stock_classifier": graph.get("stock_classifier"),
     }
 
 

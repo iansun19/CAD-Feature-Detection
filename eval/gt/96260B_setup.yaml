@@ -23,6 +23,7 @@ setups:
     opening_axis:
       mode: auto
     pocket_access: open
+    scope: [facing]
 
   rear:
     setup_id: rear
@@ -31,3 +32,4 @@ setups:
     opening_axis:
       mode: auto
     pocket_access: closed
+    scope: full

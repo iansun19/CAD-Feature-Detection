@@ -1,0 +1,45 @@
+========================================================================
+CamPlan vs Toolpath ground truth
+========================================================================
+Setup:           rear
+GT file:         /Users/iansun19/mlcad/eval/gt/96260B_rear_shop_program.yaml
+GT part_id:      None
+GT schema:       counts=False features=False operations=True
+GT op source:    shop_program
+
+=== AGGREGATE SCORECARD (primary for shop program GT) ===
+
+--- 1. Op count ---
+Shop ops: 20   Emitted: 60   Gap (ours - shop): +40
+Shop feature-instances batched across ops: 262
+  TODO: batch-by-tool grouping (next task) to close structural op-count gap.
+
+--- 2. Strategy coverage ---
+Shop strategies:    facing, finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+Emitted (mapped):   finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+Covered:            finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+MISSED:             facing
+
+--- 3. Feature-category coverage ---
+Shop categories:    Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+Emitted categories: Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+Covered:            Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+MISSED:             (none)
+
+--- 4. Tool-type coverage (type+diameter; labels may be truncated) ---
+Shop tool types:    ball, bullnose, endmill, face_mill
+Emitted tool types: ball, endmill
+Overlap:            ball, endmill
+Shop-only gaps:     bullnose, face_mill
+
+--- 5. Feeds (informational; not pass/fail) ---
+  - finishing: feed ratio 0.431 (9 emitted vs 4 shop ops) rpm ratio 1.571
+  - finishing_fillet: feed ratio 0.236 (2 emitted vs 1 shop ops) rpm ratio 1.571
+  - finishing_floor: feed ratio 1.136 (17 emitted vs 3 shop ops) rpm ratio 1.333
+  - finishing_wall: feed ratio 0.192 (16 emitted vs 6 shop ops) rpm ratio 1.346
+  - roughing: feed ratio 1.516 (16 emitted vs 5 shop ops) rpm ratio 0.849
+
+--- Per-feature matching (unreliable for shop program GT) ---
+
+--- Operation coverage (per-feature refs) ---
+GT ops: 20   Emitted: 60   Matched: 0   Missing: 20   Extra: 60

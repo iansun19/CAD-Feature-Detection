@@ -172,6 +172,13 @@ def run_one(
             else:
                 html_path = out_dir / "viewer.html"
                 print(f"[pipeline] building viewer -> {html_path.name}")
+                print(
+                    "[pipeline] viewer note: "
+                    f"{out_dir / 'viewer.html'} is the HEURISTIC graph "
+                    "(no stock-gate metadata). For STOCK/CUT inspection open "
+                    f"pipeline_out/{part_id}_cascade/viewer.html "
+                    f"(run_cascade --export-dir pipeline_out/{part_id}_cascade)."
+                )
                 _build_viewer(step_path, graph_path, html_path, part_id)
                 viewer_ok = True
 

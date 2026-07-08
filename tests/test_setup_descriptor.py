@@ -20,6 +20,7 @@ from setup_descriptor import (  # noqa: E402
     OpeningAxisLowConfidenceError,
     OpeningAxisSpec,
     SetupDescriptorError,
+    SetupScope,
     auto_detect_opening_axis,
     default_setup_descriptor,
     load_setup_descriptor,
@@ -27,6 +28,7 @@ from setup_descriptor import (  # noqa: E402
     resolve_opening_axis,
     resolve_setup_entry,
     to_pocket_setup_config,
+    _parse_setup_scope,
 )
 
 
@@ -157,6 +159,17 @@ class TestArbitrarySetupAccess(unittest.TestCase):
         self.assertIn("back", msg)
         self.assertIn("pocket_access", msg)
 
+    def test_parse_scope_variants(self) -> None:
+        self.assertTrue(_parse_setup_scope("full", where="t").is_full)
+        facing = _parse_setup_scope(["facing"], where="t")
+        self.assertTrue(facing.stock_boundary_only)
+        explicit = _parse_setup_scope(
+            {"classes": ["wall"], "feature_ids": ["12"]},
+            where="t",
+        )
+        self.assertEqual(explicit.classes, ("wall",))
+        self.assertEqual(explicit.feature_ids, ("12",))
+
     def test_96260B_front_back_unchanged(self) -> None:
         path = os.path.join(ROOT, "eval/gt/96260B_setup.yaml")
         desc = load_setup_descriptor(path)
@@ -168,6 +181,8 @@ class TestArbitrarySetupAccess(unittest.TestCase):
         )
         self.assertEqual(front.pocket_access, "open")
         self.assertEqual(rear.pocket_access, "closed")
+        self.assertTrue(front.scope.stock_boundary_only)
+        self.assertTrue(rear.scope.is_full)
         self.assertEqual(to_pocket_setup_config(front).resolved_access(), ("open", True))
         self.assertEqual(to_pocket_setup_config(rear).resolved_access(), ("closed", True))
 

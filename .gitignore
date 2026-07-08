@@ -29,6 +29,14 @@ nist_ctc_01_stage_a.npz
 .DS_Store
 .idea/
 .vscode/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# Local Fusion tool-library exports (ingest once into Supabase; do not commit)
+local_tool_libraries/
 # Pipeline outputs (Phase 4)
 pipeline_out/
 *.parquet

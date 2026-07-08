@@ -177,6 +177,7 @@ def run_cascade(
     edge_index: np.ndarray,
     edge_attr: np.ndarray,
     *,
+    stock_classifier: str | None = "new",
     pocket_config: PocketDetectionConfig | None = None,
     hole_config: HoleDetectionConfig | None = None,
     coaxial_config: CoaxialStackDetectionConfig | None = None,
@@ -196,6 +197,18 @@ def run_cascade(
     occ_faces = load_step_faces(step_path)
     n_faces = len(faces)
 
+    stock_faces: set[int] = set()
+    if stock_classifier and stock_classifier != "off":
+        from stock_cut_classification import stock_face_ids
+
+        stock_faces = stock_face_ids(step_path, classifier=stock_classifier)  # type: ignore[arg-type]
+    cut_candidates = set(range(n_faces)) - stock_faces
+    if stock_faces:
+        logger.info(
+            "stock_cut_classification (%s): %d STOCK, %d CUT candidates",
+            stock_classifier, len(stock_faces), len(cut_candidates),
+        )
+
     claim_recorder = None
     if instrument:
         from cascade_instrumentation import PassClaimRecorder
@@ -204,7 +217,7 @@ def run_cascade(
 
     pocket_result = detect_pockets(
         faces, edge_index, edge_attr,
-        occ_faces=occ_faces, candidate_faces=set(range(n_faces)),
+        occ_faces=occ_faces, candidate_faces=cut_candidates,
         config=pocket_config,
     )
     pocket_result = apply_filleted_lobe_tiers_to_result(
@@ -376,6 +389,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     ap.add_argument("-v", "--verbose", action="store_true")
     ap.add_argument(
+        "--stock-classifier",
+        choices=("new", "old", "off"),
+        default="new",
+        help="STOCK/CUT face gate before cascade (default: new convexity-primary; off=all faces)",
+    )
+    ap.add_argument(
         "--export-dir", type=Path, default=None,
         help="write feature_graph_cascade.json (+ viewer.html if --open) under this directory",
     )
@@ -432,6 +451,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     faces, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
         step_path, edge_index, edge_attr,
+        stock_classifier=args.stock_classifier,
         pocket_config=pocket_config, hole_config=hole_config,
         instrument=args.instrument, instrument_dir=instrument_dir,
     )
@@ -647,22 +667,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         graph = build_cascade_feature_graph(
             part_id, n_faces, pk, hl, cx, fl, of, wl, pr, rs, edge_index,
         )
+        if args.stock_classifier and args.stock_classifier != "off":
+            from stock_cut_classification import stock_face_ids
+
+            graph["stock_face_ids"] = sorted(
+                stock_face_ids(step_path, classifier=args.stock_classifier)  # type: ignore[arg-type]
+            )
+            graph["stock_classifier"] = args.stock_classifier
         graph_path = export_dir / "feature_graph_cascade.json"
         write_feature_graph(str(graph_path), graph)
         print(f"\nWrote {graph_path.resolve()}")
-        if args.open:
-            from feature_graph_viewer.build import DEFAULT_TEMPLATE, build_viewer
 
-            viewer_path = export_dir / "viewer.html"
-            build_viewer(
-                part_id=part_id,
-                graph_path=graph_path,
-                step_path=step_path,
-                output_path=viewer_path,
-                template_path=DEFAULT_TEMPLATE,
-                open_browser=False,
-            )
-            print(f"Wrote {viewer_path.resolve()}")
+        from feature_graph_viewer.build import DEFAULT_TEMPLATE, build_viewer
+
+        viewer_path = export_dir / "viewer.html"
+        build_viewer(
+            part_id=part_id,
+            graph_path=graph_path,
+            step_path=step_path,
+            output_path=viewer_path,
+            template_path=DEFAULT_TEMPLATE,
+            open_browser=False,
+        )
+        print(f"Wrote {viewer_path.resolve()}")
+        if args.open:
             import subprocess
             subprocess.run(["open", str(viewer_path.resolve())], check=False)
 

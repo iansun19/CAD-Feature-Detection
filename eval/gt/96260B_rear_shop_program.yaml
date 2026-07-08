@@ -1,0 +1,437 @@
+# Ground-truth CAM program for 96260B REAR — transcribed from Toolpath shop program.
+#
+# SOURCE: Screenshots of the actual Toolpath program a machinist ran for this part.
+#         Not machine-exported; hand-transcribed from the operations UI. Treat as
+#         "what an experienced machinist actually did," NOT a theoretically optimal
+#         plan. A few cuts were reported slightly inaccurate by the shop; operation
+#         set / tools / sequence are the reliable part, exact feeds less so.
+#
+# SCOPE: This is the eval `operations:` block the harness consumes to grade the
+#        planner's emitted CamPlan (operation coverage, op-type agreement, tool
+#        agreement, sequence, and loose feed/speed ratio).
+#
+# KEY STRUCTURAL FACT (for whoever reads this): the shop batches by (tool, strategy)
+#        across MANY features per operation (op 1 = 81 features, op 7 = 28), and
+#        orders rough->finish and coarse-tool->fine-tool. The planner currently
+#        emits per-feature rough+finish pairs. Divergence is expected and is the
+#        point of the eval.
+#
+# UNITS: as displayed in Toolpath = inch tools, feeds in in/min, rpm as shown.
+#        Feature names are Toolpath's display names (Face #N, Contour Surface #N,
+#        Wall #N, Filleted Pocket #N, Profile #N, Outer Fillet #N, Through Hole #N,
+#        Filleted Blind Hole #N) — NOT cascade feature_ids. Mapping to cascade ids
+#        is the harness's job; see notes at bottom.
+#
+# "features_shown" lists only the features legible in the screenshot (top 4 of N);
+# "feature_count" is the true total from the op header. Where the full list wasn't
+# visible, features_shown is a partial sample and feature_count is authoritative.
+
+part: "96260B"
+setup_side: "rear"
+source: "toolpath_screenshots_2026-07-07"
+transcription: "manual_from_ui"
+
+setups:
+  - setup: 1
+    total_operations: 19
+    cycle_time: "1h50m47s"
+    operations:
+      - index: 1
+        strategy: "roughing"
+        tool: "ALU-POWER 3/8\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.375
+        flutes: 3
+        feature_count: 81
+        features_shown: ["Face #4", "Contour Surface #27", "Face #1", "Filleted Pocket #2"]
+        preset: "AluWrought_Adaptive_Rough"
+        spindle_rpm: 10186
+        surface_speed_ft_min: 1000
+        feed_in_min: 146.87
+        feed_per_tooth_in: 0.0048
+        stepdown_in: 1.0
+        stepover_in: 0.0876
+        cycle_time: "16m36s"
+
+      - index: 2
+        strategy: "finishing_floor"
+        tool: "ALU-POWER 3/8\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.375
+        flutes: 3
+        feature_count: 1
+        features_shown: ["Face #7"]
+        preset: "AluWrought_Floor_Finish"
+        spindle_rpm: 10186
+        surface_speed_ft_min: 1000
+        feed_in_min: 83.58
+        feed_per_tooth_in: 0.0027
+        stepdown_in: 1.0
+        stepover_in: 0.3375
+        cycle_time: "19s"
+
+      - index: 3
+        strategy: "roughing"
+        tool: "FLASHSOLID 1/2\" 3F Bull"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 24
+        features_shown: ["Profile #1", "Contour Surface #15", "Contour Surface #3", "Face #8"]
+        preset: "AluWrought_Adaptive_Rough"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 118.06
+        feed_per_tooth_in: 0.0052
+        stepdown_in: 1.25
+        stepover_in: 0.0613
+        cycle_time: "12m51s"
+
+      - index: 4
+        strategy: "roughing"
+        tool: "Harvey 3/16\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.1875
+        flutes: 3
+        feature_count: 36
+        features_shown: ["Contour Surface #5", "Face #5", "Contour Surface #8", "Face #2"]
+        preset: "AluWrought_Adaptive_Rough"
+        spindle_rpm: 12000
+        surface_speed_ft_min: 589
+        feed_in_min: 75.6
+        feed_per_tooth_in: 0.0021
+        stepdown_in: 0.75
+        stepover_in: 0.0338
+        cycle_time: "11m26s"
+
+      - index: 5
+        strategy: "roughing"
+        tool: "ALU-POWER 1/8\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.125
+        flutes: 3
+        feature_count: 8
+        features_shown: ["Contour Surface #10", "Contour Surface #2", "Contour Surface #3", "Contour Surface #14"]
+        preset: "AluWrought_Adaptive_Rough"
+        spindle_rpm: 12000
+        surface_speed_ft_min: 393
+        feed_in_min: 46.8
+        feed_per_tooth_in: 0.0013
+        stepdown_in: 0.375
+        stepover_in: 0.0178
+        cycle_time: "16m38s"
+
+      - index: 6
+        strategy: "finishing_wall"
+        tool: "FLASHSOLID 1/2\" 3F Bull R0.xx"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 1
+        features_shown: ["Profile #1"]
+        preset: "AluWrought_Wall_Finish"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 1.25
+        stepover_in: 0.396
+        cycle_time: "18s"
+
+      - index: 7
+        strategy: "finishing"
+        tool: "FLASHSOLID 1/2\" 3F Bull"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 28
+        features_shown: ["Contour Surface #22", "Contour Surface #32", "Contour Surface #36", "Contour Surface #33"]
+        preset: "AluWrought_Surface"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 0.0394
+        stepover_in: 0.0155
+        cycle_time: "26m15s"
+
+      - index: 8
+        strategy: "finishing"
+        tool: "FLASHSOLID 1/2\" 3F Bull"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 1
+        features_shown: ["Outer Fillet #1"]
+        preset: "AluWrought_Surface"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 0.0394
+        stepover_in: 0.0155
+        cycle_time: "7m38s"
+
+      - index: 9
+        strategy: "finishing_wall"
+        tool: "FLASHSOLID 1/2\" 3F Bull R0.03"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        corner_radius_in: 0.03
+        feature_count: 1
+        features_shown: ["Filleted Blind Hole #1"]
+        preset: "AluWrought_Wall_Finish"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 1.25
+        stepover_in: 0.396
+        cycle_time: "9s"
+
+      - index: 10
+        strategy: "finishing_floor"
+        tool: "FLASHSOLID 1/2\" 3F Bull R0.xx"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 1
+        features_shown: ["Filleted Blind Hole #1"]
+        preset: "AluWrought_Floor_Finish"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 1.25
+        stepover_in: 0.396
+        cycle_time: "17s"
+
+      - index: 11
+        strategy: "finishing"
+        tool: "FLASHSOLID 1/2\" 3F Bull R0.xx"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 7
+        features_shown: ["Filleted Pocket #3", "Filleted Pocket #1", "Filleted Pocket #7", "Filleted Pocket #5"]
+        preset: "AluWrought_Floor_Finish"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 1.25
+        stepover_in: 0.396
+        cycle_time: "N/A"
+
+      - index: 12
+        strategy: "finishing_fillet"
+        tool: "FLASHSOLID 1/2\" 3F Bull"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 7
+        features_shown: ["Filleted Pocket #3", "Filleted Pocket #1", "Filleted Pocket #7", "Filleted Pocket #5"]
+        preset: "AluWrought_Surface"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 0.0394
+        stepover_in: 0.0155
+        cycle_time: "5m43s"
+
+      - index: 13
+        strategy: "finishing_wall"
+        tool: "FLASHSOLID 1/2\" 3F Bull R0.03"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        corner_radius_in: 0.03
+        feature_count: 1
+        features_shown: ["Through Hole #1"]
+        preset: "AluWrought_Wall_Finish"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 1.25
+        stepover_in: 0.396
+        cycle_time: "7s"
+
+      - index: 14
+        strategy: "finishing"
+        tool: "Harvey 1/4\" 4F Ball"
+        tool_type: "ball_endmill"
+        tool_diameter_in: 0.25
+        flutes: 4
+        feature_count: 15
+        features_shown: ["Contour Surface #7", "Contour Surface #4", "Contour Surface #14", "Contour Surface #5"]
+        preset: "AluWrought_Surface"
+        spindle_rpm: 12000
+        surface_speed_ft_min: 785
+        feed_in_min: 78.0
+        feed_per_tooth_in: 0.0016
+        stepdown_in: 0.0394
+        stepover_in: 0.0316
+        cycle_time: "11m12s"
+
+      - index: 15
+        strategy: "roughing"
+        tool: "Harvey 1/8\" 3F Ball"
+        tool_type: "ball_endmill"
+        tool_diameter_in: 0.125
+        flutes: 3
+        feature_count: 7
+        features_shown: ["Face #5", "Face #8", "Face #3", "Face #1"]
+        preset: "AluWrought_Adaptive_Rough"
+        spindle_rpm: 12000
+        surface_speed_ft_min: 393
+        feed_in_min: 60.24
+        feed_per_tooth_in: 0.0017
+        stepdown_in: 0.187
+        stepover_in: 0.0347
+        cycle_time: "N/A"
+
+      - index: 16
+        strategy: "finishing_floor"
+        tool: "FLASHSOLID 1/2\" 3F Bull R0.xx"
+        tool_type: "bullnose_endmill"
+        tool_diameter_in: 0.5
+        flutes: 3
+        feature_count: 7
+        features_shown: ["Face #6", "Face #4", "Face #2", "Face #5"]
+        preset: "AluWrought_Floor_Finish"
+        spindle_rpm: 7639
+        surface_speed_ft_min: 1000
+        feed_in_min: 75.63
+        feed_per_tooth_in: 0.0033
+        stepdown_in: 1.25
+        stepover_in: 0.396
+        cycle_time: "12s"
+
+      - index: 17
+        strategy: "finishing_wall"
+        tool: "Harvey 3/16\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.1875
+        flutes: 3
+        feature_count: 14
+        features_shown: ["Wall #35", "Wall #34", "Wall #33", "Wall #32"]
+        preset: "AluWrought_Wall_Finish"
+        spindle_rpm: 12000
+        surface_speed_ft_min: 589
+        feed_in_min: 46.8
+        feed_per_tooth_in: 0.0013
+        stepdown_in: 0.75
+        stepover_in: 0.1688
+        cycle_time: "21s"
+
+      - index: 18
+        strategy: "finishing_wall"
+        tool: "ALU-POWER 3/8\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.375
+        flutes: 3
+        feature_count: 14
+        features_shown: ["Wall #17", "Wall #20", "Wall #21", "Wall #16"]
+        preset: "AluWrought_Wall_Finish"
+        spindle_rpm: 10186
+        surface_speed_ft_min: 1000
+        feed_in_min: 83.58
+        feed_per_tooth_in: 0.0027
+        stepdown_in: 1.0
+        stepover_in: 0.3375
+        cycle_time: "26s"
+
+      - index: 19
+        strategy: "finishing_wall"
+        tool: "ALU-POWER 3/8\" 3F Flat"
+        tool_type: "endmill"
+        tool_diameter_in: 0.375
+        flutes: 3
+        feature_count: 7
+        features_shown: ["Wall #7", "Wall #6", "Wall #5", "Wall #4"]
+        preset: "AluWrought_Wall_Finish"
+        spindle_rpm: 10186
+        surface_speed_ft_min: 1000
+        feed_in_min: 83.58
+        feed_per_tooth_in: 0.0027
+        stepdown_in: 1.0
+        stepover_in: 0.3375
+        cycle_time: "12s"
+
+  - setup: 2
+    total_operations: 1
+    cycle_time: "1m8s"
+    operations:
+      - index: 1
+        strategy: "facing"
+        tool: "1.5\" 6F Face Mill"
+        tool_type: "face_mill"
+        tool_diameter_in: 1.5
+        flutes: 6
+        feature_count: 1
+        features_shown: ["Face #1"]
+        preset: "AluWrought_Face_Rough_Starred"
+        spindle_rpm: 12000
+        surface_speed_ft_min: 4700
+        feed_in_min: 140.0
+        feed_per_tooth_in: 0.0019
+        stepdown_in: 0.2
+        stepover_in: 1.4
+        cycle_time: "1m8s"
+
+# ------------------------------------------------------------------------------
+# DERIVED SUMMARY (for quick planner comparison; harness may recompute)
+# ------------------------------------------------------------------------------
+summary:
+  setup1_operation_count: 19
+  setup2_operation_count: 1
+  total_operations: 20
+  distinct_tools:
+    - "ALU-POWER 3/8\" 3F Flat"       # endmill 0.375
+    - "FLASHSOLID 1/2\" 3F Bull"       # bullnose 0.5 (some entries R0.03)
+    - "Harvey 3/16\" 3F Flat"          # endmill 0.1875
+    - "ALU-POWER 1/8\" 3F Flat"        # endmill 0.125
+    - "Harvey 1/4\" 4F Ball"           # ball 0.25
+    - "Harvey 1/8\" 3F Ball"           # ball 0.125
+    - "1.5\" 6F Face Mill"             # face mill 1.5
+  strategy_types_used:
+    - roughing            # adaptive rough, batched by tool
+    - finishing_floor
+    - finishing_wall
+    - finishing           # contour surface finishing
+    - finishing_fillet
+    - facing
+  feature_categories_machined:
+    - Face                # faced / floored
+    - Contour Surface     # 3D surface finishing incl. ball tools
+    - Wall                # dedicated wall finishing passes
+    - Filleted Pocket
+    - Filleted Blind Hole
+    - Through Hole        # finished as a wall, NOT drilled
+    - Profile             # outer profile rough + finish
+    - Outer Fillet
+  # Planner-relevant observations:
+  # - Batched by (tool, strategy): op1=81 feats, op7=28 feats. Planner emits
+  #   per-feature pairs -> structural mismatch, not a bug.
+  # - Ball endmills used for contour-surface finishing (ops 14,15). Planner emits none.
+  # - Through Hole #1 and Filleted Blind Hole #1 are finished as WALL/FLOOR passes
+  #   with a 1/2" bullnose endmill (ops 9,10,13) -- NOT drilled. Confirms the large
+  #   central hole is contoured, not drilled; planner's holes->drill is too rigid.
+  # - No dedicated drilling/tapping op appears in this program at all.
+  # - Feeds pull the SAME AluWrought_* presets the planner resolves against.
+
+# ------------------------------------------------------------------------------
+# FEATURE-ID MAPPING NOTE
+# ------------------------------------------------------------------------------
+# Toolpath feature names (Face #N, Wall #N, Contour Surface #N, etc.) are display
+# names, NOT cascade feature_ids. The harness must map these to cascade ids to
+# compute per-feature coverage. Two known linkages from prior cascade GT:
+#   - cascade feature 14 <-> Filleted Blind Hole (Ø ~101.75 mm / 4.006 in)
+#   - cascade feature 15 <-> Through Hole (Ø ~81.28 mm / 3.2 in)
+# For other features, match by (class_name family + diameter/size) where possible;
+# where a confident mapping isn't available, compare at the AGGREGATE level
+# (op counts by strategy, tool set, feature-category coverage) rather than forcing
+# a per-feature id match. Aggregate comparison is the reliable signal here.

@@ -2,7 +2,7 @@
 # Copy to eval/gt/{part_id}_setup.yaml and fill one entry per machining setup.
 # Paths are relative to the repo root unless absolute.
 #
-# Scope: geometrically-unrecoverable setup facts ONLY ó not detection thresholds,
+# Scope: geometrically-unrecoverable setup facts ONLY ù not detection thresholds,
 # reference face sets, or Toolpath count ground truth (those live elsewhere).
 #
 # part_id is explicit here; do NOT rely on STEP filename normalization (96260B-specific).
@@ -15,10 +15,10 @@ defaults:
   setup_id: default
   opening_axis:
     mode: auto
-    min_confidence: 0.85   # auto mode only ó below this ? error, ask for explicit vector
+    min_confidence: 0.85   # auto mode only ù below this ? error, ask for explicit vector
   pocket_access: unknown     # all filleted pockets unless overridden per setup / per seed
 
-# One block per named machining setup (setup_id is arbitrary ó front/rear are conventional).
+# One block per named machining setup (setup_id is arbitrary ù front/rear are conventional).
 setups:
   front:
     setup_id: front
@@ -29,6 +29,7 @@ setups:
       # vector: [0.0, 1.0, 0.0]             # required when mode: explicit
       # min_confidence: 0.85                # optional override (auto mode only)
     pocket_access: open                     # setup-wide label for all filleted pockets
+    scope: [facing]                          # or: full | [stock_face] | [wall, pocket] | {feature_ids: ["18"]}
     # Per-pocket overrides when lobes disagree within one setup (rare).
     # Key = B-rep face id of a floor/sphere seed (stable for a fixed STEP; discover via dry run).
     # Tradeoff vs dry-run ordinal: seed ids survive reordering but shift if topology changes.
@@ -44,6 +45,7 @@ setups:
     opening_axis:
       mode: auto
     pocket_access: closed
+    scope: full                              # machine all recognized features on this setup
 
   # Example non-front/rear setup name (same schema):
   # op10_top:

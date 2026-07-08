@@ -1,0 +1,113 @@
+========================================================================
+CamPlan vs Toolpath ground truth
+========================================================================
+Setup:           rear
+GT file:         /Users/iansun19/mlcad/eval/gt/96260B_rear_shop_program.yaml
+GT part_id:      None
+GT schema:       counts=False features=False operations=True
+GT op source:    shop_program
+
+=== AGGREGATE SCORECARD (primary for shop program GT) ===
+
+--- 1. Op count ---
+Shop ops: 20   Emitted: 31   Gap (ours - shop): +11
+Shop feature-instances batched across ops: 262
+  TODO: batch-by-tool grouping (next task) to close structural op-count gap.
+
+--- 2. Strategy coverage ---
+Shop strategies:    facing, finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+Emitted (mapped):   roughing
+Covered:            roughing
+MISSED:             facing, finishing, finishing_fillet, finishing_floor, finishing_wall
+
+--- 3. Feature-category coverage ---
+Shop categories:    Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+Emitted categories: Filleted Pocket, Through Hole
+Covered:            Filleted Pocket, Through Hole
+MISSED:             Contour Surface, Face, Filleted Blind Hole, Outer Fillet, Profile, Wall
+
+--- 4. Tool-type coverage (type+diameter; labels may be truncated) ---
+Shop tool types:    ball, bullnose, endmill, face_mill
+Emitted tool types: endmill, unknown
+Overlap:            endmill
+Shop-only gaps:     ball, bullnose, face_mill
+Emitted-only:       unknown
+
+--- 5. Feeds (informational; not pass/fail) ---
+  - roughing: feed ratio 0.092 (30 emitted vs 5 shop ops) rpm ratio 1.0
+
+--- Per-feature matching (unreliable for shop program GT) ---
+
+--- Operation coverage (per-feature refs) ---
+GT ops: 20   Emitted: 31   Matched: 0   Missing: 20   Extra: 31
+Missing from emitted plan:
+  - feature : GT=adaptive_rough dia=9.5mm (shop_program)
+  - feature : GT=floor_finish dia=9.5mm (shop_program)
+  - feature : GT=adaptive_rough dia=12.7mm (shop_program)
+  - feature : GT=adaptive_rough dia=4.8mm (shop_program)
+  - feature : GT=adaptive_rough dia=3.2mm (shop_program)
+  - feature : GT=wall_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=12.7mm (shop_program)
+  - feature : GT=wall_finish dia=12.7mm (shop_program)
+  - feature : GT=floor_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=12.7mm (shop_program)
+  - feature : GT=fillet_finish dia=12.7mm (shop_program)
+  - feature : GT=wall_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=6.3mm (shop_program)
+  - feature : GT=adaptive_rough dia=3.2mm (shop_program)
+  - feature : GT=floor_finish dia=12.7mm (shop_program)
+  - feature : GT=wall_finish dia=4.8mm (shop_program)
+  - feature : GT=wall_finish dia=9.5mm (shop_program)
+  - feature : GT=wall_finish dia=9.5mm (shop_program)
+  - feature : GT=facing dia=38.1mm (shop_program)
+Extra in emitted plan (not in GT reference):
+  - OP010 feature 14,15: drill/peck_drill
+  - OP020 feature 0: pocket_mill/spiral
+  - OP030 feature 0: finish_contour/spiral
+  - OP040 feature 1: pocket_mill/spiral
+  - OP050 feature 1: finish_contour/spiral
+  - OP060 feature 10: pocket_mill/spiral
+  - OP070 feature 10: finish_contour/spiral
+  - OP080 feature 11: pocket_mill/spiral
+  - OP090 feature 11: finish_contour/spiral
+  - OP100 feature 12: pocket_mill/spiral
+  - OP110 feature 12: finish_contour/spiral
+  - OP120 feature 13: pocket_mill/spiral
+  - OP130 feature 13: finish_contour/spiral
+  - OP140 feature 16: pocket_mill/plunge_roughing
+  - OP150 feature 16: finish_contour/spiral
+  - OP160 feature 2: pocket_mill/spiral
+  - OP170 feature 2: finish_contour/spiral
+  - OP180 feature 3: pocket_mill/spiral
+  - OP190 feature 3: finish_contour/spiral
+  - OP200 feature 4: pocket_mill/spiral
+  - OP210 feature 4: finish_contour/spiral
+  - OP220 feature 5: pocket_mill/spiral
+  - OP230 feature 5: finish_contour/spiral
+  - OP240 feature 6: pocket_mill/spiral
+  - OP250 feature 6: finish_contour/spiral
+  - OP260 feature 7: pocket_mill/spiral
+  - OP270 feature 7: finish_contour/spiral
+  - OP280 feature 8: pocket_mill/spiral
+  - OP290 feature 8: finish_contour/spiral
+  - OP300 feature 9: pocket_mill/spiral
+  - OP310 feature 9: finish_contour/spiral
+
+--- 2. Op-type agreement ---
+Exact type match: 0/0 (0% of matched ops)
+Op-type mismatches: (none)
+
+--- 3. Tool agreement ---
+Tool type/diameter agree: 0/0 (0% of matched ops with tool checks)
+Tool mismatches: (none - GT tool specs mostly unspecified)
+
+--- 4. Sequence agreement ---
+Rough-before-finish pairs: 0/0 (0%)
+Sequence inversions: (none)
+
+--- 5. Parameters (informational) ---
+No GT feed/speed values to compare (GT YAML lacks operation parameters).
+Emitted plan has feeds/speeds on 31 ops (see cam_plan metadata for param_source breakdown).
+Emitted param_source: preset=30 handbook=1 mixed=0
+========================================================================

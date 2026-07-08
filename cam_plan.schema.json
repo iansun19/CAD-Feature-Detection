@@ -1,0 +1,375 @@
+{
+  "$defs": {
+    "MachiningParameters": {
+      "additionalProperties": false,
+      "description": "Cutting parameters for one operation.\n\nSourced from handbook defaults, shop templates, or conservative heuristics in v0.\nparam_source records provenance so values can later be swapped for learned ones.",
+      "properties": {
+        "spindle_rpm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spindle Rpm"
+        },
+        "feed_mm_per_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feed Mm Per Min"
+        },
+        "plunge_mm_per_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plunge Mm Per Min"
+        },
+        "stepdown_mm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stepdown Mm"
+        },
+        "stepover_mm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stepover Mm"
+        },
+        "coolant": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coolant"
+        },
+        "param_source": {
+          "description": "Provenance tag, e.g. \"handbook_default\", \"shop_default\", \"conservative_heuristic\".",
+          "title": "Param Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "param_source"
+      ],
+      "title": "MachiningParameters",
+      "type": "object"
+    },
+    "Operation": {
+      "additionalProperties": false,
+      "description": "One executable machining operation in program order.\n\nfeature_refs point at feature graph node ids (feature_id serialized as string).\ndepends_on lists op_ids that must complete before this op -- precedence edges\npreserved even though operations[] is already topologically sorted.\naccess is required for pocket-class ops (from setup descriptor); null otherwise.",
+      "properties": {
+        "op_id": {
+          "title": "Op Id",
+          "type": "string"
+        },
+        "sequence_index": {
+          "minimum": 0,
+          "title": "Sequence Index",
+          "type": "integer"
+        },
+        "feature_refs": {
+          "description": "Feature graph feature_id values as strings.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Feature Refs",
+          "type": "array"
+        },
+        "feature_type": {
+          "description": "Recognizer / Toolpath class, e.g. through_hole, filleted_pocket.",
+          "title": "Feature Type",
+          "type": "string"
+        },
+        "setup_id": {
+          "title": "Setup Id",
+          "type": "string"
+        },
+        "operation_type": {
+          "description": "CAM operation kind, e.g. \"drill\", \"pocket_mill\", \"finish_contour\".",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "strategy": {
+          "description": "Strategy tag, e.g. \"peck_drill\", \"trochoidal\", \"spiral\".",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "tool_id": {
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/MachiningParameters"
+        },
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "access": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PocketAccess"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Pocket access label from setup descriptor; null for non-pockets."
+        }
+      },
+      "required": [
+        "op_id",
+        "sequence_index",
+        "feature_refs",
+        "feature_type",
+        "setup_id",
+        "operation_type",
+        "strategy",
+        "tool_id",
+        "parameters"
+      ],
+      "title": "Operation",
+      "type": "object"
+    },
+    "PocketAccess": {
+      "description": "Filleted-pocket machining access label from setup descriptor; not B-rep inferred.",
+      "enum": [
+        "open",
+        "closed",
+        "unknown"
+      ],
+      "title": "PocketAccess",
+      "type": "string"
+    },
+    "Setup": {
+      "additionalProperties": false,
+      "description": "One machining setup (workholding + approach direction).\n\nopening_axis is a discrete 3-axis label (e.g. \"+Z\") derived from the setup\ndescriptor YAML, not a free-form vector in the CAM plan.",
+      "properties": {
+        "setup_id": {
+          "title": "Setup Id",
+          "type": "string"
+        },
+        "opening_axis": {
+          "description": "Discrete approach direction, e.g. \"+Z\", \"-Y\". From setup descriptor.",
+          "title": "Opening Axis",
+          "type": "string"
+        },
+        "fixture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fixture id or name when a fixture library exists; null in v0.",
+          "title": "Fixture"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "setup_id",
+        "opening_axis"
+      ],
+      "title": "Setup",
+      "type": "object"
+    },
+    "ToolRef": {
+      "additionalProperties": false,
+      "description": "A tool referenced by one or more operations.\n\nSourced from a shop tool library or hardcoded v0 defaults. diameter_mm is required;\nflute_length_mm and max_depth_mm are optional enrichments from the library.",
+      "properties": {
+        "tool_id": {
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "tool_type": {
+          "description": "Tool category, e.g. \"drill\", \"endmill\", \"ball_endmill\".",
+          "title": "Tool Type",
+          "type": "string"
+        },
+        "diameter_mm": {
+          "exclusiveMinimum": 0.0,
+          "title": "Diameter Mm",
+          "type": "number"
+        },
+        "flute_length_mm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Flute Length Mm"
+        },
+        "max_depth_mm": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Depth Mm"
+        },
+        "corner_radius_mm": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Corner radius (RE) for bullnose/chamfer tools; omitted for plain endmills.",
+          "title": "Corner Radius Mm"
+        },
+        "source": {
+          "description": "Catalog origin, e.g. \"shop_library\", \"hardcoded_v0\".",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_id",
+        "tool_type",
+        "diameter_mm",
+        "source"
+      ],
+      "title": "ToolRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Top-level structured CAM plan emitted by the planner.\n\noperations[] execution order equals list order; sequence_index on each Operation\nmust match its index. tools[] is the deduplicated catalog referenced by tool_id.",
+  "properties": {
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_part": {
+      "description": "Part identifier or STEP filename the plan was generated from.",
+      "title": "Source Part",
+      "type": "string"
+    },
+    "feature_graph_ref": {
+      "description": "Path or id of the feature_graph_cascade.json used as input.",
+      "title": "Feature Graph Ref",
+      "type": "string"
+    },
+    "setups": {
+      "items": {
+        "$ref": "#/$defs/Setup"
+      },
+      "minItems": 1,
+      "title": "Setups",
+      "type": "array"
+    },
+    "operations": {
+      "items": {
+        "$ref": "#/$defs/Operation"
+      },
+      "minItems": 1,
+      "title": "Operations",
+      "type": "array"
+    },
+    "tools": {
+      "items": {
+        "$ref": "#/$defs/ToolRef"
+      },
+      "minItems": 1,
+      "title": "Tools",
+      "type": "array"
+    },
+    "remaining_material": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Reserved for in-process stock state after partial machining. Always null in v0.",
+      "title": "Remaining Material"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Free-form generator metadata (version, timestamp, notes).",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "source_part",
+    "feature_graph_ref",
+    "setups",
+    "operations",
+    "tools"
+  ],
+  "title": "CamPlan",
+  "type": "object"
+}

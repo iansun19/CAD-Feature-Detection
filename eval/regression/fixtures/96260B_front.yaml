@@ -1,0 +1,19 @@
+fixture_id: "96260B_front"
+step: "96260B_FRONT_XR004_PCD PLATE.stp copy"
+graph_npz: "eval/regression/graphs/96260B_front.graph.npz"
+face_index_scheme: "analyze_step_v1"
+
+setup:
+  machining_side: front
+  pocket_access: open
+
+run:
+  stock_classifier: new
+  max_diameter_mm: 150.0
+  wall_attach_dist: null
+
+golden: "eval/regression/golden/96260B_front.partition.json"
+
+notes: |
+  96260B XR004 front setup (open filleted pockets). STEP is gitignored at
+  repo root. graph.npz pinned from pipeline_out/96260B_front ingest.

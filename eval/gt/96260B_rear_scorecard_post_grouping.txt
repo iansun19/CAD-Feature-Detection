@@ -1,0 +1,95 @@
+========================================================================
+CamPlan vs Toolpath ground truth
+========================================================================
+Setup:           rear
+GT file:         /Users/iansun19/mlcad/eval/gt/96260B_rear_shop_program.yaml
+GT part_id:      None
+GT schema:       counts=False features=False operations=True
+GT op source:    shop_program
+
+=== AGGREGATE SCORECARD (primary for shop program GT) ===
+
+--- 1. Op count ---
+Shop ops: 20   Emitted: 10   Gap (ours - shop): -10
+Shop feature-instances batched across ops: 262
+  Grouping is applied; remaining gap vs shop is multi-pass tool sizing / setup-2 facing.
+
+--- 2. Strategy coverage ---
+Shop strategies:    facing, finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+Emitted (mapped):   finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+Covered:            finishing, finishing_fillet, finishing_floor, finishing_wall, roughing
+MISSED:             facing
+
+--- 3. Feature-category coverage ---
+Shop categories:    Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+Emitted categories: Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+Covered:            Contour Surface, Face, Filleted Blind Hole, Filleted Pocket, Outer Fillet, Profile, Through Hole, Wall
+MISSED:             (none)
+
+--- 4. Tool-type coverage (type+diameter; labels may be truncated) ---
+Shop tool types:    ball, bullnose, endmill, face_mill
+Emitted tool types: ball, endmill
+Overlap:            ball, endmill
+Shop-only gaps:     bullnose, face_mill
+
+--- 5. Feeds (informational; not pass/fail) ---
+  - finishing: feed ratio 0.431 (1 emitted vs 4 shop ops) rpm ratio 1.571
+  - finishing_fillet: feed ratio 0.236 (1 emitted vs 1 shop ops) rpm ratio 1.571
+  - finishing_floor: feed ratio 1.136 (3 emitted vs 3 shop ops) rpm ratio 1.333
+  - finishing_wall: feed ratio 1.067 (2 emitted vs 6 shop ops) rpm ratio 1.245
+  - roughing: feed ratio 1.516 (3 emitted vs 5 shop ops) rpm ratio 0.849
+
+--- Per-feature matching (unreliable for shop program GT) ---
+
+--- Operation coverage (per-feature refs) ---
+GT ops: 20   Emitted: 10   Matched: 0   Missing: 20   Extra: 10
+Missing from emitted plan:
+  - feature : GT=adaptive_rough dia=9.5mm (shop_program)
+  - feature : GT=floor_finish dia=9.5mm (shop_program)
+  - feature : GT=adaptive_rough dia=12.7mm (shop_program)
+  - feature : GT=adaptive_rough dia=4.8mm (shop_program)
+  - feature : GT=adaptive_rough dia=3.2mm (shop_program)
+  - feature : GT=wall_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=12.7mm (shop_program)
+  - feature : GT=wall_finish dia=12.7mm (shop_program)
+  - feature : GT=floor_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=12.7mm (shop_program)
+  - feature : GT=fillet_finish dia=12.7mm (shop_program)
+  - feature : GT=wall_finish dia=12.7mm (shop_program)
+  - feature : GT=surface_finish dia=6.3mm (shop_program)
+  - feature : GT=adaptive_rough dia=3.2mm (shop_program)
+  - feature : GT=floor_finish dia=12.7mm (shop_program)
+  - feature : GT=wall_finish dia=4.8mm (shop_program)
+  - feature : GT=wall_finish dia=9.5mm (shop_program)
+  - feature : GT=wall_finish dia=9.5mm (shop_program)
+  - feature : GT=facing dia=38.1mm (shop_program)
+Extra in emitted plan (not in GT reference):
+  - OP090 feature 1,11,13,3,5,7,9: pocket_mill/roughing
+  - OP070 feature 14,15: bore/helical_bore
+  - OP100 feature 0,10,12,2,4,6,8: pocket_mill/roughing
+  - OP080 feature 16,36: adaptive_rough/roughing
+  - OP030 feature 1,11,13,3,5,7,9: finish_contour/finishing_floor
+  - OP050 feature 0,10,12,2,4,6,8: finish_contour/finishing_floor
+  - OP040 feature 16,18,19: finish_contour/finishing_floor
+  - OP060 feature 22,23,24,25,26,27,28,29,30,31,32,33,34,35,36: wall_finish/finishing_wall
+  - OP010 feature 17,37,38,39,40,41,42,43,44: surface_finish/finishing
+  - OP020 feature 20,21: fillet_finish/finishing_fillet
+
+--- 2. Op-type agreement ---
+Exact type match: 0/0 (0% of matched ops)
+Op-type mismatches: (none)
+
+--- 3. Tool agreement ---
+Tool type/diameter agree: 0/0 (0% of matched ops with tool checks)
+Tool mismatches: (none - GT tool specs mostly unspecified)
+
+--- 4. Sequence agreement ---
+Rough-before-finish pairs: 0/0 (0%)
+Sequence inversions: (none)
+
+--- 5. Parameters (informational) ---
+No GT feed/speed values to compare (GT YAML lacks operation parameters).
+Emitted plan has feeds/speeds on 10 ops (see cam_plan metadata for param_source breakdown).
+Emitted param_source: preset=9 handbook=0 mixed=1
+========================================================================

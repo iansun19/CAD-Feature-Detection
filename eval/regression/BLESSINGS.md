@@ -1,0 +1,2 @@
+- 2026-07-08T02:22:42.444366+00:00  **96260B_rear**  sha=61154f2 dirty=True  - Initial golden bless for 96260B_rear cascade regression fixture
+- 2026-07-08T02:35:16.259885+00:00  **96260B_front**  sha=61154f2 dirty=True  - Initial golden bless for 96260B_front cascade regression fixture
