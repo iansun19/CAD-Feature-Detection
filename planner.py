@@ -61,10 +61,11 @@ SURFACE_CLASSES = frozenset({"contour_surface"})
 FILLET_CLASSES = frozenset({"outer_fillet", "fillet"})
 PROFILE_CLASSES = frozenset({"profile"})
 FACE_CLASSES = frozenset({"flat", "face"})
+CHAMFER_CLASSES = frozenset({"chamfer"})
 
 PLANNER_FEATURE_CLASSES = (
     HOLE_CLASSES | POCKET_CLASSES | WALL_CLASSES | SURFACE_CLASSES
-    | FILLET_CLASSES | PROFILE_CLASSES | FACE_CLASSES
+    | FILLET_CLASSES | PROFILE_CLASSES | FACE_CLASSES | CHAMFER_CLASSES
 )
 
 # --- Canonical operation bank groupings (operation_bank.Operation values) ---
@@ -75,10 +76,26 @@ ROUGH_OPS = ROUGH_PHASE_OPS
 FINISH_OPS = FINISH_PHASE_OPS
 # Hole ops that plunge a drill/tap tool along an axis (no open tool sizing).
 HOLE_OPS = frozenset({BankOp.DRILL, BankOp.CHIP_BREAK_DRILL, BankOp.THREAD_MILL})
-# Finish ops that carry a fillet radius and cap the tool at 2*fillet.
-FILLET_CAP_FINISH_OPS = frozenset({BankOp.CONTOUR_2D, BankOp.WATERLINE, BankOp.PENCIL})
+# Ops whose tool is capped at 2*fillet (tool must fit the internal corner radius).
+# Rest ops are included so they resolve a smaller-than-prior tool that reaches the fillet.
+FILLET_CAP_OPS = frozenset({
+    BankOp.CONTOUR_2D,
+    BankOp.WATERLINE,
+    BankOp.PENCIL,
+    BankOp.REST_ROUGHING,
+    BankOp.REST_FINISH,
+})
 # Deep-hole peck threshold: depth/diameter above this -> chip-break drilling.
 CHIP_BREAK_DEPTH_RATIO = 4.0
+# Rest machining trigger: emit a rest op only when the prior tool leaves at least this
+# much uncut radius in a feature's internal corner (prior_tool_radius - fillet_radius).
+REST_UNCUT_MARGIN_MM = 0.5
+
+# 3D roughing split: a 3D-surface feature whose steep-face area fraction (slope_profile)
+# reaches this is roughed with Z-level area_roughing; below it, adaptive optirough.
+# Tunable; UNVERIFIED on real data (no 96260B pocket has 3D_surface=True) -- see
+# _rough_operation and test_area_roughing_selected_for_steep_3d_pocket.
+AREA_ROUGH_STEEP_FRACTION = 0.5
 
 # Finish-phase tie-break rank (floor -> wall -> surface -> fillet -> bore -> hole).
 # Computed per op because contour_2d/waterline serve both floor (pocket) and wall
@@ -180,6 +197,8 @@ class PlannerFeature:
     axis_direction: tuple[float, float, float] | None = None
     is_tapped: bool = False
     is_threaded: bool = False  # non-tap threading (thread-milled); tap wins if both set
+    slope_mixed: bool = False  # surface spans both steep and shallow bands (slope_profile)
+    steep_fraction: float = 0.0  # area fraction of steep faces (slope_profile), for 3D roughing
     raw_params: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -201,6 +220,7 @@ class OpSpec:
     access: PocketAccess | None = None
     depends_on: list[str] = field(default_factory=list)
     parameters: MachiningParameters | None = None
+    attributes: dict[str, Any] = field(default_factory=dict)
 
 
 def _vec3(raw: Any) -> tuple[float, float, float] | None:
@@ -275,6 +295,10 @@ def cascade_node_to_feature(node: Mapping[str, Any]) -> PlannerFeature:
         params.get(key) for key in ("threaded", "has_thread", "is_threaded")
     )
 
+    slope = node.get("slope_profile") or {}
+    slope_mixed = bool(slope.get("mixed"))
+    steep_fraction = float(slope.get("steep_fraction") or 0.0)
+
     return PlannerFeature(
         feature_id=feature_id,
         feature_type=feature_type,
@@ -286,6 +310,8 @@ def cascade_node_to_feature(node: Mapping[str, Any]) -> PlannerFeature:
         axis_direction=axis_direction,
         is_tapped=bool(is_tapped),
         is_threaded=bool(is_threaded),
+        slope_mixed=slope_mixed,
+        steep_fraction=steep_fraction,
         raw_params=params,
     )
 
@@ -755,13 +781,207 @@ def _is_3d_surface(feature: PlannerFeature) -> bool:
     return bool(feature.raw_params.get("3D_surface"))
 
 
+_REVOLVED_SURFACE_TYPES = ("cone", "torus", "sphere", "cylinder")
+
+
+def _is_axisymmetric_surface(feature: PlannerFeature) -> bool:
+    """True for a body-of-revolution surface (round boss/pocket/dome) -> radial_spiral.
+
+    Uses the cascade ``n_distinct_axes`` (1 = faces share a single axis) plus a
+    ``surface_type_histogram`` dominated by surfaces of revolution, so incidental
+    single-axis bspline blends stay freeform (constant_scallop).
+    """
+    params = feature.raw_params
+    if int(params.get("n_distinct_axes") or 0) != 1:
+        return False
+    hist = params.get("surface_type_histogram") or {}
+    total = sum(hist.values())
+    if total <= 0:
+        return False
+    revolved = sum(hist.get(k, 0) for k in _REVOLVED_SURFACE_TYPES)
+    return revolved * 2 >= total  # revolved surfaces are the majority
+
+
+def _surface_finish_operation(feature: PlannerFeature) -> BankOp:
+    """Pick a 3D surface-finish op:
+
+    - spans both steep and shallow bands -> steep_shallow (waterline+raster split);
+    - else round/axisymmetric (uniform revolution) -> radial_spiral;
+    - else freeform -> constant_scallop.
+
+    Mixed slope wins over roundness: a surface that spans both bands needs the split
+    even when it is a body of revolution (a single radial pass smears the finish).
+    """
+    if feature.slope_mixed:
+        return BankOp.STEEP_SHALLOW
+    if _is_axisymmetric_surface(feature):
+        return BankOp.RADIAL_SPIRAL
+    return BankOp.CONSTANT_SCALLOP
+
+
+def _deburr_op(feature_refs: Sequence[str], setup_id: str) -> OpSpec:
+    """Whole-setup deburr: auto-breaks all model edges accessible in this setup.
+
+    Not tied to one recognizer feature -- references every in-scope feature and needs
+    a chamfer/deburr tool (UNRESOLVED until such a tool exists in the library). Sorts
+    last via _finish_order (auxiliary, rank 99).
+    """
+    return OpSpec(
+        feature_refs=list(feature_refs),
+        feature_type="part",
+        setup_id=setup_id,
+        operation=BankOp.DEBURR,
+        tool_type_needed="chamfer_mill",
+        access=None,
+    )
+
+
+def _resolve_engrave_target(
+    spec: Mapping[str, Any],
+    features: Sequence[PlannerFeature],
+    facing_feature_ids: frozenset[str],
+) -> str | None:
+    """Resolve a declared engrave target to an in-scope feature_id, or None.
+
+    `target.feature_id` -> that feature if present; `target.datum` -> the setup's
+    datum flat (the same face the facing op uses). Never fabricates a reference.
+    """
+    target = spec.get("target") or {}
+    fid = target.get("feature_id")
+    if fid is not None:
+        return str(fid) if str(fid) in {f.feature_id for f in features} else None
+    if target.get("datum") is not None:
+        return next(iter(sorted(facing_feature_ids)), None)
+    return None
+
+
+def _engraving_ops(
+    context: MachiningContext,
+    features: Sequence[PlannerFeature],
+    facing_feature_ids: frozenset[str],
+    setup_id: str,
+) -> tuple[list[OpSpec], list[Mapping[str, Any]]]:
+    """Build ENGRAVING ops from declared specs; return (ops, unresolved_specs).
+
+    Declared (explicit process input), never inferred from geometry. Text/depth flow
+    straight to the CAM op via attributes; source is tagged explicit_spec. A spec whose
+    target can't be resolved is NOT fabricated into an op -- it's returned for a flag.
+    """
+    ops: list[OpSpec] = []
+    unresolved: list[Mapping[str, Any]] = []
+    for spec in (context.setups[0].engrave or []):
+        target = _resolve_engrave_target(spec, features, facing_feature_ids)
+        if target is None:
+            unresolved.append(spec)
+            continue
+        ops.append(OpSpec(
+            feature_refs=[target],
+            feature_type="engraving",
+            setup_id=setup_id,
+            operation=BankOp.ENGRAVING,
+            tool_type_needed="engraver",
+            attributes={
+                "text": spec.get("text"),
+                "depth_mm": spec.get("depth_mm"),
+                "source": "explicit_spec",
+            },
+            access=None,
+        ))
+    return ops, unresolved
+
+
+def _op_tool_radius_mm(op: OpSpec, tool_lookup: Mapping[str, Tool]) -> float | None:
+    """Radius of the tool assigned to ``op`` (None if unresolved)."""
+    tool = tool_lookup.get(op.tool_id)
+    if tool is None or not tool.diameter_mm:
+        return None
+    return tool.diameter_mm / 2.0
+
+
+def _rest_op(base: OpSpec, operation: BankOp, fillet_radius_mm: float) -> OpSpec:
+    """A rest-machining op cloning a base op's geometry but capped to the fillet.
+
+    Carries the fillet radius so FILLET_CAP_OPS sizing resolves a tool that reaches
+    the corner (necessarily smaller than the prior op's tool, which triggered it).
+    The leftover-stock shape and toolpath are Mastercam's rest-strategy job at encode
+    time; this op only declares that a rest pass is needed here.
+    """
+    return OpSpec(
+        feature_refs=list(base.feature_refs),
+        feature_type=base.feature_type,
+        setup_id=base.setup_id,
+        operation=operation,
+        tool_type_needed="endmill",
+        depth_mm=base.depth_mm,
+        lateral_extent_mm=base.lateral_extent_mm,
+        fillet_radius_mm=fillet_radius_mm,
+        access=base.access,
+    )
+
+
+def _rest_machining_ops(
+    op_specs: Sequence[OpSpec],
+    tool_lookup: Mapping[str, Tool],
+) -> list[OpSpec]:
+    """Per-feature rest-machining trigger (Track C, radius heuristic, no stock model).
+
+    For each feature, compare the tool actually assigned to its rough/finish op against
+    the feature's tightest internal fillet radius. When a tool leaves more than
+    REST_UNCUT_MARGIN_MM of uncut radius in the corner, emit a rest op with a
+    fillet-capped (smaller) tool:
+      * roughing tool too big + a finish follows -> rest_roughing (between them);
+      * finish tool still too big               -> rest_finish (after it).
+    No leftover-stock geometry is computed -- Mastercam rest-machines from the tool
+    sequence at encode time.
+    """
+    by_feature: dict[tuple[str, ...], list[OpSpec]] = {}
+    for op in op_specs:
+        by_feature.setdefault(tuple(op.feature_refs), []).append(op)
+
+    rest_ops: list[OpSpec] = []
+    for ops in by_feature.values():
+        fillets = [o.fillet_radius_mm for o in ops if o.fillet_radius_mm]
+        if not fillets:
+            continue
+        fillet = min(fillets)  # tightest corner limits the tool
+
+        rough = next(
+            (o for o in ops if o.operation in ROUGH_OPS and o.tool_type_needed == "endmill"),
+            None,
+        )
+        finish = next(
+            (o for o in ops if o.operation in (BankOp.CONTOUR_2D, BankOp.WATERLINE)),
+            None,
+        )
+
+        if rough is not None and finish is not None:
+            r = _op_tool_radius_mm(rough, tool_lookup)
+            if r is not None and r - fillet > REST_UNCUT_MARGIN_MM:
+                rest_ops.append(_rest_op(rough, BankOp.REST_ROUGHING, fillet))
+
+        if finish is not None:
+            r = _op_tool_radius_mm(finish, tool_lookup)
+            if r is not None and r - fillet > REST_UNCUT_MARGIN_MM:
+                rest_ops.append(_rest_op(finish, BankOp.REST_FINISH, fillet))
+
+    return rest_ops
+
+
 def _rough_operation(feature: PlannerFeature, access: PocketAccess) -> BankOp:
     """Geometry-driven roughing/clearing op for a pocket-class feature.
 
-    3D sculpted -> optirough (adaptive 3D); prismatic closed region -> pocket;
-    prismatic open region -> 2D dynamic mill.
+    3D sculpted -> steep-dominated content gets Z-level area_roughing, shallow/adaptive
+    content gets optirough (steep_fraction from the slope pass); prismatic closed region
+    -> pocket; prismatic open region -> 2D dynamic mill.
+
+    NOTE: the 3D branch is UNVERIFIED on real data -- no 96260B pocket has 3D_surface=True
+    (the only 3D_surface features are contour_surfaces, which are finished not roughed).
+    Covered only by a synthetic fixture (test_area_roughing_selected_for_steep_3d_pocket)
+    until a part with real freeform-pocket content exists.
     """
     if _is_3d_surface(feature):
+        if feature.steep_fraction >= AREA_ROUGH_STEEP_FRACTION:
+            return BankOp.AREA_ROUGHING
         return BankOp.OPTIROUGH
     if access == PocketAccess.CLOSED:
         return BankOp.POCKET
@@ -944,7 +1164,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation=BankOp.CONSTANT_SCALLOP,
+                operation=_surface_finish_operation(primary),
                 tool_type_needed="ball_endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=lateral,
@@ -1022,6 +1242,21 @@ def map_feature_to_operations(
             ),
         ]
 
+    if primary.feature_type in CHAMFER_CLASSES:
+        # Edge-break: cut the bevel with a chamfer mill (UNRESOLVED until such a tool
+        # exists in the library, like deburr). Sequenced late (auxiliary).
+        return [
+            OpSpec(
+                feature_refs=[primary.feature_id],
+                feature_type=primary.feature_type,
+                setup_id=setup_id,
+                operation=BankOp.CHAMFER,
+                tool_type_needed="chamfer_mill",
+                lateral_extent_mm=_float_param(primary.raw_params, "chamfer_size_mm"),
+                access=None,
+            ),
+        ]
+
     return []
 
 
@@ -1031,7 +1266,7 @@ def _uses_default_open_band(op_spec: OpSpec) -> bool:
         return False
     if (
         op_spec.fillet_radius_mm is not None
-        and op_spec.operation in FILLET_CAP_FINISH_OPS
+        and op_spec.operation in FILLET_CAP_OPS
     ):
         return False
     return op_spec.operation in OPEN_MILLING_OPS
@@ -1047,7 +1282,7 @@ def _max_open_tool_diameter_mm(op_spec: OpSpec) -> float | None:
         caps.append(op_spec.lateral_extent_mm)
     if (
         op_spec.fillet_radius_mm is not None
-        and op_spec.operation in FILLET_CAP_FINISH_OPS
+        and op_spec.operation in FILLET_CAP_OPS
     ):
         caps.append(2.0 * op_spec.fillet_radius_mm)
 
@@ -1348,6 +1583,9 @@ def _batch_role(op: OpSpec) -> str:
     """
     if op.operation in (BankOp.CONTOUR_2D, BankOp.WATERLINE):
         return "wall" if op.feature_type in (WALL_CLASSES | PROFILE_CLASSES) else "floor"
+    if op.operation == BankOp.ENGRAVING:
+        # Distinct engravings carry distinct text/target -> never merge them.
+        return f"engrave:{sorted(op.feature_refs)}:{op.attributes.get('text')}"
     return ""
 
 
@@ -1369,7 +1607,7 @@ def _batch_probe_op(members: Sequence[OpSpec]) -> OpSpec:
         member.fillet_radius_mm
         for member in members
         if member.fillet_radius_mm is not None
-        and member.operation in FILLET_CAP_FINISH_OPS
+        and member.operation in FILLET_CAP_OPS
     ]
     return OpSpec(
         tool_type_needed=primary.tool_type_needed,
@@ -1434,7 +1672,7 @@ def _merge_member_group(members: Sequence[OpSpec], tool: Tool | None) -> OpSpec:
         member.fillet_radius_mm
         for member in members
         if member.fillet_radius_mm is not None
-        and member.operation in FILLET_CAP_FINISH_OPS
+        and member.operation in FILLET_CAP_OPS
     ]
     return OpSpec(
         feature_refs=merged_refs,
@@ -1448,6 +1686,7 @@ def _merge_member_group(members: Sequence[OpSpec], tool: Tool | None) -> OpSpec:
         depth_mm=max(depths) if depths else primary.depth_mm,
         access=access,
         parameters=primary.parameters,
+        attributes=dict(primary.attributes),
     )
 
 
@@ -1581,6 +1820,39 @@ def build_precedence(op_specs: Sequence[OpSpec]) -> dict[str, list[str]]:
                     other.operation in ROUGH_OPS
                     and _refs_overlap(other.feature_refs, op.feature_refs)
                     and other.op_id != op.op_id
+                ):
+                    precedence[op.op_id].append(other.op_id)
+
+        # A rest op follows the coarser pass it cleans up after, on the same feature(s):
+        # rest_roughing after the main roughing (then the main finish follows it via the
+        # FINISH<-ROUGH rule); rest_finish after the main contour finish.
+        if op.operation == BankOp.REST_ROUGHING:
+            for other in op_specs:
+                if (
+                    other.operation in ROUGH_OPS
+                    and other.operation != BankOp.REST_ROUGHING
+                    and _refs_overlap(other.feature_refs, op.feature_refs)
+                    and other.op_id != op.op_id
+                ):
+                    precedence[op.op_id].append(other.op_id)
+
+        if op.operation == BankOp.REST_FINISH:
+            for other in op_specs:
+                if (
+                    other.operation in (BankOp.CONTOUR_2D, BankOp.WATERLINE)
+                    and _refs_overlap(other.feature_refs, op.feature_refs)
+                    and other.op_id != op.op_id
+                ):
+                    precedence[op.op_id].append(other.op_id)
+
+        # Whole-setup deburr runs after every other op in its setup (edge-break last),
+        # so the sequencer/beam search cannot float it before a machining op.
+        if op.operation == BankOp.DEBURR:
+            for other in op_specs:
+                if (
+                    other.op_id != op.op_id
+                    and other.setup_id == op.setup_id
+                    and other.operation != BankOp.DEBURR
                 ):
                     precedence[op.op_id].append(other.op_id)
 
@@ -2221,11 +2493,35 @@ def _plan_one_setup(
             )
         )
 
+    # Declared engraving (explicit process input): emit an ENGRAVING op per resolved
+    # marking spec. Never inferred from geometry; unresolved targets are surfaced as
+    # review flags below, not fabricated into ops.
+    engrave_ops, engrave_unresolved = _engraving_ops(
+        context, features, facing_feature_ids, setup_id
+    )
+    op_specs.extend(engrave_ops)
+
+    # Whole-setup deburr: one auto edge-break pass over all in-scope features,
+    # sequenced last. Emitted only when the setup has machined features.
+    if op_specs:
+        deburr_refs = sorted({f.feature_id for f in features}, key=int)
+        op_specs.append(_deburr_op(deburr_refs, setup_id))
+
     _assign_op_ids(op_specs)
 
     tool_lookup = _tool_by_id(context.tools)
     for op in op_specs:
         _apply_tool_selection(op, context.tools, tool_lookup, material=context.material)
+
+    # Rest machining (Track C): compare each feature's assigned rough/finish tool
+    # against its fillet radius; inject rest ops (with their own smaller tool) where a
+    # prior tool cannot reach the corner. Runs post-tool-selection so radii are known.
+    rest_ops = _rest_machining_ops(op_specs, tool_lookup)
+    if rest_ops:
+        for op in rest_ops:
+            _apply_tool_selection(op, context.tools, tool_lookup, material=context.material)
+        op_specs.extend(rest_ops)
+        _assign_op_ids(op_specs)
 
     for op in op_specs:
         tool = tool_lookup.get(op.tool_id)
@@ -2242,6 +2538,35 @@ def _plan_one_setup(
     precedence = build_precedence(grouped_ops)
     for op in grouped_ops:
         op.depends_on = list(precedence.get(op.op_id, []))
+
+    # Residual/coverage flag (fail-safe, never silent): surface in-scope features that
+    # got no shaping op, and declared engravings whose target didn't resolve. These are
+    # flags for post-hoc review -- NOT ops, and they never auto-commit anything.
+    _AUX_OPS = {BankOp.DEBURR, BankOp.ENGRAVING}
+    machined_refs = {
+        ref for op in grouped_ops if op.operation not in _AUX_OPS for ref in op.feature_refs
+    }
+    review_flags: list[dict[str, Any]] = [
+        {
+            "feature_id": f.feature_id,
+            "class_name": f.feature_type,
+            "source": "unclassified_residual",
+            "confidence": "low",
+            "note": "recognized in-scope feature produced no machining operation",
+        }
+        for f in features
+        if f.feature_id not in machined_refs
+    ]
+    review_flags += [
+        {
+            "text": s.get("text"),
+            "target": s.get("target"),
+            "source": "engrave_unresolved",
+            "confidence": "low",
+            "note": "declared engraving target did not resolve to an in-scope feature",
+        }
+        for s in engrave_unresolved
+    ]
 
     param_source_counts: dict[str, int] = {
         "toolpath_preset": 0,
@@ -2295,6 +2620,7 @@ def _plan_one_setup(
         "params_handbook_default": param_source_counts.get("handbook_default", 0),
         "params_mixed": param_source_counts.get("mixed", 0),
         "wrong_material_tool_ops": wrong_material_ops,
+        "review_flags": review_flags,
         **scope_info,
     }
 
@@ -2309,16 +2635,25 @@ def _plan_one_setup(
 
 
 def _reassign_global_op_ids(merged_ops: list[OpSpec]) -> None:
-    """Assign contiguous op_ids across setups and remap depends_on edges."""
-    old_to_new: dict[str, str] = {}
-    for idx, op in enumerate(merged_ops, start=1):
-        new_id = f"OP{idx * 10:03d}"
-        old_to_new[op.op_id] = new_id
-        op.op_id = new_id
-    for op in merged_ops:
+    """Assign contiguous op_ids across setups and remap depends_on edges.
+
+    Per-setup slices each number their ops from OP010, so raw op_ids collide across
+    setups. All pre-merge depends_on edges are intra-setup (cross-setup edges are
+    added afterward with global ids), so the remap is keyed by (setup_id, old_id) to
+    disambiguate the collision -- otherwise a slice's deps can be remapped onto
+    another setup's ops and fabricate a cycle.
+    """
+    new_ids = [f"OP{idx * 10:03d}" for idx in range(1, len(merged_ops) + 1)]
+    old_to_new: dict[tuple[str, str], str] = {
+        (op.setup_id, op.op_id): new_id for op, new_id in zip(merged_ops, new_ids)
+    }
+    for op, new_id in zip(merged_ops, new_ids):
         op.depends_on = [
-            old_to_new[dep] for dep in op.depends_on if dep in old_to_new
+            old_to_new[(op.setup_id, dep)]
+            for dep in op.depends_on
+            if (op.setup_id, dep) in old_to_new
         ]
+        op.op_id = new_id
 
 
 def _apply_cross_setup_precedence(
@@ -2434,6 +2769,7 @@ def _slice_to_operations(ordered: Sequence[OpSpec]) -> list[Operation]:
             parameters=op.parameters or MachiningParameters(param_source="handbook_default"),
             depends_on=op.depends_on,
             access=op.access,
+            attributes=dict(op.attributes),
         )
         for idx, op in enumerate(ordered)
     ]
@@ -2462,6 +2798,11 @@ def _aggregate_setup_stats(slices: Sequence[_SetupPlanSlice]) -> dict[str, Any]:
             totals[key] += int(slice_.stats.get(key, 0))
     totals["setups"] = len(slices)
     totals["per_setup"] = per_setup
+    totals["review_flags"] = [
+        {**flag, "setup_id": slice_.setup.setup_id}
+        for slice_ in slices
+        for flag in slice_.stats.get("review_flags", [])
+    ]
     return totals
 
 

@@ -183,6 +183,172 @@ class TestWidenedFeatureMapping(unittest.TestCase):
         face_ops = map_feature_to_operations(face, ctx)
         self.assertEqual(face_ops[0].operation, "raster")
 
+    def test_axisymmetric_surface_maps_to_radial_spiral(self) -> None:
+        ctx = _minimal_context()
+        # single shared axis + revolved-surface-dominated histogram -> round -> radial_spiral
+        dome = cascade_node_to_feature({
+            "feature_id": 102, "class_name": "contour_surface",
+            "params": {"n_distinct_axes": 1, "surface_type_histogram": {"torus": 2, "sphere": 2, "cone": 2}},
+        })
+        # freeform bspline (no shared axis) -> constant_scallop
+        freeform = cascade_node_to_feature({
+            "feature_id": 41, "class_name": "contour_surface",
+            "params": {"n_distinct_axes": 0, "surface_type_histogram": {"bspline": 1}},
+        })
+        # single axis but bspline-dominated -> stays constant_scallop
+        blend = cascade_node_to_feature({
+            "feature_id": 39, "class_name": "contour_surface",
+            "params": {"n_distinct_axes": 1, "surface_type_histogram": {"bspline": 5, "torus": 1}},
+        })
+
+        self.assertEqual(map_feature_to_operations(dome, ctx)[0].operation, "radial_spiral")
+        self.assertEqual(map_feature_to_operations(freeform, ctx)[0].operation, "constant_scallop")
+        self.assertEqual(map_feature_to_operations(blend, ctx)[0].operation, "constant_scallop")
+
+    def test_mixed_slope_surface_maps_to_steep_shallow(self) -> None:
+        ctx = _minimal_context()
+        # surface spanning both steep and shallow bands -> steep_shallow, even when
+        # it is also a body of revolution (mixed slope wins over roundness)
+        mixed_round = cascade_node_to_feature({
+            "feature_id": 36, "class_name": "contour_surface",
+            "params": {"n_distinct_axes": 1, "surface_type_histogram": {"cone": 1, "torus": 1}},
+            "slope_profile": {"mixed": True, "steep_fraction": 0.54, "shallow_fraction": 0.46},
+        })
+        # round but single-band (not mixed) -> radial_spiral
+        round_uniform = cascade_node_to_feature({
+            "feature_id": 102, "class_name": "contour_surface",
+            "params": {"n_distinct_axes": 1, "surface_type_histogram": {"torus": 1}},
+            "slope_profile": {"mixed": False, "steep_fraction": 1.0, "shallow_fraction": 0.0},
+        })
+        self.assertEqual(map_feature_to_operations(mixed_round, ctx)[0].operation, "steep_shallow")
+        self.assertEqual(map_feature_to_operations(mixed_round, ctx)[0].tool_type_needed, "ball_endmill")
+        self.assertEqual(map_feature_to_operations(round_uniform, ctx)[0].operation, "radial_spiral")
+
+    def test_area_roughing_selected_for_steep_3d_pocket(self) -> None:
+        # Synthetic fixture: no repo part has a 3D_surface=True pocket (the only
+        # 3D_surface features are contour_surfaces, which are finished not roughed),
+        # so exercise the optirough-vs-area_roughing split directly here.
+        ctx = _minimal_context()
+
+        def rough_op(steep_fraction: float, three_d: bool = True) -> str:
+            node = {
+                "feature_id": 1,
+                "class_name": "filleted_pocket",
+                "params": {"3D_surface": three_d, "depth": 10.0},
+                "slope_profile": {
+                    "steep_fraction": steep_fraction,
+                    "shallow_fraction": 1.0 - steep_fraction,
+                    "mixed": False,
+                },
+            }
+            feat = cascade_node_to_feature(node)
+            return map_feature_to_operations(feat, ctx)[0].operation
+
+        # steep-dominated 3D content -> Z-level area_roughing; shallow -> adaptive optirough
+        self.assertEqual(rough_op(0.80), "area_roughing")
+        self.assertEqual(rough_op(0.20), "optirough")
+        self.assertEqual(rough_op(0.50), "area_roughing")  # threshold is >=
+        # a 2.5D pocket ignores slope entirely (3D gate closed) -> neither 3D rough op
+        self.assertNotIn(rough_op(0.90, three_d=False), {"area_roughing", "optirough"})
+
+    def test_rest_roughing_triggers_when_rough_tool_exceeds_fillet(self) -> None:
+        import types
+        import planner as _p
+
+        setup = "rear"
+        fillet = 3.81
+        rough = OpSpec(
+            op_id="OP010", feature_refs=["1"], feature_type="filleted_pocket",
+            setup_id=setup, operation="dynamic_mill_2d", tool_id="BIG",
+            tool_type_needed="endmill", fillet_radius_mm=fillet,
+        )
+        finish = OpSpec(
+            op_id="OP020", feature_refs=["1"], feature_type="filleted_pocket",
+            setup_id=setup, operation="contour_2d", tool_id="SMALL",
+            tool_type_needed="endmill", fillet_radius_mm=fillet,
+        )
+        # BIG rough tool (r=6.0) leaves >0.5mm uncut in a 3.81mm corner -> rest_roughing;
+        # SMALL finish tool (r=3.0) reaches the corner -> no rest_finish.
+        tool_lookup = {
+            "BIG": types.SimpleNamespace(diameter_mm=12.0),
+            "SMALL": types.SimpleNamespace(diameter_mm=6.0),
+        }
+        rest = _p._rest_machining_ops([rough, finish], tool_lookup)
+        ops = {r.operation for r in rest}
+        self.assertIn("rest_roughing", ops)
+        self.assertNotIn("rest_finish", ops)
+        rr = next(r for r in rest if r.operation == "rest_roughing")
+        self.assertEqual(rr.fillet_radius_mm, fillet)
+        self.assertEqual(rr.feature_refs, ["1"])
+
+        # When the rough tool already fits the corner (r=3.0 <= 3.81), nothing fires.
+        tool_lookup["BIG"] = types.SimpleNamespace(diameter_mm=6.0)
+        self.assertEqual(_p._rest_machining_ops([rough, finish], tool_lookup), [])
+
+    def test_chamfer_feature_maps_to_chamfer_op(self) -> None:
+        ctx = _minimal_context()
+        cham = cascade_node_to_feature({
+            "feature_id": 7, "class_name": "chamfer",
+            "params": {"has_chamfer": True, "chamfer_size_mm": 0.5, "chamfer_angle_deg": 45.0},
+        })
+        ops = map_feature_to_operations(cham, ctx)
+        self.assertEqual([o.operation for o in ops], ["chamfer"])
+        self.assertEqual(ops[0].tool_type_needed, "chamfer_mill")
+        self.assertEqual(ops[0].lateral_extent_mm, 0.5)
+
+    def test_engrave_spec_parses_from_descriptor(self) -> None:
+        from setup_descriptor import parse_setup_descriptor
+        desc = parse_setup_descriptor({
+            "part_id": "p",
+            "setups": {"front": {"engrave": [
+                {"text": "XR004", "target": {"feature_id": "21"}, "depth_mm": 0.2},
+            ]}},
+        })
+        specs = desc.setups["front"].engrave
+        self.assertEqual(len(specs), 1)
+        self.assertEqual(specs[0].text, "XR004")
+        self.assertEqual(specs[0].target_feature_id, "21")
+        self.assertEqual(specs[0].depth_mm, 0.2)
+        # malformed target (both / neither) is rejected, not silently dropped
+        from setup_descriptor import SetupDescriptorError
+        with self.assertRaises(SetupDescriptorError):
+            parse_setup_descriptor({"setups": {"s": {"engrave": [{"text": "x"}]}}})
+
+    def test_declared_engraving_emits_op_with_source(self) -> None:
+        ctx = load_machining_context(CONTEXT_PATH)
+        ctx.setups[0].engrave = [
+            {"text": "XR004", "target": {"feature_id": "17"}, "depth_mm": 0.2}
+        ]
+        cam = plan(CASCADE_PATH, ctx, seq_search="beam", seq_beam_width=5)
+        eng = [o for o in cam.operations if o.operation == "engraving"]
+        self.assertEqual(len(eng), 1)
+        self.assertEqual(eng[0].feature_refs, ["17"])
+        self.assertEqual(eng[0].attributes["text"], "XR004")
+        self.assertEqual(eng[0].attributes["source"], "explicit_spec")
+        self.assertEqual(eng[0].attributes["depth_mm"], 0.2)
+        self.assertEqual(cam.operations[-1].operation, "deburr")  # engraving before deburr
+        flags = cam.metadata["planner_stats"].get("review_flags", [])
+        self.assertFalse(any(f.get("source") == "engrave_unresolved" for f in flags))
+
+    def test_unresolved_engraving_is_flagged_not_fabricated(self) -> None:
+        ctx = load_machining_context(CONTEXT_PATH)
+        ctx.setups[0].engrave = [
+            {"text": "X", "target": {"feature_id": "999999"}, "depth_mm": 0.1}
+        ]
+        cam = plan(CASCADE_PATH, ctx, seq_search="beam", seq_beam_width=5)
+        self.assertEqual([o for o in cam.operations if o.operation == "engraving"], [])
+        flags = cam.metadata["planner_stats"].get("review_flags", [])
+        self.assertTrue(any(f.get("source") == "engrave_unresolved" for f in flags))
+
+    def test_deburr_is_appended_last_over_whole_setup(self) -> None:
+        ctx = load_machining_context(CONTEXT_PATH)
+        cam = plan(CASCADE_PATH, ctx, seq_search="beam", seq_beam_width=5)
+        deburrs = [op for op in cam.operations if op.operation == "deburr"]
+        self.assertEqual(len(deburrs), 1, "exactly one whole-setup deburr op")
+        self.assertEqual(cam.operations[-1].operation, "deburr", "deburr sequences last")
+        # whole-setup: references more than one feature
+        self.assertGreater(len(deburrs[0].feature_refs), 1)
+
     def test_front_stock_flat_maps_to_facing(self) -> None:
         ctx = _minimal_context(
             setups=[
@@ -1293,8 +1459,15 @@ class TestMultiSetupPlanning(unittest.TestCase):
 
         rear_ops = [op for op in cam_plan.operations if op.setup_id == "rear"]
         front_ops = [op for op in cam_plan.operations if op.setup_id == "front"]
-        self.assertEqual(len(rear_ops), 5)
-        self.assertEqual(len(front_ops), 11)
+        self.assertEqual(len(rear_ops), 8)
+        self.assertEqual(len(front_ops), 13)
+        # each setup ends with its whole-setup deburr pass
+        self.assertEqual(rear_ops[-1].operation, "deburr")
+        self.assertEqual(front_ops[-1].operation, "deburr")
+        # front's 3.81mm-fillet pockets trigger rest roughing (rough tool too big for
+        # the corner); rear's 6.35mm fillets do not
+        self.assertTrue(any(op.operation == "rest_roughing" for op in front_ops))
+        self.assertFalse(any("rest" in op.operation for op in rear_ops))
 
         per_setup = cam_plan.metadata["planner_stats"]["per_setup"]
         self.assertEqual(per_setup["rear"]["scope_mode"], "reachability")
@@ -1383,7 +1556,8 @@ class TestPlanIntegration(unittest.TestCase):
 
         stats = cam_plan.metadata["planner_stats"]
         self.assertGreaterEqual(stats.get("operations_out"), 5)
-        self.assertLessEqual(stats.get("operations_out"), 6)
+        # grew with the surface-finish split: +deburr, +radial_spiral, +steep_shallow
+        self.assertLessEqual(stats.get("operations_out"), 8)
 
         tool_lookup = {tool.tool_id: tool for tool in context.tools}
         open_finish_types = {

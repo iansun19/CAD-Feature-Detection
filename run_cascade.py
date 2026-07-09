@@ -754,6 +754,41 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"-> {len(merge_report.clusters)} merged clusters "
                 f"({merge_report.nodes_removed} nodes removed)"
             )
+        # Per-feature slope profile (steep vs shallow), computed on the final merged
+        # node set so merged contour surfaces get an area-weighted profile over all
+        # their faces. Consumed by the planner for slope-aware surface finishing.
+        from slope_profile import annotate_slope_profiles
+
+        graph["slope_profile_summary"] = annotate_slope_profiles(
+            graph["nodes"], faces=faces, opening_axis=pk.opening_axis,
+        )
+        graph["schema_version"] = 5
+
+        # Chamfer (edge-break) recognizer: additive, runs LAST on faces no other
+        # feature claimed, appending its own nodes. Finds nothing on 96260B (no real
+        # chamfers) -- correct; see chamfer_detection.py.
+        from chamfer_detection import detect_chamfers
+
+        _claimed = frozenset(
+            int(i) for n in graph["nodes"] for i in n.get("face_ids", [])
+        )
+        _chamfers = detect_chamfers(faces, edge_index, edge_attr, exclude_faces=_claimed)
+        _next_id = max((int(n["feature_id"]) for n in graph["nodes"]), default=-1) + 1
+        for feat in _chamfers.features:
+            ids = sorted(int(i) for i in feat.face_indices)
+            graph["nodes"].append({
+                "feature_id": _next_id,
+                "class_id": -1,
+                "class_name": "chamfer",
+                "face_ids": ids,
+                "n_faces": len(ids),
+                "mean_confidence": 1.0,
+                "params": feat.to_dict(),
+            })
+            _next_id += 1
+        graph["chamfer_summary"] = {"chamfers": len(_chamfers.features)}
+        graph["schema_version"] = 6
+
         if args.stock_classifier and args.stock_classifier != "off":
             from stock_cut_classification import stock_face_ids
 

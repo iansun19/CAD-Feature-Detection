@@ -160,6 +160,13 @@ class SetupContext(BaseModel):
         default_factory=SetupScopeSpec,
         description="Machinable feature scope: full, class list, or explicit feature_ids.",
     )
+    engrave: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Declared engraving specs for this setup (explicit process input): each "
+            '{text, target:{feature_id|datum}, depth_mm}. Drives the engraving producer.'
+        ),
+    )
     fixture: str | None = None
     source_step_file: str | None = None
 
@@ -975,6 +982,7 @@ def build_setup_context(
         orientation_provisional=orientation is not None,
         pocket_access=pocket_access,
         scope=SetupScopeSpec.model_validate(resolved.scope.to_dict()),
+        engrave=[e.to_dict() for e in getattr(resolved, "engrave", ())],
         fixture=None,
         source_step_file=source_step_file or resolved.part_step,
     )

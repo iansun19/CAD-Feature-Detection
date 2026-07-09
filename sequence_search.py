@@ -1,8 +1,11 @@
 """Search over valid topological operation orders (greedy + beam)."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Literal, Mapping, Sequence
+
+logger = logging.getLogger(__name__)
 
 from score_sequence import (
     DEFAULT_SEQUENCE_WEIGHTS,
@@ -205,33 +208,32 @@ def search_sequence(
     if tie_break_key is None:
         tie_break_key = lambda op: (op.op_id,)  # noqa: E731
 
+    def _topo() -> list[Any]:
+        fn = topo_sort_fn
+        if fn is None:
+            from planner import sequence as fn  # noqa: PLC0415
+        return list(fn(ops, precedence, tool_lookup=tool_lookup or {}))
+
     if strategy == "none":
-        if topo_sort_fn is None:
-            from planner import sequence as topo_sort_fn  # noqa: PLC0415
-        ordered = list(
-            topo_sort_fn(
-                ops,
-                precedence,
-                tool_lookup=tool_lookup or {},
+        ordered = _topo()
+    elif strategy in ("greedy", "beam"):
+        search = _search_greedy if strategy == "greedy" else _search_beam
+        kwargs = dict(
+            setup_approach=setup_approach, weights=w, tie_break_key=tie_break_key
+        )
+        if strategy == "beam":
+            kwargs["beam_width"] = beam_width
+        try:
+            ordered = search(ops, precedence, **kwargs)
+        except ValueError:
+            # Heuristic search can strand a valid order under tight precedence
+            # (e.g. a whole-setup deburr that depends on every other op). The
+            # topological sort always yields a precedence-respecting order.
+            logger.warning(
+                "%s sequence search found no complete order; falling back to topo sort",
+                strategy,
             )
-        )
-    elif strategy == "greedy":
-        ordered = _search_greedy(
-            ops,
-            precedence,
-            setup_approach=setup_approach,
-            weights=w,
-            tie_break_key=tie_break_key,
-        )
-    elif strategy == "beam":
-        ordered = _search_beam(
-            ops,
-            precedence,
-            beam_width=beam_width,
-            setup_approach=setup_approach,
-            weights=w,
-            tie_break_key=tie_break_key,
-        )
+            ordered = _topo()
     else:
         raise ValueError(f"unknown seq-search strategy: {strategy!r}")
 

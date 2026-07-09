@@ -251,10 +251,17 @@ class Test96260BCleanPlan(unittest.TestCase):
             material="aluminum",
             graph=graph,
         )
+        # Identify the size-matched wall op by content (op_ids shift as the op set
+        # grows), then assert it carries no feed_off flag.
+        wall_rows = [
+            r for r in report.feed_rows
+            if r.strategy == "finishing_wall" and r.compare_mode == "size_matched"
+        ]
+        self.assertEqual(len(wall_rows), 1)
+        wall_op_id = wall_rows[0].op_id
         wall_feed_flags = [
             f for f in report.flags
-            if f.gate == "feed_off"
-            and f.op_id == "OP070"
+            if f.gate == "feed_off" and f.op_id == wall_op_id
         ]
         self.assertEqual(wall_feed_flags, [])
 

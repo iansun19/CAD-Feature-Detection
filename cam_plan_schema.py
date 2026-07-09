@@ -178,6 +178,13 @@ class Operation(BaseModel):
         default=None,
         description="Pocket access label from setup descriptor; null for non-pockets.",
     )
+    attributes: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Op-specific extras carried to the CAM consumer, e.g. engraving "
+            '{"text", "depth_mm", "source"}. Empty for ops with no extras.'
+        ),
+    )
 
     @field_validator("operation")
     @classmethod

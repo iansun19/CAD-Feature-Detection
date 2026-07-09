@@ -135,6 +135,32 @@ class SetupScope:
         return cls(mode="filtered", classes=classes, feature_ids=feature_ids)
 
 
+@dataclass(frozen=True)
+class EngraveSpec:
+    """Declared engraving/marking on one face (explicit process input, not B-rep inferred).
+
+    Target is either a recognized feature (`target_feature_id`) or a setup datum
+    (`target_datum`, e.g. "top"); exactly one should be set. `text`/`depth_mm` are the
+    marking content, carried straight to the CAM op -- never OCR'd from geometry.
+    """
+
+    text: str
+    target_feature_id: str | None = None
+    target_datum: str | None = None
+    depth_mm: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        target: dict[str, Any] = {}
+        if self.target_feature_id is not None:
+            target["feature_id"] = self.target_feature_id
+        if self.target_datum is not None:
+            target["datum"] = self.target_datum
+        out: dict[str, Any] = {"text": self.text, "target": target}
+        if self.depth_mm is not None:
+            out["depth_mm"] = self.depth_mm
+        return out
+
+
 @dataclass
 class SetupDefaults:
     """Fallback values when no descriptor file exists or a setup field is omitted."""
@@ -159,6 +185,8 @@ class SetupEntry:
     # General cardinal orientation (e.g. "+X"); supersedes machining_side when set.
     # None => derive orientation the legacy way from machining_side + opening axis.
     orientation: str | None = None
+    # Declared engraving/marking for this setup (explicit process input).
+    engrave: tuple[EngraveSpec, ...] = ()
 
     def effective_scope(self, defaults: SetupDefaults) -> SetupScope:
         return self.scope if self.scope is not None else defaults.scope
@@ -212,6 +240,7 @@ class ResolvedSetup:
     scope: SetupScope = field(default_factory=SetupScope)
     # Explicit cardinal orientation (provisional lateral path), or None for legacy.
     orientation: str | None = None
+    engrave: tuple[EngraveSpec, ...] = ()
 
 
 def default_setup_descriptor(part_id: str = "unknown") -> PartSetupDescriptor:
@@ -358,6 +387,38 @@ def _parse_pockets_by_seed_face(raw: Any, *, where: str) -> dict[int, PocketAcce
     return out
 
 
+def _parse_engrave(raw: Any, *, where: str) -> tuple[EngraveSpec, ...]:
+    """Parse the optional `engrave` list. Each item: {text, target:{feature_id|datum}
+    or flat feature_id/datum, depth_mm}. A malformed item raises (never silently
+    dropped -- a broken marking spec must surface, not read as 'no engraving')."""
+    if raw is None:
+        return ()
+    if not isinstance(raw, (list, tuple)):
+        raise SetupDescriptorError(f"{where}.engrave must be a list of marking specs")
+    specs: list[EngraveSpec] = []
+    for i, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise SetupDescriptorError(f"{where}.engrave[{i}] must be a mapping")
+        text = item.get("text")
+        if not text or not isinstance(text, str):
+            raise SetupDescriptorError(f"{where}.engrave[{i}].text is required (non-empty string)")
+        target = item.get("target") if isinstance(item.get("target"), dict) else {}
+        feature_id = target.get("feature_id", item.get("feature_id"))
+        datum = target.get("datum", item.get("datum"))
+        if (feature_id is None) == (datum is None):
+            raise SetupDescriptorError(
+                f"{where}.engrave[{i}] must set exactly one of target.feature_id / target.datum"
+            )
+        depth = item.get("depth_mm")
+        specs.append(EngraveSpec(
+            text=text,
+            target_feature_id=str(feature_id) if feature_id is not None else None,
+            target_datum=str(datum) if datum is not None else None,
+            depth_mm=float(depth) if depth is not None else None,
+        ))
+    return tuple(specs)
+
+
 def parse_setup_descriptor(data: dict[str, Any] | None) -> PartSetupDescriptor:
     """Parse a setup descriptor mapping (already loaded from YAML)."""
     data = data or {}
@@ -406,6 +467,7 @@ def parse_setup_descriptor(data: dict[str, Any] | None) -> PartSetupDescriptor:
             orientation=_parse_orientation(
                 entry_raw.get("orientation"), where=f"setups[{key}]"
             ),
+            engrave=_parse_engrave(entry_raw.get("engrave"), where=f"setups[{key}]"),
         )
     return PartSetupDescriptor(part_id=part_id, defaults=defaults, setups=setups)
 
@@ -558,6 +620,7 @@ def resolve_setup_entry(
         pockets_by_seed_face=dict(entry.pockets_by_seed_face),
         scope=entry.effective_scope(descriptor.defaults),
         orientation=entry.effective_orientation(descriptor.defaults),
+        engrave=entry.engrave,
     )
 
 
