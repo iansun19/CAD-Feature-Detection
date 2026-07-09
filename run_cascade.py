@@ -189,7 +189,7 @@ def run_cascade(
     instrument: bool = False,
     instrument_dir: Path | None = None,
 ):
-    """Run full cascade; return (faces, pk, hl, cx, fl, of, wl, pr, rs)."""
+    """Run full cascade; return (faces, pk, hl, cx, fl, of, wl, pr, rs, if_)."""
     from feature_params import analyze_step, load_step_faces, require_occ
 
     require_occ()
@@ -214,6 +214,24 @@ def run_cascade(
         from cascade_instrumentation import PassClaimRecorder
 
         claim_recorder = PassClaimRecorder()
+
+    # Pass 0 - inner_fillet: geometry-only template match run before pockets so a
+    # core tangent blend is claimed as its own feature rather than absorbed into
+    # a pocket. Claims nothing on parts without such blends (e.g. 96260B), so it
+    # leaves the downstream pool - and hence the partition - unchanged there.
+    from inner_fillet_detection import detect_inner_fillets
+
+    inner_fillet_result = detect_inner_fillets(
+        step_path, faces, edge_index, edge_attr,
+        candidate_faces=cut_candidates,
+    )
+    cut_candidates = inner_fillet_result.remaining_faces
+    if inner_fillet_result.claimed_faces:
+        logger.info(
+            "inner_fillet: %d claimed (%s)",
+            len(inner_fillet_result.claimed_faces),
+            sorted(inner_fillet_result.claimed_faces),
+        )
 
     pocket_result = detect_pockets(
         faces, edge_index, edge_attr,
@@ -357,6 +375,7 @@ def run_cascade(
     return (
         faces, pocket_result, hole_result, coaxial_result, flat_result,
         outer_fillet_result, wall_result, profile_result, residual_result,
+        inner_fillet_result,
     )
 
 
@@ -411,6 +430,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="write diagnostic artifacts under pipeline_out/<part>/instrument/",
     )
+    ap.add_argument(
+        "--merge-lobe-contours",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="merge same-lobe cap contour_surface fragments before export (default: on)",
+    )
+    ap.add_argument(
+        "--lateral-axes",
+        action="store_true",
+        default=False,
+        help="ALSO annotate PROVISIONAL lateral ±X/±Y/±Z approach candidacy + "
+             "reachability (unvalidated; default: off, calibrated Z-only path only)",
+    )
     args = ap.parse_args(argv)
 
     logging.basicConfig(
@@ -449,7 +481,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         instrument_dir.mkdir(parents=True, exist_ok=True)
 
-    faces, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
+    faces, pk, hl, cx, fl, of, wl, pr, rs, if_ = run_cascade(
         step_path, edge_index, edge_attr,
         stock_classifier=args.stock_classifier,
         pocket_config=pocket_config, hole_config=hole_config,
@@ -485,9 +517,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"STEP: {step_path}")
     print(
         f"faces: {n_faces}   cascade: "
-        f"pockets -> holes -> coaxial_stack -> flats -> outer_fillets "
-        f"-> wall -> profile -> residual"
+        f"inner_fillet -> pockets -> holes -> coaxial_stack -> flats "
+        f"-> outer_fillets -> wall -> profile -> residual"
     )
+
+    print("\n" + "=" * 78)
+    print("PASS 0 — INNER FILLETS")
+    print("=" * 78)
+    print(if_.summary())
 
     print("\n" + "=" * 78)
     print("PASS 1 — POCKETS")
@@ -666,7 +703,57 @@ def main(argv: Sequence[str] | None = None) -> int:
         export_dir.mkdir(parents=True, exist_ok=True)
         graph = build_cascade_feature_graph(
             part_id, n_faces, pk, hl, cx, fl, of, wl, pr, rs, edge_index,
+            inner_fillet_result=if_,
         )
+        from feature_params import load_step_faces
+        from step_ingest import load_step_shape
+        from approach_vectors import annotate_approach_vectors
+        from lobe_contour_merge import merge_lobe_contour_fragments
+        from reachability import annotate_reachability
+
+        occ_faces = load_step_faces(step_path)
+        shape, _ = load_step_shape(str(step_path))
+        graph["approach_frame"] = annotate_approach_vectors(
+            graph["nodes"], faces=faces, opening_axis=pk.opening_axis,
+        )
+        graph["schema_version"] = 3
+        graph["reachability_summary"] = annotate_reachability(
+            graph["nodes"], occ_faces=occ_faces, shape=shape,
+            opening_axis=pk.opening_axis,
+        )
+        graph["schema_version"] = 4
+        if args.lateral_axes:
+            # PROVISIONAL lateral ±X/±Y/±Z path — additive, never overwrites the
+            # calibrated Z-only approach/reachability fields. See lateral_axes.py.
+            from lateral_axes import (
+                annotate_lateral_candidates,
+                annotate_lateral_reachability,
+            )
+
+            graph["lateral_candidates_summary"] = annotate_lateral_candidates(
+                graph["nodes"], faces=faces, opening_axis=pk.opening_axis,
+            )
+            graph["lateral_reachability_summary"] = annotate_lateral_reachability(
+                graph["nodes"], occ_faces=occ_faces, shape=shape,
+            )
+            print("\nlateral-axes: annotated PROVISIONAL ±X/±Y/±Z candidacy + "
+                  "reachability (unvalidated path)")
+        graph, merge_report = merge_lobe_contour_fragments(
+            graph,
+            faces,
+            edge_index,
+            edge_attr,
+            opening_axis=pk.opening_axis,
+            occ_faces=occ_faces,
+            enabled=args.merge_lobe_contours,
+            prefer_rear=not is_front,
+        )
+        if merge_report.nodes_removed:
+            print(
+                f"\nlobe contour merge: {merge_report.candidates_before} candidates "
+                f"-> {len(merge_report.clusters)} merged clusters "
+                f"({merge_report.nodes_removed} nodes removed)"
+            )
         if args.stock_classifier and args.stock_classifier != "off":
             from stock_cut_classification import stock_face_ids
 
@@ -677,6 +764,48 @@ def main(argv: Sequence[str] | None = None) -> int:
         graph_path = export_dir / "feature_graph_cascade.json"
         write_feature_graph(str(graph_path), graph)
         print(f"\nWrote {graph_path.resolve()}")
+
+        from setup_descriptor import dump_setup_descriptor
+        from setup_generation import generate_setup_entry_for_export, merge_setup_entries
+
+        setup_id = "front" if is_front else "rear"
+        entry = generate_setup_entry_for_export(
+            graph,
+            setup_id=setup_id,
+            part_step=step_path,
+        )
+        if "96260B" in step_path.name.upper():
+            family_id = "96260B"
+        else:
+            family_id = part_id.rsplit("_", 1)[0] if "_" in part_id else part_id
+        single_desc = merge_setup_entries(family_id, [entry])
+        setup_desc_path = export_dir / "setup_descriptor.yaml"
+        dump_setup_descriptor(
+            single_desc,
+            setup_desc_path,
+            header="Generated by run_cascade export (step 3).",
+        )
+        print(f"Wrote {setup_desc_path.resolve()}")
+
+        family_dir = export_dir.parent / family_id
+        family_dir.mkdir(parents=True, exist_ok=True)
+        family_path = family_dir / "setup_descriptor.yaml"
+        if family_path.is_file():
+            from setup_descriptor import load_setup_descriptor
+
+            existing = load_setup_descriptor(family_path)
+            merged_entries = list(existing.setups.values())
+            by_id = {e.setup_id: e for e in merged_entries}
+            by_id[entry.setup_id] = entry
+            family_desc = merge_setup_entries(family_id, list(by_id.values()))
+        else:
+            family_desc = single_desc
+        dump_setup_descriptor(
+            family_desc,
+            family_path,
+            header="Generated by run_cascade export (step 3) — merged family descriptor.",
+        )
+        print(f"Wrote {family_path.resolve()}")
 
         from feature_graph_viewer.build import DEFAULT_TEMPLATE, build_viewer
 

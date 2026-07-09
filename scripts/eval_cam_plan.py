@@ -799,18 +799,52 @@ def load_gt_operations(
     return inferred, "inferred"
 
 
+# Canonical operation-bank slug -> legacy (operation_type, strategy) eval vocabulary.
+# The planner collapsed operation_type+strategy into a single ``operation`` field;
+# the eval scorecard still reasons in the old shop-ish vocabulary, so map back here.
+_BANK_TO_EVAL_OPTYPE: dict[str, tuple[str, str]] = {
+    "helix_bore": ("bore", "helical_bore"),
+    "drill": ("drill", "peck_drill"),
+    "chip_break_drill": ("drill", "peck_drill"),
+    "thread_mill": ("tap", "rigid_tap"),
+    "optirough": ("pocket_mill", "roughing"),
+    "area_roughing": ("pocket_mill", "roughing"),
+    "rest_roughing": ("pocket_mill", "roughing"),
+    "pocket": ("pocket_mill", "roughing"),
+    "dynamic_mill_2d": ("pocket_mill", "roughing"),
+    "facing": ("facing", "facing"),
+    "raster": ("floor_finish", "finishing_floor"),
+    "constant_scallop": ("surface_finish", "finishing"),
+    "radial_spiral": ("surface_finish", "finishing"),
+    "steep_shallow": ("surface_finish", "finishing"),
+    "rest_finish": ("surface_finish", "finishing"),
+    "pencil": ("fillet_finish", "finishing_fillet"),
+}
+_WALL_FEATURE_CLASSES = frozenset({"wall", "profile"})
+
+
+def _emitted_optype_strategy(operation: str, feature_type: str) -> tuple[str, str]:
+    """Map a canonical bank op back to the eval's legacy (operation_type, strategy)."""
+    if operation in ("contour_2d", "waterline"):
+        if feature_type in _WALL_FEATURE_CLASSES:
+            return ("wall_finish", "finishing_wall")
+        return ("finish_contour", "finishing_floor")
+    return _BANK_TO_EVAL_OPTYPE.get(operation, (operation, operation))
+
+
 def load_emitted_operations(plan: CamPlan) -> list[EmittedOperation]:
     tool_lookup = {tool.tool_id: tool for tool in plan.tools}
     emitted: list[EmittedOperation] = []
     for op in plan.operations:
         tool = tool_lookup.get(op.tool_id)
         params = op.parameters
+        op_type, op_strategy = _emitted_optype_strategy(op.operation, op.feature_type)
         emitted.append(
             EmittedOperation(
                 op_id=op.op_id,
                 feature_refs=_refs_key(op.feature_refs),
-                operation_type=op.operation_type,
-                strategy=op.strategy,
+                operation_type=op_type,
+                strategy=op_strategy,
                 tool_id=op.tool_id,
                 tool_type=tool.tool_type if tool is not None else None,
                 tool_diameter_mm=tool.diameter_mm if tool is not None else None,

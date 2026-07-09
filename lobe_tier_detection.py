@@ -67,7 +67,17 @@ class LobeTierConfig:
     require_interior_wall: bool = True
     min_step_tiers: int = 2
     min_steps_per_tier: int = 6
+    # dia_family_tol_in is the diameter-match tolerance (inches) used when testing
+    # a wall against a BoreFamily role. The former hard-coded 96260B diameters
+    # (2.867/3.453/0.800/0.500 in) are now DERIVED per part by build_bore_family()
+    # from concentric-bore relationships (primary vs duplicate by size ratio;
+    # mouth vs deep by axial depth). Byte-identical on 96260B; recalibrate/extend
+    # as new lobed parts arrive (see memory cadcam-roadmap).
     dia_family_tol_in: float = 0.05
+    # A wall is a "primary" bore if it is at least this many times larger than a
+    # concave/smooth-adjacent wall (which is then its "duplicate"), and vice versa.
+    # 96260B: primaries ~2.867/3.453 in, duplicates ~0.800/0.500 in (ratio ~3.6).
+    bore_primary_duplicate_ratio: float = 2.0
     mouth_tier_span_fraction: float = DEFAULT_MOUTH_TIER_SPAN_FRACTION
     mouth_numeric_floor_mm: float = NUMERIC_FLOOR_MM
     mouth_tolerance_floor_mm: float = TOLERANCE_FLOOR_MM
@@ -168,6 +178,161 @@ def _near_dia_in(d_mm: float | None, target_in: float, tol_in: float) -> bool:
     if d_mm is None:
         return False
     return abs(d_mm / MM_PER_IN - target_in) <= tol_in
+
+
+@dataclass
+class BoreFamily:
+    """Per-part concentric-bore role table, derived from wall relationships.
+
+    Replaces the former hard-coded 96260B diameters. Roles are assigned by
+    RELATIONSHIP, not absolute size: an interior bore is a *primary* if it has a
+    much-smaller concave/smooth-adjacent *duplicate* bore (size ratio >=
+    ``bore_primary_duplicate_ratio``); of the primaries the axially shallower one
+    is the mouth (open-tier) bore and the deeper one is the deep (closed-tier)
+    bore; remaining small bores are duplicates ranked largest-first. The central
+    hub bore (no small duplicate neighbour) is excluded. Matching still uses the
+    ``dia_family_tol_in`` tolerance, so on 96260B the derived targets reproduce
+    the old 2.867/3.453/0.800/0.500 in matches byte-for-byte.
+    """
+
+    mouth_primary_mm: float | None
+    deep_primary_mm: float | None
+    duplicates_mm: tuple[float, ...]  # descending diameter
+    tol_in: float
+
+    def _near(self, d_mm: float | None, target_mm: float | None) -> bool:
+        if d_mm is None or target_mm is None:
+            return False
+        return abs(float(d_mm) / MM_PER_IN - float(target_mm) / MM_PER_IN) <= self.tol_in
+
+    def is_mouth_primary(self, d_mm: float | None) -> bool:
+        return self._near(d_mm, self.mouth_primary_mm)
+
+    def is_deep_primary(self, d_mm: float | None) -> bool:
+        return self._near(d_mm, self.deep_primary_mm)
+
+    def is_duplicate(self, d_mm: float | None, rank: int | None = None) -> bool:
+        """True if d matches a duplicate bore; if ``rank`` given, that specific
+        size rank (0 = largest duplicate)."""
+        if rank is None:
+            return any(self._near(d_mm, x) for x in self.duplicates_mm)
+        if rank < 0 or rank >= len(self.duplicates_mm):
+            return False
+        return self._near(d_mm, self.duplicates_mm[rank])
+
+
+def _cluster_diameters(diams: Sequence[float], tol_in: float) -> list[float]:
+    """Collapse near-equal diameters (within tol) to representatives, descending."""
+    reps: list[list[float]] = []
+    for d in sorted(diams, reverse=True):
+        for c in reps:
+            if abs(d - c[0]) / MM_PER_IN <= tol_in:
+                c.append(d)
+                break
+        else:
+            reps.append([d])
+    return [float(np.mean(c)) for c in reps]
+
+
+def build_bore_family(
+    by_index: dict[int, Any],
+    occ_map: dict[int, Any] | None,
+    graph: FaceGraph,
+    axis: np.ndarray,
+    cfg: LobeTierConfig,
+) -> BoreFamily:
+    """Derive the concentric-bore role table from wall relationships (see BoreFamily)."""
+    a = np.asarray(axis, dtype=np.float64)
+    n = float(np.linalg.norm(a))
+    a = a / n if n > 1e-12 else a
+
+    walls: dict[int, tuple[float, float]] = {}  # fid -> (diameter_mm, axial)
+    for fid, fg in by_index.items():
+        if fg.surface_type not in WALL_SURF_TYPES:
+            continue
+        info = _wall_interior_and_axis(fg, occ_map.get(fid) if occ_map else None)
+        if info is None:
+            continue
+        interior, _, dia = info
+        if not interior or dia is None:
+            continue
+        if dia < cfg.wall_dia_min_mm or dia > cfg.wall_dia_max_mm:
+            continue
+        axial = float(np.dot(np.asarray(fg.centroid, dtype=np.float64), a))
+        walls[fid] = (float(dia), axial)
+
+    ratio = cfg.bore_primary_duplicate_ratio
+    primaries: list[tuple[float, float]] = []  # (diameter, axial)
+    duplicates: list[float] = []
+    for fid, (dia, axial) in walls.items():
+        is_primary = is_duplicate = False
+        for nb in graph.neighbors.get(fid, ()):
+            if graph.edge_kind(fid, nb) not in ("concave", "smooth"):
+                continue
+            if nb not in walls:
+                continue
+            nd = walls[nb][0]
+            if dia >= ratio * nd:
+                is_primary = True
+            if nd >= ratio * dia:
+                is_duplicate = True
+        if is_primary:
+            primaries.append((dia, axial))
+        if is_duplicate:
+            duplicates.append(dia)
+
+    # Cluster primary diameters; assign mouth (shallowest = max axial along +axis,
+    # which points to the part top) and deep (deepest = min axial).
+    prim_clusters: dict[float, list[float]] = {}
+    for dia, axial in primaries:
+        key = next(
+            (k for k in prim_clusters if abs(dia - k) / MM_PER_IN <= cfg.dia_family_tol_in),
+            None,
+        )
+        prim_clusters.setdefault(dia if key is None else key, []).append(axial)
+
+    mouth_primary_mm: float | None = None
+    deep_primary_mm: float | None = None
+    if prim_clusters:
+        ordered = sorted(prim_clusters.items(), key=lambda kv: float(np.mean(kv[1])))
+        deep_primary_mm = ordered[0][0]
+        mouth_primary_mm = ordered[-1][0]
+
+    return BoreFamily(
+        mouth_primary_mm=mouth_primary_mm,
+        deep_primary_mm=deep_primary_mm,
+        duplicates_mm=tuple(_cluster_diameters(duplicates, cfg.dia_family_tol_in)),
+        tol_in=cfg.dia_family_tol_in,
+    )
+
+
+def _ensure_bore_family(
+    graph: FaceGraph,
+    by_index: dict[int, Any],
+    occ_map: dict[int, Any] | None,
+    axis: np.ndarray,
+    cfg: LobeTierConfig,
+) -> BoreFamily:
+    """Build and stash the BoreFamily on the graph once; idempotent.
+
+    Called at every entry that has the opening axis (the main detection entry and
+    the tolerance/trace helpers that tests invoke directly on a fresh graph), so
+    the axis-free diameter helpers can fetch it via _bore_family."""
+    fam = getattr(graph, "bore_family", None)
+    if fam is None:
+        fam = build_bore_family(by_index, occ_map, graph, axis, cfg)
+        graph.bore_family = fam
+    return fam
+
+
+def _bore_family(graph: FaceGraph) -> BoreFamily:
+    """Fetch the BoreFamily stashed on the graph (see _ensure_bore_family)."""
+    fam = getattr(graph, "bore_family", None)
+    if fam is None:
+        raise RuntimeError(
+            "bore family not built; call _ensure_bore_family at the axis-carrying entry"
+        )
+    return fam
 
 
 def _opening_blend(
@@ -506,9 +671,10 @@ def _deep_wall_pair_member(
             continue
         d_a = diameter or 0.0
         d_b = ninfo[2] or 0.0
-        tol = cfg.dia_family_tol_in
-        if (_near_dia_in(d_a, 3.453, tol) and _near_dia_in(d_b, 0.800, tol)) or (
-            _near_dia_in(d_a, 0.800, tol) and _near_dia_in(d_b, 3.453, tol)
+        fam = _bore_family(graph)
+        # Deep primary bore concave/smooth-paired with its (largest) duplicate.
+        if (fam.is_deep_primary(d_a) and fam.is_duplicate(d_b, 0)) or (
+            fam.is_duplicate(d_a, 0) and fam.is_deep_primary(d_b)
         ):
             return True
     return False
@@ -532,11 +698,12 @@ def _composition_tier(
         if _opening_blend(fg, occ, cfg):
             return "open"
         if _wall_band(fg, occ, cfg):
-            if _near_dia_in(d, 2.867, cfg.dia_family_tol_in):
+            fam = _bore_family(graph)
+            if fam.is_mouth_primary(d):
                 return "open"
             if _deep_wall_pair_member(face_idx, by_index, occ_map, graph, cfg):
                 return "closed"
-            if _near_dia_in(d, 3.453, cfg.dia_family_tol_in):
+            if fam.is_deep_primary(d):
                 return "closed"
             return "either"
     return "either"
@@ -549,13 +716,14 @@ def _adjacent_shallow_bore_cylinder(
     graph: FaceGraph,
     cfg: LobeTierConfig,
 ) -> bool:
-    """True when a 0.800in cylinder is the shallow duplicate bore (concave to 2.867in)."""
+    """True when a duplicate bore is the shallow one (concave to the mouth primary)."""
     fg = by_index[face_idx]
     if fg.surface_type not in WALL_SURF_TYPES:
         return False
+    fam = _bore_family(graph)
     occ = occ_map.get(face_idx) if occ_map else None
     info = _wall_interior_and_axis(fg, occ)
-    if info is None or not _near_dia_in(info[2], 0.800, cfg.dia_family_tol_in):
+    if info is None or not fam.is_duplicate(info[2], 0):
         return False
     for nb in graph.neighbors.get(face_idx, ()):
         if graph.edge_kind(face_idx, nb) != "concave":
@@ -564,7 +732,7 @@ def _adjacent_shallow_bore_cylinder(
         if nfg.surface_type not in WALL_SURF_TYPES:
             continue
         ninfo = _wall_interior_and_axis(nfg, occ_map.get(nb) if occ_map else None)
-        if ninfo and _near_dia_in(ninfo[2], 2.867, cfg.dia_family_tol_in):
+        if ninfo and fam.is_mouth_primary(ninfo[2]):
             return True
     return False
 
@@ -573,15 +741,16 @@ def _duplicate_bore_transition_cylinder(
     face_idx: int,
     by_index: dict[int, Any],
     occ_map: dict[int, Any] | None,
+    graph: FaceGraph,
     cfg: LobeTierConfig,
 ) -> bool:
-    """3.453-family barrel linking duplicate 0.800/0.500 bores above the mouth step."""
+    """Deep-primary barrel linking the duplicate bores above the mouth step."""
     fg = by_index[face_idx]
     if fg.surface_type not in WALL_SURF_TYPES:
         return False
     occ = occ_map.get(face_idx) if occ_map else None
     info = _wall_interior_and_axis(fg, occ)
-    return info is not None and _near_dia_in(info[2], 3.453, cfg.dia_family_tol_in)
+    return info is not None and _bore_family(graph).is_deep_primary(info[2])
 
 
 def _links_duplicate_bore_transition(
@@ -596,7 +765,7 @@ def _links_duplicate_bore_transition(
     for nb in graph.neighbors.get(face_idx, ()):
         if graph.edge_kind(face_idx, nb) not in edge_kinds:
             continue
-        if _duplicate_bore_transition_cylinder(nb, by_index, occ_map, cfg):
+        if _duplicate_bore_transition_cylinder(nb, by_index, occ_map, graph, cfg):
             return True
     return False
 
@@ -631,11 +800,13 @@ def _closed_tier_opening_extension_wall(
     if info is None:
         return False
     diameter = info[2]
-    if _near_dia_in(diameter, 0.800, cfg.dia_family_tol_in):
+    fam = _bore_family(graph)
+    # Largest duplicate links via convex only; smaller duplicate via convex+concave.
+    if fam.is_duplicate(diameter, 0):
         return _links_duplicate_bore_transition(
             face_idx, by_index, occ_map, graph, cfg, edge_kinds=frozenset({"convex"}),
         )
-    if _near_dia_in(diameter, 0.500, cfg.dia_family_tol_in):
+    if fam.is_duplicate(diameter, 1):
         return _links_duplicate_bore_transition(
             face_idx, by_index, occ_map, graph, cfg,
         )
@@ -680,7 +851,8 @@ def _convex_only_to_open_bore(
     growing: set[int],
     cfg: LobeTierConfig,
 ) -> bool:
-    """True when a fillet torus only reaches the local 0.800in bore via convex edges."""
+    """True when a fillet torus only reaches the local duplicate bore via convex edges."""
+    fam = _bore_family(graph)
     for nb in graph.neighbors.get(face_idx, ()):
         if nb not in growing:
             continue
@@ -688,7 +860,7 @@ def _convex_only_to_open_bore(
         if nfg.surface_type not in WALL_SURF_TYPES:
             continue
         ninfo = _wall_interior_and_axis(nfg, occ_map.get(nb) if occ_map else None)
-        if ninfo is None or not _near_dia_in(ninfo[2], 0.800, cfg.dia_family_tol_in):
+        if ninfo is None or not fam.is_duplicate(ninfo[2], 0):
             continue
         kind = graph.edge_kind(face_idx, nb)
         if kind == "convex":
@@ -838,6 +1010,7 @@ def _mouth_tier_boundary_tol_mm(
     opening_axis: np.ndarray,
     cfg: LobeTierConfig,
 ) -> float:
+    _ensure_bore_family(graph, by_index, occ_map, opening_axis, cfg)
     clearance = _mouth_boundary_clearance_mm(
         pool, mouth_step, deep_step, by_index, occ_map, graph, opening_axis, cfg,
     )
@@ -961,7 +1134,7 @@ def _region_grow_tier(
                     and vfg.surface_type in WALL_SURF_TYPES
                 ):
                     vinfo = _wall_interior_and_axis(vfg, occ_map.get(v) if occ_map else None)
-                    if vinfo and _near_dia_in(vinfo[2], 0.800, cfg.dia_family_tol_in):
+                    if vinfo and _bore_family(graph).is_duplicate(vinfo[2], 0):
                         continue
             if kind == "concave" and tier_hint == "open":
                 if (
@@ -973,9 +1146,8 @@ def _region_grow_tier(
                     if uinfo and vinfo:
                         ud = uinfo[2] or 0.0
                         vd = vinfo[2] or 0.0
-                        if _near_dia_in(ud, 2.867, cfg.dia_family_tol_in) and _near_dia_in(
-                            vd, 0.800, cfg.dia_family_tol_in,
-                        ):
+                        fam = _bore_family(graph)
+                        if fam.is_mouth_primary(ud) and fam.is_duplicate(vd, 0):
                             continue
             if kind == "convex" and tier_hint == "open":
                 if ufg.surface_type == "plane" and _is_axial_plane(
@@ -1334,7 +1506,7 @@ def _is_convex_duplicate_open_fillet(
         if nfg.surface_type not in WALL_SURF_TYPES:
             continue
         ninfo = _wall_interior_and_axis(nfg, occ_map.get(nb) if occ_map else None)
-        if ninfo is None or not _near_dia_in(ninfo[2], 0.800, cfg.dia_family_tol_in):
+        if ninfo is None or not _bore_family(graph).is_duplicate(ninfo[2], 0):
             continue
         for other in tier_faces:
             if other == face_idx or by_index[other].surface_type not in FILLET_TYPES:
@@ -1854,6 +2026,10 @@ def detect_filleted_lobe_tiers(
         axis = np.array([0.0, 1.0, 0.0], dtype=np.float64)
     else:
         axis = np.asarray(opening_axis, dtype=np.float64)
+
+    # Derive the concentric-bore role table once and stash it on the graph so the
+    # downstream tier helpers can query roles instead of hard-coded diameters.
+    _ensure_bore_family(graph, by_index, occ_map, axis, config)
 
     step_planes = _collect_axial_step_planes(by_index, axis, config)
     mouth_steps, deep_steps, bins = discover_mouth_and_deep_steps(

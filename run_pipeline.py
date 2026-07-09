@@ -9,6 +9,11 @@ One command produces a directory with:
   manifest.json           — paths, checkpoint, summary metadata
   pipeline.log            — run log
 
+CAM planning (cascade + reachability + planner) is a separate path:
+  run_cascade.py --export-dir pipeline_out/<part>_rear
+  run_cascade.py --export-dir pipeline_out/<part>_front   # split-panel parts
+  python planner.py --multi-setup --setups generated --scope-diff
+
 Usage:
     python run_pipeline.py --step path/to/part.step
     python run_pipeline.py --step path/to/part.step --out-dir out/my_part

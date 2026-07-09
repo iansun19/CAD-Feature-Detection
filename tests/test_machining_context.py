@@ -22,7 +22,12 @@ from machining_context import (  # noqa: E402
     vector_to_opening_axis_label,
     write_machining_context,
 )
-from setup_descriptor import resolve_setup_entry  # noqa: E402
+from setup_descriptor import (  # noqa: E402
+    OpeningAxisSpec,
+    ResolvedSetup,
+    SetupScope,
+    resolve_setup_entry,
+)
 
 EXAMPLE_PATH = Path(ROOT) / "examples" / "machining_context_96260B.json"
 SETUP_YAML = Path(ROOT) / "eval" / "gt" / "96260B_setup.yaml"
@@ -99,12 +104,28 @@ class TestSetupAssembly(unittest.TestCase):
         self.assertIn("0", setup.pocket_access)
         self.assertEqual(setup.pocket_access["0"], "closed")
 
-    def test_open_pocket_feature_16_is_unknown(self) -> None:
-        from setup_descriptor import load_setup_descriptor
-
-        descriptor = load_setup_descriptor(SETUP_YAML)
-        resolved = resolve_setup_entry(descriptor, setup_id="rear")
-        setup = build_setup_context(resolved, self._load_graph())
+    def test_pocket_with_unspecified_access_resolves_unknown(self) -> None:
+        # A pocket whose setup pins no access (machining_side None, pocket_access
+        # not open/closed, no seed override) must resolve to "unknown" through
+        # build_setup_context. Fixture-independent so it can't drift with feature
+        # numbering (the rear golden currently pins every pocket to "closed").
+        resolved = ResolvedSetup(
+            part_id="synthetic",
+            setup_id="unspecified",
+            part_step=None,
+            machining_side=None,
+            opening_axis=OpeningAxisSpec(mode="explicit", vector=(0.0, 1.0, 0.0)),
+            pocket_access="unknown",
+            pockets_by_seed_face={},
+            scope=SetupScope(),
+        )
+        graph = {
+            "approach_frame": {"z": [0.0, 1.0, 0.0]},
+            "nodes": [
+                {"feature_id": 16, "class_name": "filleted_open_pocket", "params": {}},
+            ],
+        }
+        setup = build_setup_context(resolved, graph)
         self.assertEqual(setup.pocket_access.get("16"), "unknown")
 
     def test_vector_to_opening_axis_label(self) -> None:
@@ -132,8 +153,11 @@ class TestFullExample(unittest.TestCase):
             CASCADE_PATH,
             oversize_mm=2.0,
             step_path=REAR_STEP,
+            setups_source="authored",
         )
-        self.assertEqual(ctx.setups[0].pocket_access.get("16"), "unknown")
+        # Rear descriptor pins every pocket to "closed" (machining_side=back);
+        # feature 0 is a stable golden pocket. Verifies descriptor access flows in.
+        self.assertEqual(ctx.setups[0].pocket_access.get("0"), "closed")
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "ctx.json"
             write_machining_context(out, ctx)

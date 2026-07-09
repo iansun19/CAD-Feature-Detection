@@ -29,6 +29,13 @@ STOCK_BOUNDARY_SCOPE_TOKENS = frozenset({"facing", "stock_face"})
 
 DEFAULT_MIN_AXIS_CONFIDENCE = 0.85
 
+# General setup orientation: which cardinal direction a 3-axis setup is evaluated
+# from. This is the extension of the binary front/back `machining_side` to all six
+# cardinal directions. `machining_side` front/back still works and maps to the
+# ±opening-axis pair; a lateral orientation (anything not along the part's opening
+# axis) is PROVISIONAL — see lateral_axes.py / [[cadcam-roadmap]].
+CARDINAL_ORIENTATIONS = frozenset({"+X", "-X", "+Y", "-Y", "+Z", "-Z"})
+
 
 class SetupDescriptorError(ValueError):
     """Invalid setup descriptor YAML or unresolved required field."""
@@ -149,9 +156,20 @@ class SetupEntry:
     pocket_access: PocketAccessLabel | None = None
     pockets_by_seed_face: dict[int, PocketAccessLabel] = field(default_factory=dict)
     scope: SetupScope | None = None
+    # General cardinal orientation (e.g. "+X"); supersedes machining_side when set.
+    # None => derive orientation the legacy way from machining_side + opening axis.
+    orientation: str | None = None
 
     def effective_scope(self, defaults: SetupDefaults) -> SetupScope:
         return self.scope if self.scope is not None else defaults.scope
+
+    def effective_orientation(self, defaults: SetupDefaults) -> str | None:
+        """Explicit cardinal orientation, or None to fall back to machining_side.
+
+        Returning None keeps the calibrated front/back + opening-axis path intact;
+        an explicit orientation is the (provisional) lateral-axis override.
+        """
+        return self.orientation
 
     def effective_opening_axis(self, defaults: SetupDefaults) -> OpeningAxisSpec:
         spec = self.opening_axis or defaults.opening_axis
@@ -192,6 +210,8 @@ class ResolvedSetup:
     pocket_access: PocketAccessLabel
     pockets_by_seed_face: dict[int, PocketAccessLabel]
     scope: SetupScope = field(default_factory=SetupScope)
+    # Explicit cardinal orientation (provisional lateral path), or None for legacy.
+    orientation: str | None = None
 
 
 def default_setup_descriptor(part_id: str = "unknown") -> PartSetupDescriptor:
@@ -258,6 +278,17 @@ def _parse_pocket_access(raw: Any, *, where: str) -> PocketAccessLabel | None:
             f"{where}.pocket_access must be open, closed, or unknown, got {raw!r}"
         )
     return label  # type: ignore[return-value]
+
+
+def _parse_orientation(raw: Any, *, where: str) -> str | None:
+    if raw is None:
+        return None
+    label = str(raw).strip().upper()
+    if label not in CARDINAL_ORIENTATIONS:
+        raise SetupDescriptorError(
+            f"{where}.orientation must be one of {sorted(CARDINAL_ORIENTATIONS)}, got {raw!r}"
+        )
+    return label
 
 
 def _parse_setup_scope(raw: Any, *, where: str) -> SetupScope:
@@ -372,6 +403,9 @@ def parse_setup_descriptor(data: dict[str, Any] | None) -> PartSetupDescriptor:
             scope=_parse_setup_scope(entry_raw.get("scope"), where=f"setups[{key}]")
             if entry_raw.get("scope") is not None
             else None,
+            orientation=_parse_orientation(
+                entry_raw.get("orientation"), where=f"setups[{key}]"
+            ),
         )
     return PartSetupDescriptor(part_id=part_id, defaults=defaults, setups=setups)
 
@@ -382,6 +416,81 @@ def load_setup_descriptor(path: Path | str) -> PartSetupDescriptor:
     if not p.is_file():
         raise SetupDescriptorError(f"setup descriptor not found: {p}")
     return parse_setup_descriptor(_load_yaml(p))
+
+
+def _opening_axis_to_dict(spec: OpeningAxisSpec) -> dict[str, Any]:
+    if spec.mode == "explicit":
+        assert spec.vector is not None
+        return {"mode": "explicit", "vector": [float(x) for x in spec.vector]}
+    return {"mode": "auto", "min_confidence": float(spec.min_confidence)}
+
+
+def setup_descriptor_to_dict(descriptor: PartSetupDescriptor) -> dict[str, Any]:
+    """Serialize a descriptor to a mapping that ``parse_setup_descriptor`` round-trips.
+
+    Inverse of :func:`parse_setup_descriptor`. Fields left at their inheriting
+    default (``None`` on the entry, or a ``full`` scope) are omitted so the parse
+    re-derives them, matching the hand-authored YAML style.
+    """
+    defaults = descriptor.defaults
+    defaults_out: dict[str, Any] = {
+        "setup_id": defaults.setup_id,
+        "opening_axis": _opening_axis_to_dict(defaults.opening_axis),
+        "pocket_access": defaults.pocket_access,
+    }
+    if not defaults.scope.is_full:
+        defaults_out["scope"] = defaults.scope.to_dict()
+
+    setups_out: dict[str, Any] = {}
+    for setup_id, entry in descriptor.setups.items():
+        entry_out: dict[str, Any] = {"setup_id": entry.setup_id}
+        if entry.part_step is not None:
+            entry_out["part_step"] = entry.part_step
+        if entry.machining_side is not None:
+            entry_out["machining_side"] = entry.machining_side
+        if entry.opening_axis is not None:
+            entry_out["opening_axis"] = _opening_axis_to_dict(entry.opening_axis)
+        if entry.pocket_access is not None:
+            entry_out["pocket_access"] = entry.pocket_access
+        if entry.pockets_by_seed_face:
+            entry_out["pockets"] = {
+                "by_seed_face": {
+                    int(k): v for k, v in sorted(entry.pockets_by_seed_face.items())
+                }
+            }
+        if entry.scope is not None and not entry.scope.is_full:
+            entry_out["scope"] = entry.scope.to_dict()
+        if entry.orientation is not None:
+            entry_out["orientation"] = entry.orientation
+        setups_out[setup_id] = entry_out
+
+    return {
+        "part_id": descriptor.part_id,
+        "defaults": defaults_out,
+        "setups": setups_out,
+    }
+
+
+def dump_setup_descriptor(
+    descriptor: PartSetupDescriptor,
+    path: Path | str,
+    *,
+    header: str | None = None,
+) -> None:
+    """Write a descriptor to YAML in the schema ``load_setup_descriptor`` reads."""
+    try:
+        import yaml
+    except ImportError as exc:  # pragma: no cover
+        raise SetupDescriptorError(
+            "PyYAML required to dump setup descriptors (pip install pyyaml)."
+        ) from exc
+    payload = setup_descriptor_to_dict(descriptor)
+    text = yaml.safe_dump(payload, sort_keys=False, default_flow_style=False)
+    with Path(path).open("w", encoding="utf-8") as fh:
+        if header:
+            for line in header.splitlines():
+                fh.write(f"# {line}\n" if line else "#\n")
+        fh.write(text)
 
 
 def _normalize_step_ref(step_path: str | Path) -> str:
@@ -436,6 +545,7 @@ def resolve_setup_entry(
             pocket_access=defaults.pocket_access,
             pockets_by_seed_face={},
             scope=defaults.scope,
+            orientation=None,
         )
 
     return ResolvedSetup(
@@ -447,6 +557,7 @@ def resolve_setup_entry(
         pocket_access=entry.effective_pocket_access(descriptor.defaults),
         pockets_by_seed_face=dict(entry.pockets_by_seed_face),
         scope=entry.effective_scope(descriptor.defaults),
+        orientation=entry.effective_orientation(descriptor.defaults),
     )
 
 

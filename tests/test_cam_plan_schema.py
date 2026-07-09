@@ -37,7 +37,7 @@ class TestCamPlanSchema(unittest.TestCase):
     def test_example_json_file_validates(self):
         self.assertTrue(EXAMPLE_PATH.is_file(), f"missing {EXAMPLE_PATH}")
         plan = load_cam_plan(EXAMPLE_PATH)
-        self.assertEqual(plan.operations[0].operation_type, "drill")
+        self.assertEqual(plan.operations[0].operation, "drill")
         self.assertEqual(plan.operations[1].feature_type, "filleted_pocket")
 
     def test_sequence_index_must_match_list_order(self):
@@ -49,8 +49,7 @@ class TestCamPlanSchema(unittest.TestCase):
                 feature_refs=["0"],
                 feature_type="through_hole",
                 setup_id="primary",
-                operation_type="drill",
-                strategy="peck_drill",
+                operation="drill",
                 tool_id="T01",
                 parameters=MachiningParameters(param_source="handbook_default"),
                 depends_on=[],

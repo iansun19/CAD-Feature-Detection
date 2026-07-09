@@ -20,6 +20,8 @@
     {
       "setup_id": "rear",
       "opening_axis": "+Y",
+      "opening_axis_vector": [0.0, 1.0, 0.0],
+      "machining_side": "back",
       "pocket_access": {
         "0": "closed",
         "1": "closed",

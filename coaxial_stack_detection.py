@@ -27,6 +27,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from hole_detection import FaceGraph, _unit
+from part_scale import resolve_scaled_mm
 
 logger = logging.getLogger("coaxial_stack_detection")
 
@@ -52,7 +53,11 @@ class CoaxialStackDetectionConfig:
 
     min_floor_depth_mm: float = 10.0
     min_floor_area_mm2: float = 500.0
-    coaxial_radial_margin_mm: float = 85.0
+    # Radial grab margin beyond the hole-stack radius. Absolute (mm) if set;
+    # when None it is derived as ``coaxial_radial_margin_frac * part scale`` so
+    # the bound tracks part size instead of 96260B's ~85 mm plate radius.
+    coaxial_radial_margin_mm: float | None = None
+    coaxial_radial_margin_frac: float = 0.379  # 85.0 mm / 224.6 mm ref plate
     pocket_axial_band_mm: float = 5.0
     bfs_max_hops: int = 8
     horizontal_normal_tol_deg: float = 15.0
@@ -160,6 +165,7 @@ def _coaxial_pool(
     axis_point: np.ndarray,
     axis_dir: np.ndarray,
     config: CoaxialStackDetectionConfig,
+    radial_margin_mm: float,
 ) -> set[int]:
     """Faces in pool reachable from hole walls within radial bound of the stack axis."""
     hole_walls = {
@@ -172,7 +178,7 @@ def _coaxial_pool(
     max_rad = max(
         _radial_dist(by_index[i].centroid, axis_point, axis_dir)
         for i in hole_claimed
-    ) + config.coaxial_radial_margin_mm
+    ) + radial_margin_mm
 
     frontier: set[int] = set()
     for wall in hole_walls:
@@ -491,9 +497,13 @@ def detect_coaxial_stack(
         )
 
     axis_point, axis_dir = axis_info
+    radial_margin_mm = resolve_scaled_mm(
+        config.coaxial_radial_margin_mm, config.coaxial_radial_margin_frac, faces,
+    )
     graph = FaceGraph.from_edge_tensors(edge_index, edge_attr, n_faces)
     coaxial = _coaxial_pool(
         pool, hole_claimed, by_index, graph, axis_point, axis_dir, config,
+        radial_margin_mm,
     )
     if not coaxial:
         logger.info("empty coaxial pool — skip")

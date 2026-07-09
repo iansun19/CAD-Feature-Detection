@@ -277,6 +277,7 @@ CASCADE_TP_CLASS_ID: dict[str, int] = {
     "through_hole": 0,
     "flat": 11,
     "outer_fillet": 10,
+    "inner_fillet": 10,
     "wall": -1,
     "profile": -1,
     "contour_surface": -1,
@@ -295,8 +296,18 @@ def build_cascade_feature_graph(
     profile_result,
     residual_result,
     edge_index: np.ndarray,
+    faces: Sequence[Any] | None = None,
+    opening_axis: Sequence[float] | None = None,
+    *,
+    inner_fillet_result: Any | None = None,
 ) -> dict[str, Any]:
-    """Build feature_graph_cascade.json from cascade pass results."""
+    """Build feature_graph_cascade.json from cascade pass results.
+
+    When ``faces`` and ``opening_axis`` are supplied, each node is annotated with
+    a 3-axis tool-approach direction (``node['approach']``) and the graph gains an
+    ``approach_frame`` block; ``schema_version`` bumps to 3. Callers that omit
+    them get the byte-identical v2 output.
+    """
     from feature_graph import feature_adjacency
 
     nodes: list[dict[str, Any]] = []
@@ -316,6 +327,10 @@ def build_cascade_feature_graph(
             "mean_confidence": 1.0,
             "params": params,
         })
+
+    if inner_fillet_result is not None:
+        for feat in inner_fillet_result.features:
+            _append_node("inner_fillet", feat.face_indices, feat.to_dict())
 
     for feat in pocket_result.features:
         _append_node(feat.toolpath_class, feat.face_indices, feat.to_dict())
@@ -350,7 +365,7 @@ def build_cascade_feature_graph(
     instances = [_Inst(n["face_ids"]) for n in nodes]
     edges = feature_adjacency(instances, edge_index, n_faces)
 
-    return {
+    graph: dict[str, Any] = {
         "schema_version": 2,
         "part_id": part_id,
         "source": "cascade",
@@ -360,6 +375,16 @@ def build_cascade_feature_graph(
         "nodes": nodes,
         "edges": edges,
     }
+
+    if faces is not None and opening_axis is not None:
+        from approach_vectors import annotate_approach_vectors
+
+        graph["approach_frame"] = annotate_approach_vectors(
+            nodes, faces=faces, opening_axis=opening_axis,
+        )
+        graph["schema_version"] = 3
+
+    return graph
 
 
 def _count_by_tp(instances: Sequence[CascadeInstance]) -> dict[str, int]:
@@ -705,7 +730,7 @@ def eval_part(gt_path: Path) -> PartReport:
     prev_level = logging.root.level
     logging.root.setLevel(logging.ERROR)
     try:
-        faces, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
+        faces, pk, hl, cx, fl, of, wl, pr, rs, if_ = run_cascade(
             step_path, edge_index, edge_attr, pocket_config=pocket_config,
         )
     finally:

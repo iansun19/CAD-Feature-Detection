@@ -261,6 +261,7 @@ class TestBuildContextWithLibrary(unittest.TestCase):
             CASCADE_PATH,
             setup_id="rear",
             tool_library_paths=[SAMPLE_LIBRARY],
+            setups_source="authored",
         )
         self.assertGreater(len(ctx.tools), 8)
         self.assertEqual(len(ctx.tools), 12)

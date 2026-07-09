@@ -225,8 +225,7 @@ def build_smoke_cam_plan(
             feature_refs=[str(node_a[FEATURE_ID_KEY])],
             feature_type=str(node_a[FEATURE_TYPE_KEY]),
             setup_id=setup_id,
-            operation_type="drill" if "hole" in str(node_a[FEATURE_TYPE_KEY]) else "pocket_mill",
-            strategy="peck_drill" if "hole" in str(node_a[FEATURE_TYPE_KEY]) else "spiral",
+            operation="drill" if "hole" in str(node_a[FEATURE_TYPE_KEY]) else "pocket",
             tool_id="T01",
             parameters=MachiningParameters(
                 spindle_rpm=3000.0,
@@ -249,8 +248,7 @@ def build_smoke_cam_plan(
                 feature_refs=[str(node_b[FEATURE_ID_KEY])],
                 feature_type=str(node_b[FEATURE_TYPE_KEY]),
                 setup_id=setup_id,
-                operation_type="pocket_mill",
-                strategy="spiral",
+                operation="pocket",
                 tool_id="T02",
                 parameters=MachiningParameters(
                     spindle_rpm=8000.0,

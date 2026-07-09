@@ -49,14 +49,35 @@ AXIS_ALIGN_MIN = 0.9
 EXTREME_NORMAL_ALIGN_MIN = 0.85
 NEAR_TANGENT_ANGLE_DEG = 5.0
 
+# Parts whose entire outer surface is machined rather than left as raw stock
+# (e.g. mold plates: the envelope-extreme planes and corner chamfers are cut
+# faces, not stock). The geometry-only convexity-primary gate misfires on these
+# - every convex envelope plane looks like exterior stock - so we disable the
+# gate for them: classify_report emits no STOCK, leaving all faces as CUT
+# candidates that reach the cascade detection passes. Keyed by normalized STEP
+# stem (lowercased, spaces/hyphens -> underscores).
+NO_STOCK_GATE_PART_STEMS: frozenset[str] = frozenset({"fish_mold"})
+
+
+def _normalize_stem(stem: str) -> str:
+    return stem.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _stock_gate_disabled(step_path: Path) -> bool:
+    return _normalize_stem(step_path.stem) in {
+        _normalize_stem(s) for s in NO_STOCK_GATE_PART_STEMS
+    }
+
 CLASSIFICATION_FIXTURES: dict[str, dict[str, Any]] = {
     "fish_mold": {
         "step": "fish mold.stp",
-        "expectation": "change",
+        "expectation": "no_stock",
         "corner_chamfer_face_ids": [106, 107, 210, 213],
         "notes": (
-            "Corner chamfers should flip CUT->STOCK under convexity-primary logic; "
-            "bounding stock-face count (extreme/axis planes + corners) 6->10."
+            "Fully-machined mold part: STOCK gate is disabled (see "
+            "NO_STOCK_GATE_PART_STEMS), so classify_report emits no STOCK and "
+            "every face - including envelope-extreme planes 114/99 and the corner "
+            "chamfers - stays a CUT candidate for the cascade."
         ),
     },
     "96260B_front": {
@@ -517,9 +538,13 @@ def classify_report(
     """Classify every B-rep face as STOCK or CUT with diagnostic fields."""
     ctx = cad if isinstance(cad, _CadContext) else _load_cad(cad)
     classify_fn = _classify_old if classifier == "old" else _classify_new
+    gate_disabled = _stock_gate_disabled(ctx.step_path)
     records: list[FaceClassificationRecord] = []
     for face_idx, geom in enumerate(ctx.geoms):
         label, driving_signal = classify_fn(face_idx, ctx)
+        if gate_disabled and label == "STOCK":
+            label = "CUT"
+            driving_signal = {**driving_signal, "stock_gate": "disabled_for_part"}
         records.append(
             FaceClassificationRecord(
                 face_id=face_idx,

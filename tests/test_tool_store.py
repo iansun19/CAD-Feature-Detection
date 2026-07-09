@@ -393,6 +393,7 @@ class TestBuildContextSupabase(unittest.TestCase):
                 CASCADE_PATH,
                 setup_id="rear",
                 tool_source="supabase",
+                setups_source="authored",
             )
 
         fetch_mock.assert_called_once()

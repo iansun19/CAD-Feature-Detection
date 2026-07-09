@@ -60,6 +60,39 @@ SHOP_STRATEGIES = frozenset({
 
 ROUGH_OP_TYPES = frozenset({"pocket_mill", "adaptive_rough", "rough", "bore", "slot_mill"})
 
+# Canonical operation-bank slug -> legacy (operation_type, strategy) vocabulary. The
+# planner collapsed operation_type+strategy into one ``operation`` field; this diagnostic
+# still reasons in the old shop-ish vocabulary, so map back at the schema boundary.
+_BANK_TO_LEGACY_OPTYPE: dict[str, tuple[str, str]] = {
+    "helix_bore": ("bore", "helical_bore"),
+    "drill": ("drill", "peck_drill"),
+    "chip_break_drill": ("drill", "peck_drill"),
+    "thread_mill": ("tap", "rigid_tap"),
+    "optirough": ("pocket_mill", "roughing"),
+    "area_roughing": ("pocket_mill", "roughing"),
+    "rest_roughing": ("pocket_mill", "roughing"),
+    "pocket": ("pocket_mill", "roughing"),
+    "dynamic_mill_2d": ("pocket_mill", "roughing"),
+    "facing": ("facing", "facing"),
+    "raster": ("floor_finish", "finishing_floor"),
+    "constant_scallop": ("surface_finish", "finishing"),
+    "radial_spiral": ("surface_finish", "finishing"),
+    "steep_shallow": ("surface_finish", "finishing"),
+    "rest_finish": ("surface_finish", "finishing"),
+    "pencil": ("fillet_finish", "finishing_fillet"),
+}
+_WALL_FEATURE_CLASSES = frozenset({"wall", "profile"})
+
+
+def _legacy_optype_strategy(op: Operation) -> tuple[str, str]:
+    """Map a schema Operation's canonical bank op back to (operation_type, strategy)."""
+    operation = op.operation
+    if operation in ("contour_2d", "waterline"):
+        if op.feature_type in _WALL_FEATURE_CLASSES:
+            return ("wall_finish", "finishing_wall")
+        return ("finish_contour", "finishing_floor")
+    return _BANK_TO_LEGACY_OPTYPE.get(operation, (operation, operation))
+
 MILLING_PARAM_FIELDS = (
     "spindle_rpm",
     "feed_mm_per_min",
@@ -232,8 +265,7 @@ def _operation_to_op_spec(op: Operation, tool: Tool | None) -> OpSpec:
         feature_refs=list(op.feature_refs),
         feature_type=op.feature_type,
         setup_id=op.setup_id,
-        operation_type=op.operation_type,
-        strategy=op.strategy,
+        operation=op.operation,
         tool_id=op.tool_id,
         tool_type_needed=tool_type,
     )
@@ -257,9 +289,9 @@ def _fields_populated_on_preset(
 ) -> tuple[str, ...]:
     effective_rpm = rpm if rpm is not None else preset.spindle_rpm
     fields: list[str] = []
-    if op_spec.tool_type_needed == "drill" or op_spec.operation_type == "drill":
+    if op_spec.tool_type_needed == "drill" or op_spec.operation == "drill":
         candidates = ("spindle_rpm", "feed_mm_per_min", "plunge_mm_per_min", "coolant")
-    elif op_spec.operation_type == "tap":
+    elif op_spec.tool_type_needed == "tap":
         candidates = ("spindle_rpm", "feed_mm_per_min", "plunge_mm_per_min", "coolant")
     else:
         candidates = MILLING_PARAM_FIELDS
@@ -271,9 +303,9 @@ def _fields_populated_on_preset(
 
 
 def _required_fields(op_spec: OpSpec) -> tuple[str, ...]:
-    if op_spec.tool_type_needed == "drill" or op_spec.operation_type == "drill":
+    if op_spec.tool_type_needed == "drill" or op_spec.operation == "drill":
         return ("spindle_rpm", "feed_mm_per_min", "plunge_mm_per_min")
-    if op_spec.operation_type == "tap":
+    if op_spec.tool_type_needed == "tap":
         return ("spindle_rpm", "feed_mm_per_min", "plunge_mm_per_min")
     return MILLING_PARAM_FIELDS[:-1]  # coolant optional for completeness check
 
@@ -395,7 +427,7 @@ def _field_provenance(
         elif handbook_val is not None:
             handbook_fields.add(field)
 
-    if op_spec.tool_type_needed == "drill" or op_spec.operation_type == "drill":
+    if op_spec.tool_type_needed == "drill" or op_spec.operation == "drill":
         rpm = preset.spindle_rpm if preset and preset.spindle_rpm else handbook.spindle_rpm
         pick("spindle_rpm", preset.spindle_rpm if preset else None, handbook.spindle_rpm)
         pick(
@@ -414,7 +446,7 @@ def _field_provenance(
         pick("coolant", preset.coolant if preset else None, handbook.coolant)
         return sorted(preset_fields), sorted(handbook_fields), preset
 
-    if op_spec.operation_type == "tap":
+    if op_spec.tool_type_needed == "tap":
         rpm = preset.spindle_rpm if preset and preset.spindle_rpm else handbook.spindle_rpm
         pick("spindle_rpm", preset.spindle_rpm if preset else None, handbook.spindle_rpm)
         feed_from_preset = None
@@ -512,21 +544,22 @@ def _classify_op(
 
 
 def _shop_strategy_from_op(op: Operation) -> str | None:
-    if op.strategy in SHOP_STRATEGIES:
-        return op.strategy
-    if op.operation_type in ROUGH_OP_TYPES:
+    operation_type, strategy = _legacy_optype_strategy(op)
+    if strategy in SHOP_STRATEGIES:
+        return strategy
+    if operation_type in ROUGH_OP_TYPES:
         return "roughing"
-    if op.operation_type == "floor_finish":
+    if operation_type == "floor_finish":
         return "finishing_floor"
-    if op.operation_type == "wall_finish":
+    if operation_type == "wall_finish":
         return "finishing_wall"
-    if op.operation_type in ("surface_finish", "finish_contour", "finish"):
+    if operation_type in ("surface_finish", "finish_contour", "finish"):
         return "finishing"
-    if op.operation_type == "fillet_finish":
+    if operation_type == "fillet_finish":
         return "finishing_fillet"
-    if op.operation_type == "facing":
+    if operation_type == "facing":
         return "facing"
-    if op.strategy == "helical_bore":
+    if strategy == "helical_bore":
         return "finishing_wall"
     return None
 
@@ -579,7 +612,12 @@ def diagnose_plan(
         part_id=plan.source_part or "plan",
         feature_graph_ref=plan.feature_graph_ref,
         stock=Stock(bbox_min=(0.0, 0.0, 0.0), bbox_max=(1.0, 1.0, 1.0)),
-        setups=[SetupContext(setup_id="diag", opening_axis="+Y")],
+        setups=[SetupContext(
+            setup_id="diag",
+            opening_axis="+Y",
+            opening_axis_vector=(0.0, 1.0, 0.0),
+            machining_side="front",
+        )],
         tools=list(tools.values()),
         material=material,
     )
@@ -638,8 +676,8 @@ def diagnose_plan(
         results.append(
             OpDiagnosis(
                 op_id=op.op_id,
-                operation_type=op.operation_type,
-                strategy=op.strategy,
+                operation_type=_legacy_optype_strategy(op)[0],
+                strategy=_legacy_optype_strategy(op)[1],
                 param_source=params.param_source,
                 tool_id=op.tool_id,
                 tool_type=tool.tool_type if tool else None,

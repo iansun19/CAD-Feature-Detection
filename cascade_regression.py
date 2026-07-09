@@ -1230,8 +1230,9 @@ def extract_partition_from_cascade(
         profile_result,
         residual_result,
     ) = cascade_results[:9]
+    inner_fillet_result = cascade_results[9]
     if edge_index is None:
-        edge_index = cascade_results[9]
+        edge_index = cascade_results[10]
 
     n_faces = len(faces)
     stock_classifier = fixture.run.get("stock_classifier", "new")
@@ -1256,6 +1257,7 @@ def extract_partition_from_cascade(
         profile_result,
         residual_result,
         edge_index,
+        inner_fillet_result=inner_fillet_result,
     )
     instances = [
         PartitionInstance(
@@ -1306,7 +1308,7 @@ def extract_partition_from_cascade(
 def extract_partition_for_fixture(fixture: RegressionFixture) -> CascadePartition:
     """Run cascade + extraction for one fixture."""
     cascade = run_cascade_for_fixture(fixture)
-    edge_index = cascade[9]
+    edge_index = cascade[10]
     return extract_partition_from_cascade(fixture, cascade, edge_index=edge_index)
 
 

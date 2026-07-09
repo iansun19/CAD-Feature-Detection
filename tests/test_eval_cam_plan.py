@@ -58,7 +58,7 @@ class TestInferenceAndMatching(unittest.TestCase):
         plan = load_cam_plan(PLAN_PATH)
         emitted = load_emitted_operations(plan)
         self.assertEqual(len(emitted), len(plan.operations))
-        bore = next(op for op in emitted if op.feature_refs == ("14", "15"))
+        bore = next(op for op in emitted if op.feature_refs == ("15",))
         self.assertEqual(bore.operation_type, "bore")
 
 

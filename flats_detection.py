@@ -25,9 +25,11 @@ from __future__ import annotations
 import argparse
 import logging
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Sequence
+
+from part_scale import resolve_scaled_mm2
 
 import numpy as np
 
@@ -57,10 +59,14 @@ class FlatDetectionConfig:
     plane_normal_round: int = 2
     plane_offset_tol_mm: float = 0.5
 
-    # Standalone flat must exceed this total group area (mm²).
-    min_flat_area_mm2: float = 500.0
+    # Standalone flat must exceed this total group area (mm²). Absolute if set;
+    # when None derived as ``min_flat_area_frac * part scale**2`` so the gate
+    # tracks part size instead of 96260B's ~500 mm² plate flats.
+    min_flat_area_mm2: float | None = None
+    min_flat_area_frac: float = 0.00991  # 500 mm² / (224.6 mm)² ref plate
     # Central-stack end caps are tiny and adjacent to a claimed hole wall — defer to contour/central pass.
-    endcap_max_area_mm2: float = 200.0
+    endcap_max_area_mm2: float | None = None
+    endcap_max_area_frac: float = 0.003965  # 200 mm² / (224.6 mm)² ref plate
     # BFS hops to reach claimed hole wall geometry from a tiny end cap (330/332 reach
     # 329/347 via the large flat 322 within 2 hops on the ref part).
     central_stack_reach_hops: int = 3
@@ -523,6 +529,13 @@ def detect_flats(
         Optional OCC faces for boundary-accurate depth (from load_step_faces).
     """
     config = config or FlatDetectionConfig()
+    config = replace(
+        config,
+        min_flat_area_mm2=resolve_scaled_mm2(
+            config.min_flat_area_mm2, config.min_flat_area_frac, faces),
+        endcap_max_area_mm2=resolve_scaled_mm2(
+            config.endcap_max_area_mm2, config.endcap_max_area_frac, faces),
+    )
     n_faces = len(faces)
     by_index = {int(f.index): f for f in faces}
     pool = set(range(n_faces)) if candidate_faces is None else {

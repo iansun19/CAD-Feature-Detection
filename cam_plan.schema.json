@@ -119,14 +119,9 @@
           "title": "Setup Id",
           "type": "string"
         },
-        "operation_type": {
-          "description": "CAM operation kind, e.g. \"drill\", \"pocket_mill\", \"finish_contour\".",
-          "title": "Operation Type",
-          "type": "string"
-        },
-        "strategy": {
-          "description": "Strategy tag, e.g. \"peck_drill\", \"trochoidal\", \"spiral\".",
-          "title": "Strategy",
+        "operation": {
+          "description": "Canonical CAM operation from the flat operation bank (operation_bank.Operation), e.g. \"drill\", \"pocket\", \"contour_2d\". The operation_type/strategy split is retired.",
+          "title": "Operation",
           "type": "string"
         },
         "tool_id": {
@@ -162,8 +157,7 @@
         "feature_refs",
         "feature_type",
         "setup_id",
-        "operation_type",
-        "strategy",
+        "operation",
         "tool_id",
         "parameters"
       ],

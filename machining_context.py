@@ -36,7 +36,9 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
 from setup_descriptor import (
+    PartSetupDescriptor,
     ResolvedSetup,
+    SetupDescriptorError,
     load_setup_descriptor,
     pocket_access_for_seed,
     resolve_setup_entry,
@@ -122,11 +124,34 @@ class SetupScopeSpec(BaseModel):
         return any(c in ("facing", "stock_face") for c in self.classes)
 
 
+class OpeningAxisResolutionError(ValueError):
+    """Raised when a setup descriptor lacks a resolvable opening axis for planning."""
+
+
 class SetupContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     setup_id: str
     opening_axis: str
+    opening_axis_vector: tuple[float, float, float] = Field(
+        description="Unit opening-axis vector resolved from the setup descriptor.",
+    )
+    machining_side: str | None = Field(
+        default=None,
+        description="front | back from descriptor; required for reachability scoping.",
+    )
+    orientation: str | None = Field(
+        default=None,
+        description=(
+            "General cardinal setup orientation (e.g. '+X'), extending front/back "
+            "to all six cardinals. None => legacy machining_side + opening_axis path. "
+            "PROVISIONAL lateral ±X/±Y path when set (see lateral_axes.py)."
+        ),
+    )
+    orientation_provisional: bool = Field(
+        default=False,
+        description="True when orientation is a provisional lateral-axis direction.",
+    )
     pocket_access: dict[str, str] = Field(
         default_factory=dict,
         description='feature_id (str) -> open|closed|unknown; descriptor YAML only.',
@@ -794,11 +819,12 @@ def load_feature_graph(path: str | Path) -> dict[str, Any]:
     return data
 
 
-def _relative_ref(path: Path) -> str:
+def _relative_ref(path: str | Path) -> str:
+    p = Path(path)
     try:
-        return str(path.resolve().relative_to(REPO_ROOT.resolve()))
+        return str(p.resolve().relative_to(REPO_ROOT.resolve()))
     except ValueError:
-        return str(path)
+        return str(p)
 
 
 def _pocket_seed_face(params: Mapping[str, Any]) -> int | None:
@@ -850,23 +876,67 @@ def _opening_axis_from_cascade(graph: Mapping[str, Any]) -> tuple[float, float, 
     return max(counts, key=counts.get)
 
 
+def resolve_opening_axis_vector_for_planning(
+    resolved: ResolvedSetup,
+    graph: Mapping[str, Any],
+) -> tuple[float, float, float]:
+    """Resolve a unit opening-axis vector from the descriptor (fail-loud).
+
+    Descriptor explicit vectors are authoritative. Auto mode may read
+    approach_frame.z or pocket opening axes from the cascade graph; never
+    a hardcoded principal axis.
+    """
+    spec = resolved.opening_axis
+    setup_id = resolved.setup_id
+
+    def _unit_or_raise(raw: Sequence[float], *, source: str) -> tuple[float, float, float]:
+        arr = np.asarray(raw, dtype=np.float64)
+        if arr.shape != (3,):
+            raise OpeningAxisResolutionError(
+                f"setup {setup_id!r}: opening_axis from {source} must be length-3, "
+                f"got {list(raw)!r}"
+            )
+        norm = float(np.linalg.norm(arr))
+        if norm <= 1e-12:
+            raise OpeningAxisResolutionError(
+                f"setup {setup_id!r}: opening_axis from {source} is zero: {list(raw)!r}"
+            )
+        unit = arr / norm
+        return (float(unit[0]), float(unit[1]), float(unit[2]))
+
+    if spec.mode == "explicit":
+        if spec.vector is None:
+            raise OpeningAxisResolutionError(
+                f"setup {setup_id!r}: opening_axis mode 'explicit' but vector is missing"
+            )
+        return _unit_or_raise(spec.vector, source="descriptor")
+
+    frame = graph.get("approach_frame") or {}
+    z = frame.get("z")
+    if isinstance(z, (list, tuple)) and len(z) == 3:
+        return _unit_or_raise(z, source="approach_frame")
+
+    cascade_vec = _opening_axis_from_cascade(graph)
+    if cascade_vec is not None:
+        return _unit_or_raise(cascade_vec, source="cascade pocket opening_axis")
+
+    if spec.vector is not None:
+        return _unit_or_raise(spec.vector, source="descriptor")
+
+    raise OpeningAxisResolutionError(
+        f"setup {setup_id!r}: opening_axis could not be resolved "
+        f"(mode={spec.mode!r}); descriptor and graph lack a usable vector"
+    )
+
+
 def opening_axis_label(
     resolved: ResolvedSetup,
     graph: Mapping[str, Any],
 ) -> str:
     """Discrete opening axis label from descriptor spec + cascade fallback for auto mode."""
-    spec = resolved.opening_axis
-    if spec.mode == "explicit" and spec.vector is not None:
-        return vector_to_opening_axis_label(spec.vector)
-
-    cascade_vec = _opening_axis_from_cascade(graph)
-    if cascade_vec is not None:
-        return vector_to_opening_axis_label(cascade_vec)
-
-    if spec.vector is not None:
-        return vector_to_opening_axis_label(spec.vector)
-
-    return "unknown"
+    return vector_to_opening_axis_label(
+        resolve_opening_axis_vector_for_planning(resolved, graph)
+    )
 
 
 def build_setup_context(
@@ -893,13 +963,72 @@ def build_setup_context(
             cascade_access if cascade_access is not None else None,
         )
 
+    axis_vector = resolve_opening_axis_vector_for_planning(resolved, graph)
+
+    orientation = getattr(resolved, "orientation", None)
     return SetupContext(
         setup_id=resolved.setup_id,
-        opening_axis=opening_axis_label(resolved, graph),
+        opening_axis=vector_to_opening_axis_label(axis_vector),
+        opening_axis_vector=axis_vector,
+        machining_side=resolved.machining_side,
+        orientation=orientation,
+        orientation_provisional=orientation is not None,
         pocket_access=pocket_access,
         scope=SetupScopeSpec.model_validate(resolved.scope.to_dict()),
         fixture=None,
         source_step_file=source_step_file or resolved.part_step,
+    )
+
+
+def load_setup_descriptor_for_planning(
+    *,
+    setups_source: Literal["authored", "generated"],
+    setup_yaml_path: str | Path,
+    part_id: str,
+    generated_descriptor: PartSetupDescriptor | None = None,
+    generated_descriptor_path: str | Path | None = None,
+    feature_graph_path: str | Path | None = None,
+) -> tuple[PartSetupDescriptor, str]:
+    """Load the setup descriptor for planner context assembly.
+
+    Returns ``(descriptor, ref_path)`` where ``ref_path`` is the resolved source.
+    """
+    if setups_source == "authored":
+        path = Path(setup_yaml_path)
+        return load_setup_descriptor(path), str(path)
+
+    if generated_descriptor is not None:
+        ref = str(generated_descriptor_path or "generated:in_memory")
+        return generated_descriptor, ref
+
+    candidates: list[Path] = []
+    if generated_descriptor_path is not None:
+        candidates.append(Path(generated_descriptor_path))
+
+    from setup_generation import resolve_generated_descriptor_path
+
+    family_ids = {part_id}
+    if "_" in part_id:
+        family_ids.add(part_id.rsplit("_", 1)[0])
+    for family_id in family_ids:
+        candidates.append(resolve_generated_descriptor_path(family_id))
+
+    if feature_graph_path is not None:
+        export_dir = Path(feature_graph_path).parent
+        candidates.append(export_dir / "setup_descriptor.yaml")
+
+    seen: set[Path] = set()
+    for path in candidates:
+        resolved = path.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if resolved.is_file():
+            return load_setup_descriptor(resolved), str(resolved)
+
+    tried = ", ".join(str(p) for p in candidates)
+    raise SetupDescriptorError(
+        f"setups_source='generated' but no generated descriptor found (tried {tried})"
     )
 
 
@@ -916,6 +1045,9 @@ def build_context_v0(
     tool_library_material: str | None = None,
     tool_source: Literal["hardcoded", "directory", "supabase"] = "hardcoded",
     tool_library_dir: str | Path | None = None,
+    setups_source: Literal["authored", "generated"] = "generated",
+    generated_descriptor: PartSetupDescriptor | None = None,
+    generated_descriptor_path: str | Path | None = None,
 ) -> MachiningContext:
     """Assemble a v0 MachiningContext from existing repo artifacts.
 
@@ -932,8 +1064,21 @@ def build_context_v0(
     feature_graph_path = Path(feature_graph_path)
     preset_material = material if material is not None else tool_library_material
 
-    descriptor = load_setup_descriptor(setup_yaml_path)
     graph = load_feature_graph(feature_graph_path)
+
+    if isinstance(step_or_extents, Mapping):
+        family_part_id = str(graph.get("part_id") or "unknown")
+    else:
+        family_part_id = str(graph.get("part_id") or Path(step_or_extents).stem)
+
+    descriptor, descriptor_ref = load_setup_descriptor_for_planning(
+        setups_source=setups_source,
+        setup_yaml_path=setup_yaml_path,
+        part_id=family_part_id,
+        generated_descriptor=generated_descriptor,
+        generated_descriptor_path=generated_descriptor_path,
+        feature_graph_path=feature_graph_path,
+    )
 
     resolved_step = step_path
     if resolved_step is None and not isinstance(step_or_extents, Mapping):
@@ -983,7 +1128,8 @@ def build_context_v0(
     metadata: dict[str, Any] = {
         "generator": "machining_context.build_context_v0",
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "setup_descriptor_ref": _relative_ref(setup_yaml_path),
+        "setup_descriptor_ref": _relative_ref(descriptor_ref),
+        "setups_source": setups_source,
         "oversize_mm": oversize_mm,
     }
     if material is not None:

@@ -19,6 +19,7 @@ import numpy as np
 
 from feature_params import FaceGeom
 from hole_detection import FaceGraph, _unit
+from part_scale import resolve_scaled_mm
 
 VERTICAL_WALL_TYPES = frozenset({"cylinder", "cone", "plane"})
 LOBE_GROW_TYPES = frozenset({"cylinder", "cone", "plane", "torus", "bspline", "bezier"})
@@ -30,8 +31,11 @@ class ExteriorBoundaryConfig:
     exterior_radial_margin_mm: float = 2.0
     exterior_diameter_rel_tol: float = 0.03
     opening_axis_parallel_tol_deg: float = 15.0
-    # Inboard radial floor for lobe sculpt grow (mm below R_exterior on reference ~9 mm).
-    lobe_grow_radial_drop_mm: float = 12.0
+    # Inboard radial floor for lobe sculpt grow (mm below R_exterior). Absolute
+    # if set; when None derived as ``lobe_grow_radial_drop_frac * part scale``
+    # so the drop tracks part size (was pinned to 96260B's ~12 mm).
+    lobe_grow_radial_drop_mm: float | None = None
+    lobe_grow_radial_drop_frac: float = 0.05343  # 12.0 mm / 224.6 mm ref plate
     grow_surface_types: frozenset[str] = LOBE_GROW_TYPES
     units: str = "mm"
 
@@ -229,7 +233,12 @@ def grow_lobe_exterior_chain(
     config: ExteriorBoundaryConfig,
 ) -> set[int]:
     """Convex/smooth BFS from one exterior wall seed through inboard lobe sculpt."""
-    radial_floor = max(0.0, r_exterior - config.lobe_grow_radial_drop_mm)
+    radial_drop = resolve_scaled_mm(
+        config.lobe_grow_radial_drop_mm,
+        config.lobe_grow_radial_drop_frac,
+        list(by_index.values()),
+    )
+    radial_floor = max(0.0, r_exterior - radial_drop)
 
     def _allowed(fid: int) -> bool:
         if fid in interior or fid in forbidden:

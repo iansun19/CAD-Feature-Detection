@@ -467,7 +467,7 @@
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e7);
   camera.position.set(120, 90, 120);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.localClippingEnabled = true;
   canvasHost.appendChild(renderer.domElement);
@@ -475,6 +475,7 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
+  controls.screenSpacePanning = true;
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.55));
   const hemi = new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.45);
@@ -490,6 +491,7 @@
   scene.add(root);
 
   const faceMeshes = [];
+  const faceMeshByIndex = new Map();
   const faceByIndex = new Map(DATA.faces.map((f) => [f.face_index, f]));
   const featureById = new Map(DATA.features.map((f) => [f.feature_id, f]));
   let edgeLines = null;
@@ -497,14 +499,73 @@
   let selectedClass = null;
   let selectedFaces = null;
   let expandedClass = null;
-  let showEdges = true;
+  let showEdges = false;
   const FACE_SEARCH_HIGHLIGHT = 0xff6600;
+  const STOCK_FACE_HIGHLIGHT = 0x9b59b6;
+  const DIM_LERP = 0.55;
+
+  function setFaceMaterial(mat, color) {
+    if (color instanceof THREE.Color) {
+      mat.color.copy(color);
+    } else if (typeof color === "number") {
+      mat.color.setHex(color);
+    } else {
+      mat.color.copy(hexColor(color));
+    }
+    mat.opacity = 1;
+    mat.transparent = false;
+    mat.emissive.setHex(0x000000);
+    mat.emissiveIntensity = 0;
+  }
+
+  function glowFaceMaterial(mat, color) {
+    setFaceMaterial(mat, color);
+    mat.emissive.copy(mat.color);
+    mat.emissiveIntensity = 0.28;
+  }
+
+  function dimFaceMaterial(mat, baseColor) {
+    const c = hexColor(baseColor);
+    c.lerp(new THREE.Color(0xffffff), DIM_LERP);
+    setFaceMaterial(mat, c);
+  }
+
+  function dimUnselectedMesh(mesh) {
+    if (mesh.userData.pickOnly) {
+      setPickOnlyVisual(mesh, false);
+      return;
+    }
+    dimFaceMaterial(mesh.material, mesh.userData.baseColor);
+  }
+
+  function setPickOnlyVisual(mesh, visible) {
+    mesh.material.colorWrite = visible;
+    mesh.material.depthWrite = visible;
+    if (!visible) {
+      mesh.material.emissive.setHex(0x000000);
+      mesh.material.emissiveIntensity = 0;
+    }
+  }
+
+  function resetMeshPresentation() {
+    for (const mesh of faceMeshes) {
+      mesh.visible = true;
+      if (mesh.userData.pickOnly) {
+        setPickOnlyVisual(mesh, false);
+      } else {
+        mesh.material.colorWrite = true;
+        mesh.material.depthWrite = true;
+      }
+    }
+  }
 
   const clippingPlane = new THREE.Plane();
   let modelBox = new THREE.Box3();
-  let sectionEnabled = true;
-  let sectionAxis = "Z";
-  let sectionT = 0.9;
+  const VIEW = DATA.view || {};
+  let sectionEnabled = VIEW.section_enabled === true;
+  let sectionAxis = VIEW.section_axis || "Y";
+  let sectionT = typeof VIEW.section_t === "number" ? VIEW.section_t : 0.5;
+  let sectionSign = VIEW.section_sign === -1 ? -1 : 1;
   const AXIS_INDEX = { X: 0, Y: 1, Z: 2 };
   const AXIS_VECTOR = {
     X: new THREE.Vector3(1, 0, 0),
@@ -736,30 +797,40 @@
         : `${faceIds.length} faces highlighted`;
   }
 
-  function applyHighlightFaces(faceIndices) {
+  function applyHighlightFaces(faceIndices, { highlightColor = FACE_SEARCH_HIGHLIGHT } = {}) {
     selectedFaces = faceIndices == null ? null : new Set(faceIndices);
     selectedFeature = null;
     selectedClass = null;
     expandedClass = null;
     updateSidebarSelection();
 
+    resetMeshPresentation();
     const idSet = selectedFaces;
+    const hiddenPartners = new Set();
     for (const mesh of faceMeshes) {
-      const mat = mesh.material;
       const fi = mesh.userData.faceIndex;
       if (idSet == null) {
-        mat.color.copy(hexColor(mesh.userData.baseColor));
-        mat.opacity = 1;
-        mat.transparent = false;
-      } else if (idSet.has(fi)) {
-        mat.color.setHex(FACE_SEARCH_HIGHLIGHT);
-        mat.opacity = 1;
-        mat.transparent = false;
-      } else {
-        mat.color.setHex(0xbbbbbb);
-        mat.opacity = 0.35;
-        mat.transparent = true;
+        setFaceMaterial(mesh.material, mesh.userData.baseColor);
+        continue;
       }
+      if (!idSet.has(fi)) {
+        dimUnselectedMesh(mesh);
+        continue;
+      }
+      const face = faceByIndex.get(fi);
+      if (mesh.userData.pickOnly) {
+        setPickOnlyVisual(mesh, true);
+        glowFaceMaterial(mesh.material, highlightColor);
+        if (face?.coincident_partner != null) {
+          hiddenPartners.add(face.coincident_partner);
+        }
+      } else {
+        glowFaceMaterial(mesh.material, highlightColor);
+      }
+    }
+    for (const partnerIdx of hiddenPartners) {
+      const partnerMesh = faceMeshByIndex.get(partnerIdx);
+      if (partnerMesh) partnerMesh.visible = false;
     }
   }
 
@@ -915,15 +986,31 @@
   }
 
   function buildMeshes() {
+    const COINCIDENT_NUDGE_MM = 0.04;
     for (const face of DATA.faces) {
       const positions = [];
-      for (const v of face.triangles) positions.push(v[0], v[1], v[2]);
+      const depthTier = face.depth_tier || 0;
+      const nudge = depthTier * COINCIDENT_NUDGE_MM;
+      const nx = face.normal?.[0] || 0;
+      const ny = face.normal?.[1] || 0;
+      const nz = face.normal?.[2] || 0;
+      for (const v of face.triangles) {
+        positions.push(
+          v[0] + nx * nudge,
+          v[1] + ny * nudge,
+          v[2] + nz * nudge,
+        );
+      }
       if (!positions.length) continue;
 
       const geom = new THREE.BufferGeometry();
       geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
       geom.computeVertexNormals();
 
+      // Coplanar mold shells need a per-tier depth bias so every face stays
+      // visible without z-fighting. Tier 0 sits on the true surface; higher
+      // tiers nudge along the face normal and get a stronger polygon offset.
+      const isFeat = face.feature_id >= 0;
       const mat = new THREE.MeshStandardMaterial({
         color: hexColor(face.color),
         metalness: 0.05,
@@ -931,15 +1018,21 @@
         side: THREE.DoubleSide,
         clippingPlanes: sectionEnabled ? [clippingPlane] : [],
         clipIntersection: true,
+        polygonOffset: depthTier > 0 || !isFeat,
+        polygonOffsetFactor: -2 - depthTier * 3 + (isFeat ? 0 : 2),
+        polygonOffsetUnits: -4 - depthTier * 5 + (isFeat ? 0 : 2),
       });
       const mesh = new THREE.Mesh(geom, mat);
       mesh.userData = {
         faceIndex: face.face_index,
         featureId: face.feature_id,
         baseColor: face.color,
+        pickOnly: false,
+        depthTier,
       };
       root.add(mesh);
       faceMeshes.push(mesh);
+      faceMeshByIndex.set(face.face_index, mesh);
     }
   }
 
@@ -982,13 +1075,22 @@
   function sectionPlanePoint() {
     const { min, span } = axisBounds(sectionAxis);
     const point = new THREE.Vector3();
-    point.setComponent(AXIS_INDEX[sectionAxis], min + sectionT * span);
+    // Nudge into the removed half so faces lying on the cut plane are not bisected.
+    const nudge = span * 0.008;
+    point.setComponent(
+      AXIS_INDEX[sectionAxis],
+      min + sectionT * span - nudge * sectionSign,
+    );
     return point;
+  }
+
+  function sectionNormal() {
+    return AXIS_VECTOR[sectionAxis].clone().multiplyScalar(sectionSign);
   }
 
   function applySectionClipping() {
     clippingPlane.setFromNormalAndCoplanarPoint(
-      AXIS_VECTOR[sectionAxis],
+      sectionNormal(),
       sectionPlanePoint(),
     );
     const planes = sectionEnabled ? [clippingPlane] : [];
@@ -1030,15 +1132,28 @@
     const distance = Math.max(fitHeight, fitWidth) * 1.35;
     controls.target.copy(center);
 
-    if (sectionEnabled && sectionAxis === "Z") {
+    if (sectionEnabled) {
+      // Oblique half-cut view: stand on the removed side and look into the
+      // exposed cut face. Geometry is oriented Y-up, so world +Y stays up
+      // (keeps OrbitControls stable — no gimbal tumbling).
+      const kept = sectionNormal();                        // three keeps the +normal side
+      const removed = kept.clone().negate();               // camera sits where material was cut away
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      let dir;
+      if (Math.abs(kept.y) > 0.9) {
+        // Horizontal cut (lid removed): look down onto the opened cavity.
+        dir = removed.multiplyScalar(0.8).add(new THREE.Vector3(0.4, 0, 0.3)).normalize();
+      } else {
+        let lateral = new THREE.Vector3().crossVectors(worldUp, kept);
+        if (lateral.lengthSq() < 1e-9) lateral.set(1, 0, 0);
+        lateral.normalize();
+        dir = removed.multiplyScalar(0.85)
+          .add(worldUp.clone().multiplyScalar(0.5))
+          .add(lateral.multiplyScalar(0.35))
+          .normalize();
+      }
       camera.up.set(0, 1, 0);
-      camera.position.set(center.x, center.y - distance * 0.15, center.z + distance * 0.95);
-    } else if (sectionEnabled && sectionAxis === "Y") {
-      camera.up.set(0, 0, 1);
-      camera.position.set(center.x, center.y + distance * 0.95, center.z + distance * 0.15);
-    } else if (sectionEnabled && sectionAxis === "X") {
-      camera.up.set(0, 1, 0);
-      camera.position.set(center.x + distance * 0.95, center.y - distance * 0.15, center.z);
+      camera.position.copy(center).addScaledVector(dir, distance);
     } else {
       camera.up.set(0, 1, 0);
       camera.position.set(
@@ -1050,8 +1165,8 @@
 
     controls.minDistance = maxDim * 0.02;
     controls.maxDistance = maxDim * 80;
-    camera.near = Math.max(maxDim / 500, 0.001);
-    camera.far = maxDim * 200;
+    camera.near = Math.max(maxDim / 50, 0.01);
+    camera.far = maxDim * 20;
     camera.updateProjectionMatrix();
     controls.update();
   }
@@ -1059,21 +1174,15 @@
   function applyHighlightFeatures(featureIds) {
     selectedFaces = null;
     const idSet = featureIds == null ? null : new Set(featureIds);
+    resetMeshPresentation();
     for (const mesh of faceMeshes) {
-      const mat = mesh.material;
       const fid = mesh.userData.featureId;
       if (idSet == null) {
-        mat.color.copy(hexColor(mesh.userData.baseColor));
-        mat.opacity = 1;
-        mat.transparent = false;
+        setFaceMaterial(mesh.material, mesh.userData.baseColor);
       } else if (idSet.has(fid)) {
-        mat.color.copy(hexColor(mesh.userData.baseColor));
-        mat.opacity = 1;
-        mat.transparent = false;
+        glowFaceMaterial(mesh.material, mesh.userData.baseColor);
       } else {
-        mat.color.setHex(0xbbbbbb);
-        mat.opacity = 0.35;
-        mat.transparent = true;
+        dimUnselectedMesh(mesh);
       }
     }
   }
@@ -1172,19 +1281,38 @@
   const raycaster = new THREE.Raycaster();
   raycaster.params.Mesh.clipIntersection = true;
   const pointer = new THREE.Vector2();
+  function pickHit(hits) {
+    // Lock each screen spot to the front-most visible face. Coincident shells
+    // hide all but one representative (pick-only), so on double-shell molds the
+    // nearest visible hit is the single face on top — no cycling through twins.
+    for (const hit of hits) {
+      if (!hit.object.userData.pickOnly) return hit;
+    }
+    return hits[0] || null;
+  }
 
   renderer.domElement.addEventListener("pointerdown", (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(faceMeshes, false);
+    // Ignore geometry the section plane has clipped away, so clicks reach the
+    // visible faces instead of the removed (invisible) half in front of them.
+    const hits = raycaster
+      .intersectObjects(faceMeshes, false)
+      .filter((h) => !sectionEnabled || clippingPlane.distanceToPoint(h.point) >= -1e-3);
     if (!hits.length) {
       applyHighlight(null);
       clearFaceSearch();
       return;
     }
-    const mesh = hits[0].object;
+    const hit = pickHit(hits);
+    if (!hit) {
+      applyHighlight(null);
+      clearFaceSearch();
+      return;
+    }
+    const mesh = hit.object;
     const fi = mesh.userData.faceIndex;
     const fid = mesh.userData.featureId;
     const faceData = DATA.faces.find((f) => f.face_index === fi);
@@ -1192,7 +1320,7 @@
       selectFeature(fid, fi);
       return;
     }
-    applyHighlight(null);
+    applyHighlightFaces([fi], { highlightColor: STOCK_FACE_HIGHLIGHT });
     if (faceData) {
       showStockFaceInfo(faceData);
     } else {
@@ -1263,8 +1391,14 @@
 
   buildMeshes();
   edgeLines = buildEdgeLines();
-  if (edgeLines) root.add(edgeLines);
+  if (edgeLines) {
+    root.add(edgeLines);
+    edgeLines.visible = showEdges;
+  }
+  document.getElementById("btn-edges").textContent =
+    showEdges ? "Hide edges" : "Show edges";
   centerAndScale();
+  document.getElementById("section-axis").value = sectionAxis;
   applySectionClipping();
   syncSectionDepthUi();
   fitCamera();

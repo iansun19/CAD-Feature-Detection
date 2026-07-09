@@ -43,6 +43,7 @@ from scripts.diagnose_preset_coverage import (  # noqa: E402
     ROUGH_OP_TYPES,
     OpDiagnosis,
     _best_strategy_preset,
+    _legacy_optype_strategy,
     _load_plan_tools,
     _load_yaml,
     _operation_to_op_spec,
@@ -190,7 +191,7 @@ def _tool_type_ok_for_op(
 def _is_open_feature_finish(op: Operation) -> bool:
     return (
         op.feature_type in OPEN_FEATURE_TYPES
-        and op.operation_type in FINISH_OP_TYPES
+        and _legacy_optype_strategy(op)[0] in FINISH_OP_TYPES
     )
 
 
@@ -283,8 +284,8 @@ def _build_op_rows(
         rows.append(
             OpRow(
                 op_id=op.op_id,
-                strategy=op.strategy,
-                operation_type=op.operation_type,
+                strategy=_legacy_optype_strategy(op)[1],
+                operation_type=_legacy_optype_strategy(op)[0],
                 tool_type=tool.tool_type if tool else None,
                 tool_diameter_mm=tool.diameter_mm if tool else None,
                 source_library=_source_library_from_tool(tool) if tool else None,
@@ -323,6 +324,7 @@ def run_sanity_gates(
         preset = resolve_preset(tool, op_spec, material)
         params = op.parameters
         dia = tool.diameter_mm if tool else None
+        op_type, op_strategy = _legacy_optype_strategy(op)
 
         # Gate: micro-tool on open feature
         if _is_open_feature_finish(op) and dia is not None and dia < MICRO_TOOL_MM:
@@ -341,8 +343,8 @@ def run_sanity_gates(
         # Gate: tool type vs strategy/operation mismatch
         if not _tool_type_ok_for_op(
             tool.tool_type if tool else None,
-            op.operation_type,
-            op.strategy,
+            op_type,
+            op_strategy,
         ):
             flags.append(
                 SanityFlag(
@@ -351,15 +353,15 @@ def run_sanity_gates(
                     op_id=op.op_id,
                     message=(
                         f"{tool.tool_type if tool else '?'} on "
-                        f"{op.operation_type}/{op.strategy}"
+                        f"{op_type}/{op_strategy}"
                     ),
                 )
             )
 
         # Gate: bore/large-hole diameter band
         is_bore = (
-            op.operation_type in BORE_OP_TYPES
-            or op.strategy == "helical_bore"
+            op_type in BORE_OP_TYPES
+            or op_strategy == "helical_bore"
         )
         if is_bore and dia is not None and (dia < BORE_DIA_MIN_MM or dia > BORE_DIA_MAX_MM):
             flags.append(
@@ -447,9 +449,10 @@ def _setup_op_pairs(plan: CamPlan) -> dict[str, list[tuple[str, str, str]]]:
     """Map setup_id -> [(op_id, feature_id, operation_type), ...]."""
     by_setup: dict[str, list[tuple[str, str, str]]] = {}
     for op in plan.operations:
+        operation_type = _legacy_optype_strategy(op)[0]
         for feature_id in op.feature_refs:
             by_setup.setdefault(op.setup_id, []).append(
-                (op.op_id, feature_id, op.operation_type)
+                (op.op_id, feature_id, operation_type)
             )
     return by_setup
 
@@ -549,7 +552,7 @@ def check_setup_strategy_scope(plan: CamPlan) -> list[SanityFlag]:
             continue
 
         setup_ops = [op for op in plan.operations if op.setup_id == setup.setup_id]
-        strategies = {op.strategy for op in setup_ops}
+        strategies = {_legacy_optype_strategy(op)[1] for op in setup_ops}
         extra = strategies - SCOPED_FACING_STRATEGIES
         if extra:
             flags.append(
@@ -633,7 +636,7 @@ def check_facing_stock_boundary(
     graphs = _load_setup_graphs(plan, plan_path, primary_graph)
     flags: list[SanityFlag] = []
     for op in plan.operations:
-        if op.operation_type != "facing":
+        if _legacy_optype_strategy(op)[0] != "facing":
             continue
         graph = graphs.get(op.setup_id)
         if graph is None:
@@ -992,7 +995,7 @@ def build_sanity_report(
             }
             per_setup_strategies = {
                 setup.setup_id: sorted(
-                    {op.strategy for op in plan.operations if op.setup_id == setup.setup_id}
+                    {_legacy_optype_strategy(op)[1] for op in plan.operations if op.setup_id == setup.setup_id}
                 )
                 for setup in plan.setups
             }

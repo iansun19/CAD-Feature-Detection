@@ -84,6 +84,7 @@ class TestBuildContextWithDefaultLibraries(unittest.TestCase):
             CASCADE_PATH,
             setup_id="rear",
             tool_source="directory",
+            setups_source="authored",
         )
         self.assertEqual(len(ctx.tools), BUNDLED_TOOL_COUNT)
         self.assertTrue(all(t.source.startswith("fusion_library:") for t in ctx.tools))

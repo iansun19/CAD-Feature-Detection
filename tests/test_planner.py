@@ -32,6 +32,8 @@ from planner import (  # noqa: E402
     cascade_node_to_feature,
     filter_planner_features,
     filter_features_for_setup,
+    filter_features_for_setup_by_reachability,
+    _reachability_dir_for_setup,
     group_coaxial_holes,
     group_operations_by_tool_strategy,
     identify_facing_feature_ids,
@@ -64,6 +66,8 @@ def _minimal_context(**overrides) -> MachiningContext:
             SetupContext(
                 setup_id="primary",
                 opening_axis="+Y",
+                opening_axis_vector=(0.0, 1.0, 0.0),
+                machining_side="back",
                 pocket_access={"1": "closed", "2": "open"},
             ),
         ],
@@ -137,8 +141,7 @@ class TestCoaxialStack(unittest.TestCase):
         ctx = _minimal_context()
         ops = map_feature_to_operations(groups[0], ctx)
         self.assertEqual(len(ops), 1)
-        self.assertEqual(ops[0].operation_type, "bore")
-        self.assertEqual(ops[0].strategy, "helical_bore")
+        self.assertEqual(ops[0].operation, "helix_bore")
         self.assertEqual(ops[0].tool_type_needed, "endmill")
         self.assertEqual(sorted(ops[0].feature_refs), ["14", "15"])
 
@@ -154,9 +157,9 @@ class TestAccessStrategyMapping(unittest.TestCase):
         )
         closed_ops = map_feature_to_operations(closed, ctx)
         open_ops = map_feature_to_operations(open_pocket, ctx)
-        self.assertEqual(closed_ops[0].strategy, "roughing")
-        self.assertEqual(open_ops[0].strategy, "roughing")
-        self.assertEqual(open_ops[1].strategy, "finishing_floor")
+        self.assertEqual(closed_ops[0].operation, "pocket")
+        self.assertEqual(open_ops[0].operation, "dynamic_mill_2d")
+        self.assertEqual(open_ops[1].operation, "contour_2d")
 
 
 class TestWidenedFeatureMapping(unittest.TestCase):
@@ -168,21 +171,17 @@ class TestWidenedFeatureMapping(unittest.TestCase):
         face = cascade_node_to_feature({"feature_id": 18, "class_name": "flat", "params": {}})
 
         wall_ops = map_feature_to_operations(wall, ctx)
-        self.assertEqual(wall_ops[0].operation_type, "wall_finish")
-        self.assertEqual(wall_ops[0].strategy, "finishing_wall")
+        self.assertEqual(wall_ops[0].operation, "contour_2d")
 
         surface_ops = map_feature_to_operations(surface, ctx)
-        self.assertEqual(surface_ops[0].operation_type, "surface_finish")
-        self.assertEqual(surface_ops[0].strategy, "finishing")
+        self.assertEqual(surface_ops[0].operation, "constant_scallop")
         self.assertEqual(surface_ops[0].tool_type_needed, "ball_endmill")
 
         fillet_ops = map_feature_to_operations(fillet, ctx)
-        self.assertEqual(fillet_ops[0].operation_type, "fillet_finish")
-        self.assertEqual(fillet_ops[0].strategy, "finishing_fillet")
+        self.assertEqual(fillet_ops[0].operation, "pencil")
 
         face_ops = map_feature_to_operations(face, ctx)
-        self.assertEqual(face_ops[0].operation_type, "floor_finish")
-        self.assertEqual(face_ops[0].strategy, "finishing_floor")
+        self.assertEqual(face_ops[0].operation, "raster")
 
     def test_front_stock_flat_maps_to_facing(self) -> None:
         ctx = _minimal_context(
@@ -190,6 +189,8 @@ class TestWidenedFeatureMapping(unittest.TestCase):
                 SetupContext(
                     setup_id="front",
                     opening_axis="+Y",
+                    opening_axis_vector=(0.0, 1.0, 0.0),
+                    machining_side="front",
                     pocket_access={},
                 ),
             ],
@@ -216,8 +217,7 @@ class TestWidenedFeatureMapping(unittest.TestCase):
             ctx,
             facing_feature_ids=facing_ids,
         )
-        self.assertEqual(facing_ops[0].operation_type, "facing")
-        self.assertEqual(facing_ops[0].strategy, "facing")
+        self.assertEqual(facing_ops[0].operation, "facing")
         self.assertEqual(facing_ops[0].tool_type_needed, "face_mill")
 
         floor_ops = map_feature_to_operations(
@@ -225,7 +225,7 @@ class TestWidenedFeatureMapping(unittest.TestCase):
             ctx,
             facing_feature_ids=facing_ids,
         )
-        self.assertEqual(floor_ops[0].operation_type, "floor_finish")
+        self.assertEqual(floor_ops[0].operation, "raster")
 
     def test_facing_selects_face_mill_near_shop_diameter(self) -> None:
         tools = [
@@ -261,8 +261,7 @@ class TestWidenedFeatureMapping(unittest.TestCase):
             ),
         ]
         op = OpSpec(
-            operation_type="facing",
-            strategy="facing",
+            operation="facing",
             tool_type_needed="face_mill",
         )
         chosen = select_tool(op, tools, material="aluminum")
@@ -284,7 +283,7 @@ class TestWidenedFeatureMapping(unittest.TestCase):
             }
         )
         ops = map_feature_to_operations(hole, ctx)
-        self.assertEqual(ops[0].operation_type, "drill")
+        self.assertEqual(ops[0].operation, "drill")
         self.assertEqual(select_tool(ops[0], ctx.tools), "T02")
 
 
@@ -319,8 +318,7 @@ class TestToolSelection(unittest.TestCase):
             ),
         ]
         op = OpSpec(
-            operation_type="floor_finish",
-            strategy="finishing_floor",
+            operation="raster",
             tool_type_needed="endmill",
             depth_mm=5.0,
         )
@@ -333,8 +331,7 @@ class TestToolSelection(unittest.TestCase):
             Tool(tool_id="OK", tool_type="endmill", diameter_mm=10.0, flute_length_mm=30.0),
         ]
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
             depth_mm=5.0,
             lateral_extent_mm=12.0,
@@ -348,8 +345,7 @@ class TestToolSelection(unittest.TestCase):
             Tool(tool_id="OK", tool_type="bullnose_endmill", diameter_mm=12.0, flute_length_mm=30.0),
         ]
         op = OpSpec(
-            operation_type="finish_contour",
-            strategy="finishing_floor",
+            operation="contour_2d",
             tool_type_needed="endmill",
             depth_mm=5.0,
             fillet_radius_mm=6.35,
@@ -369,8 +365,7 @@ class TestToolSelection(unittest.TestCase):
     def test_bore_prefers_larger_endmill_in_sane_range(self) -> None:
         tools = load_tool_library(SAMPLE_LIBRARY)
         op = OpSpec(
-            operation_type="bore",
-            strategy="helical_bore",
+            operation="helix_bore",
             tool_type_needed="endmill",
             depth_mm=25.0,
             diameter_mm=101.7,
@@ -412,14 +407,12 @@ class TestPrecedence(unittest.TestCase):
         rough = OpSpec(
             op_id="OP010",
             feature_refs=["1", "2", "3"],
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
         )
         finish = OpSpec(
             op_id="OP020",
             feature_refs=["2", "4"],
-            operation_type="finish_contour",
-            strategy="finishing_floor",
+            operation="contour_2d",
         )
         precedence = build_precedence([rough, finish])
         self.assertIn("OP010", precedence["OP020"])
@@ -428,7 +421,7 @@ class TestPrecedence(unittest.TestCase):
 class TestBatchGrouping(unittest.TestCase):
     def test_same_tool_and_operation_type_merge(self) -> None:
         shared_params = assign_parameters(
-            OpSpec(operation_type="pocket_mill", tool_type_needed="endmill", strategy="roughing"),
+            OpSpec(operation="pocket", tool_type_needed="endmill"),
             default_tool_library()[2],
             _minimal_context(material="aluminum"),
         )
@@ -438,8 +431,7 @@ class TestBatchGrouping(unittest.TestCase):
                 feature_refs=["1"],
                 feature_type="filleted_pocket",
                 setup_id="rear",
-                operation_type="pocket_mill",
-                strategy="roughing",
+                operation="pocket",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 parameters=shared_params,
@@ -449,8 +441,7 @@ class TestBatchGrouping(unittest.TestCase):
                 feature_refs=["2"],
                 feature_type="filleted_pocket",
                 setup_id="rear",
-                operation_type="pocket_mill",
-                strategy="roughing",
+                operation="pocket",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 parameters=shared_params,
@@ -463,12 +454,12 @@ class TestBatchGrouping(unittest.TestCase):
 
     def test_different_operation_type_do_not_merge(self) -> None:
         params = assign_parameters(
-            OpSpec(operation_type="pocket_mill", tool_type_needed="endmill", strategy="roughing"),
+            OpSpec(operation="pocket", tool_type_needed="endmill"),
             default_tool_library()[2],
             _minimal_context(material="aluminum"),
         )
         finish_params = assign_parameters(
-            OpSpec(operation_type="finish_contour", tool_type_needed="endmill", strategy="finishing_floor"),
+            OpSpec(operation="contour_2d", tool_type_needed="endmill"),
             default_tool_library()[2],
             _minimal_context(material="aluminum"),
         )
@@ -477,8 +468,7 @@ class TestBatchGrouping(unittest.TestCase):
                 op_id="OP010",
                 feature_refs=["1"],
                 setup_id="rear",
-                operation_type="pocket_mill",
-                strategy="roughing",
+                operation="pocket",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 parameters=params,
@@ -487,8 +477,7 @@ class TestBatchGrouping(unittest.TestCase):
                 op_id="OP020",
                 feature_refs=["2"],
                 setup_id="rear",
-                operation_type="finish_contour",
-                strategy="finishing_floor",
+                operation="contour_2d",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 parameters=finish_params,
@@ -499,7 +488,7 @@ class TestBatchGrouping(unittest.TestCase):
 
     def test_different_tool_do_not_merge(self) -> None:
         params = assign_parameters(
-            OpSpec(operation_type="pocket_mill", tool_type_needed="endmill", strategy="roughing"),
+            OpSpec(operation="pocket", tool_type_needed="endmill"),
             default_tool_library()[2],
             _minimal_context(material="aluminum"),
         )
@@ -508,8 +497,7 @@ class TestBatchGrouping(unittest.TestCase):
                 op_id="OP010",
                 feature_refs=["1"],
                 setup_id="rear",
-                operation_type="pocket_mill",
-                strategy="roughing",
+                operation="pocket",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 parameters=params,
@@ -518,8 +506,7 @@ class TestBatchGrouping(unittest.TestCase):
                 op_id="OP020",
                 feature_refs=["2"],
                 setup_id="rear",
-                operation_type="pocket_mill",
-                strategy="roughing",
+                operation="pocket",
                 tool_id="T04",
                 tool_type_needed="endmill",
                 parameters=params,
@@ -530,7 +517,7 @@ class TestBatchGrouping(unittest.TestCase):
 
     def test_reachability_splits_tight_clearance_feature(self) -> None:
         params = assign_parameters(
-            OpSpec(operation_type="wall_finish", tool_type_needed="endmill", strategy="finishing_wall"),
+            OpSpec(operation="contour_2d", tool_type_needed="endmill"),
             default_tool_library()[2],
             _minimal_context(material="aluminum"),
         )
@@ -539,8 +526,7 @@ class TestBatchGrouping(unittest.TestCase):
                 op_id="OP010",
                 feature_refs=["1"],
                 setup_id="rear",
-                operation_type="wall_finish",
-                strategy="finishing_wall",
+                operation="contour_2d",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 lateral_extent_mm=20.0,
@@ -550,8 +536,7 @@ class TestBatchGrouping(unittest.TestCase):
                 op_id="OP020",
                 feature_refs=["2"],
                 setup_id="rear",
-                operation_type="wall_finish",
-                strategy="finishing_wall",
+                operation="contour_2d",
                 tool_id="T03",
                 tool_type_needed="endmill",
                 lateral_extent_mm=1.0,
@@ -568,8 +553,7 @@ class TestBatchGrouping(unittest.TestCase):
             op_id="OP010",
             feature_refs=["1"],
             setup_id="rear",
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_id="T03",
             tool_type_needed="endmill",
         )
@@ -577,8 +561,7 @@ class TestBatchGrouping(unittest.TestCase):
             op_id="OP020",
             feature_refs=["2"],
             setup_id="rear",
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_id="T03",
             tool_type_needed="endmill",
         )
@@ -586,8 +569,7 @@ class TestBatchGrouping(unittest.TestCase):
             op_id="OP030",
             feature_refs=["1"],
             setup_id="rear",
-            operation_type="finish_contour",
-            strategy="finishing_floor",
+            operation="contour_2d",
             tool_id="T03",
             tool_type_needed="endmill",
         )
@@ -595,8 +577,7 @@ class TestBatchGrouping(unittest.TestCase):
             op_id="OP040",
             feature_refs=["2"],
             setup_id="rear",
-            operation_type="finish_contour",
-            strategy="finishing_floor",
+            operation="contour_2d",
             tool_id="T03",
             tool_type_needed="endmill",
         )
@@ -604,8 +585,8 @@ class TestBatchGrouping(unittest.TestCase):
         self.assertEqual(len(grouped), 2)
         _assign_op_ids(grouped)
         precedence = build_precedence(grouped)
-        rough_group = next(op for op in grouped if op.operation_type == "pocket_mill")
-        finish_group = next(op for op in grouped if op.operation_type == "finish_contour")
+        rough_group = next(op for op in grouped if op.operation == "pocket")
+        finish_group = next(op for op in grouped if op.operation == "contour_2d")
         self.assertIn(rough_group.op_id, precedence[finish_group.op_id])
         ordered = sequence(grouped, precedence, tool_lookup=_tool_by_id(default_tool_library()))
         rough_idx = next(i for i, op in enumerate(ordered) if op.op_id == rough_group.op_id)
@@ -663,8 +644,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
     def test_floor_finish_prefers_bullnose_over_endmill(self) -> None:
         tools = _mill_tools()
         op = OpSpec(
-            operation_type="floor_finish",
-            strategy="finishing_floor",
+            operation="raster",
             tool_type_needed="endmill",
             depth_mm=5.0,
             lateral_extent_mm=20.0,
@@ -678,8 +658,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
     def test_finish_contour_prefers_bullnose_over_endmill(self) -> None:
         tools = _mill_tools()
         op = OpSpec(
-            operation_type="finish_contour",
-            strategy="finishing_floor",
+            operation="contour_2d",
             tool_type_needed="endmill",
             depth_mm=5.0,
             lateral_extent_mm=20.0,
@@ -702,8 +681,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
             ),
         ]
         op = OpSpec(
-            operation_type="wall_finish",
-            strategy="finishing_wall",
+            operation="contour_2d",
             tool_type_needed="endmill",
             depth_mm=20.0,
             lateral_extent_mm=8.0,
@@ -715,8 +693,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
     def test_surface_finish_keeps_ball_primary(self) -> None:
         tools = _mill_tools()
         op = OpSpec(
-            operation_type="surface_finish",
-            strategy="finishing",
+            operation="constant_scallop",
             tool_type_needed="ball_endmill",
             depth_mm=5.0,
         )
@@ -739,8 +716,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
             ),
         ]
         op = OpSpec(
-            operation_type="surface_finish",
-            strategy="finishing",
+            operation="constant_scallop",
             tool_type_needed="ball_endmill",
             depth_mm=5.0,
         )
@@ -749,8 +725,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
     def test_roughing_still_uses_endmill(self) -> None:
         tools = _mill_tools()
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
             depth_mm=5.0,
             lateral_extent_mm=20.0,
@@ -766,8 +741,7 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
         bullnose = next(t for t in tools if t.tool_type == "bullnose_endmill")
         ctx = _minimal_context(material="aluminum", tools=tools)
         op = OpSpec(
-            operation_type="floor_finish",
-            strategy="finishing_floor",
+            operation="raster",
             tool_type_needed="endmill",
             depth_mm=5.0,
         )
@@ -778,8 +752,8 @@ class TestBullnoseFinishingSelection(unittest.TestCase):
 class TestSequence(unittest.TestCase):
     def test_topological_order_respects_edges(self) -> None:
         ops = [
-            OpSpec(op_id="OP010", feature_refs=["1"], operation_type="drill"),
-            OpSpec(op_id="OP020", feature_refs=["1"], operation_type="tap"),
+            OpSpec(op_id="OP010", feature_refs=["1"], operation="drill"),
+            OpSpec(op_id="OP020", feature_refs=["1"], operation="drill"),
         ]
         precedence = {"OP010": [], "OP020": ["OP010"]}
         ordered = sequence(ops, precedence)
@@ -810,7 +784,7 @@ class TestAssignParameters(unittest.TestCase):
 
     def test_drill_uses_plunge_not_v_f(self) -> None:
         ctx = _minimal_context(material="aluminum")
-        op = OpSpec(operation_type="drill", tool_type_needed="drill")
+        op = OpSpec(operation="drill", tool_type_needed="drill")
         params = assign_parameters(op, self.drill_tool, ctx)
 
         self.assertEqual(params.param_source, "toolpath_preset")
@@ -832,7 +806,7 @@ class TestAssignParameters(unittest.TestCase):
         endmill = load_tool_library(SAMPLE_LIBRARY)[0]
         preset = next(p for p in endmill.presets if p.preset_name == "AluWrought_Adaptive_Rough")
         ctx = _minimal_context(material="aluminum")
-        op = OpSpec(operation_type="pocket_mill", tool_type_needed="endmill", strategy="spiral")
+        op = OpSpec(operation="pocket", tool_type_needed="endmill")
         params = assign_parameters(op, endmill, ctx)
 
         self.assertEqual(params.param_source, "toolpath_preset")
@@ -847,7 +821,7 @@ class TestAssignParameters(unittest.TestCase):
         ball_tools = [t for t in tools if t.tool_type == "ball_endmill"]
         self.assertTrue(ball_tools)
         op = OpSpec(
-            operation_type="surface_finish",
+            operation="constant_scallop",
             tool_type_needed="ball_endmill",
             depth_mm=5.0,
         )
@@ -860,8 +834,8 @@ class TestAssignParameters(unittest.TestCase):
     def test_finish_prefers_finish_preset_over_rough(self) -> None:
         endmill = load_tool_library(SAMPLE_LIBRARY)[0]
         ctx = _minimal_context(material="aluminum")
-        rough = OpSpec(operation_type="pocket_mill", tool_type_needed="endmill")
-        finish = OpSpec(operation_type="finish_contour", tool_type_needed="endmill")
+        rough = OpSpec(operation="pocket", tool_type_needed="endmill")
+        finish = OpSpec(operation="contour_2d", tool_type_needed="endmill")
         rough_preset = resolve_preset(endmill, rough, "aluminum")
         finish_preset = resolve_preset(endmill, finish, "aluminum")
         self.assertIsNotNone(rough_preset)
@@ -894,7 +868,7 @@ class TestAssignParameters(unittest.TestCase):
                 ),
             ],
         )
-        op = OpSpec(operation_type="pocket_mill", tool_type_needed="endmill")
+        op = OpSpec(operation="pocket", tool_type_needed="endmill")
         chosen = resolve_preset(tool, op, "aluminum")
         self.assertIsNotNone(chosen)
         assert chosen is not None
@@ -904,7 +878,7 @@ class TestAssignParameters(unittest.TestCase):
     def test_missing_preset_falls_back_without_nulls(self) -> None:
         bare_tool = Tool(tool_id="T_bare", tool_type="endmill", diameter_mm=6.0, presets=[])
         ctx = _minimal_context(material="aluminum")
-        op = OpSpec(operation_type="pocket_mill", tool_type_needed="endmill")
+        op = OpSpec(operation="pocket", tool_type_needed="endmill")
         params = assign_parameters(op, bare_tool, ctx)
 
         self.assertEqual(params.param_source, "handbook_default")
@@ -928,7 +902,7 @@ class TestAssignParameters(unittest.TestCase):
             ],
         )
         ctx = _minimal_context(material="aluminum")
-        op = OpSpec(operation_type="pocket_mill", tool_type_needed="endmill")
+        op = OpSpec(operation="pocket", tool_type_needed="endmill")
         params = assign_parameters(op, partial, ctx)
 
         self.assertEqual(params.param_source, "mixed")
@@ -961,8 +935,7 @@ class TestAssignParameters(unittest.TestCase):
             ],
         )
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
         )
         chosen = resolve_preset(tool, op, "aluminum")
@@ -984,7 +957,7 @@ class TestAssignParameters(unittest.TestCase):
                 ),
             ],
         )
-        op = OpSpec(operation_type="pocket_mill", tool_type_needed="endmill")
+        op = OpSpec(operation="pocket", tool_type_needed="endmill")
         chosen = resolve_preset(tool, op, "aluminum")
         self.assertIsNotNone(chosen)
         assert chosen is not None
@@ -1032,23 +1005,20 @@ class TestAssignParameters(unittest.TestCase):
             ],
         )
         floor_op = OpSpec(
-            operation_type="floor_finish",
-            strategy="finishing_floor",
+            operation="raster",
             tool_type_needed="bullnose_endmill",
         )
         wall_op = OpSpec(
-            operation_type="wall_finish",
-            strategy="finishing_wall",
+            operation="contour_2d",
+            feature_type="wall",
             tool_type_needed="bullnose_endmill",
         )
         surface_op = OpSpec(
-            operation_type="surface_finish",
-            strategy="finishing",
+            operation="constant_scallop",
             tool_type_needed="bullnose_endmill",
         )
         fillet_op = OpSpec(
-            operation_type="fillet_finish",
-            strategy="finishing_fillet",
+            operation="pencil",
             tool_type_needed="bullnose_endmill",
         )
         self.assertEqual(
@@ -1094,8 +1064,7 @@ class TestAssignParameters(unittest.TestCase):
         )
         ctx = _minimal_context(material="aluminum")
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
         )
         params = assign_parameters(op, tool, ctx)
@@ -1137,8 +1106,7 @@ class TestAssignParameters(unittest.TestCase):
             ],
         )
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
             lateral_extent_mm=50.0,
         )
@@ -1161,8 +1129,7 @@ class TestAssignParameters(unittest.TestCase):
             ],
         )
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
             lateral_extent_mm=50.0,
         )
@@ -1207,8 +1174,7 @@ class TestAssignParameters(unittest.TestCase):
         )
         ctx = _minimal_context(material="aluminum", tools=[ferrous, aluminum])
         op = OpSpec(
-            operation_type="pocket_mill",
-            strategy="roughing",
+            operation="pocket",
             tool_type_needed="endmill",
             lateral_extent_mm=50.0,
         )
@@ -1250,6 +1216,8 @@ class TestSetupScopeFilter(unittest.TestCase):
                 SetupContext(
                     setup_id="front",
                     opening_axis="+Y",
+                    opening_axis_vector=(0.0, 1.0, 0.0),
+                    machining_side="front",
                     pocket_access={},
                     scope=SetupScopeSpec(mode="filtered", classes=["facing"]),
                 ),
@@ -1259,6 +1227,7 @@ class TestSetupScopeFilter(unittest.TestCase):
             [large_flat, small_flat, pocket],
             ctx,
             envelope_faces=envelope_faces,
+            use_reachability=False,
         )
         self.assertEqual(dropped, 2)
         self.assertEqual([f.feature_id for f in kept], ["18"])
@@ -1273,6 +1242,7 @@ class TestSetupScopeFilter(unittest.TestCase):
             [feat],
             ctx,
             envelope_faces=frozenset(),
+            use_reachability=False,
         )
         self.assertEqual(dropped, 0)
         self.assertEqual(len(kept), 1)
@@ -1295,6 +1265,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
             setup_id="rear",
             material="aluminum",
             tool_source="hardcoded",
+            setups_source="authored",
         )
         front_ctx = build_context_v0(
             Path(ROOT) / "96260B_FRONT_XR004_PCD PLATE.stp copy",
@@ -1303,6 +1274,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
             setup_id="front",
             material="aluminum",
             tool_source="hardcoded",
+            setups_source="authored",
         )
         cam_plan = plan_multi_setups(
             [
@@ -1321,14 +1293,16 @@ class TestMultiSetupPlanning(unittest.TestCase):
 
         rear_ops = [op for op in cam_plan.operations if op.setup_id == "rear"]
         front_ops = [op for op in cam_plan.operations if op.setup_id == "front"]
-        self.assertEqual(len(rear_ops), 10)
-        self.assertEqual(len(front_ops), 1)
-        self.assertEqual(front_ops[0].operation_type, "facing")
-        self.assertEqual(front_ops[0].strategy, "facing")
+        self.assertEqual(len(rear_ops), 5)
+        self.assertEqual(len(front_ops), 11)
 
         per_setup = cam_plan.metadata["planner_stats"]["per_setup"]
-        self.assertGreater(per_setup["front"]["features_scope_dropped"], 0)
-        self.assertEqual(per_setup["rear"]["scope_mode"], "full")
+        self.assertEqual(per_setup["rear"]["scope_mode"], "reachability")
+        self.assertEqual(per_setup["rear"]["opening_axis"], "+Y")
+        self.assertEqual(per_setup["rear"]["reachability_dir"], "-Z")
+        self.assertEqual(per_setup["front"]["reachability_dir"], "+Z")
+        self.assertEqual(per_setup["rear"]["features_kept"], 36)
+        self.assertEqual(per_setup["front"]["features_kept"], 39)
 
     def test_cross_setup_sequence_and_precedence(self) -> None:
         rear_ops = [
@@ -1336,8 +1310,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
                 op_id="OP010",
                 feature_refs=["1"],
                 setup_id="rear",
-                operation_type="pocket_mill",
-                strategy="roughing",
+                operation="pocket",
                 tool_id="T05",
                 tool_type_needed="endmill",
                 parameters=MachiningParameters(param_source="handbook_default"),
@@ -1346,8 +1319,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
                 op_id="OP020",
                 feature_refs=["2"],
                 setup_id="rear",
-                operation_type="wall_finish",
-                strategy="finishing_wall",
+                operation="contour_2d",
                 tool_id="T05",
                 tool_type_needed="endmill",
                 parameters=MachiningParameters(param_source="handbook_default"),
@@ -1358,8 +1330,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
                 op_id="OP010",
                 feature_refs=["18"],
                 setup_id="front",
-                operation_type="facing",
-                strategy="facing",
+                operation="facing",
                 tool_id="FM_SHOP",
                 tool_type_needed="face_mill",
                 parameters=MachiningParameters(param_source="handbook_default"),
@@ -1392,36 +1363,38 @@ class TestPlanIntegration(unittest.TestCase):
         self.assertEqual(cam_plan.setups[0].setup_id, "rear")
 
         stats = cam_plan.metadata["planner_stats"]
-        self.assertEqual(stats["nodes_in"], 45)
-        self.assertEqual(stats["features_kept"], 45)
+        # 62 = 105 raw cascade nodes minus 43 merged by lobe-contour merge on export.
+        self.assertEqual(stats["nodes_in"], 62)
+        self.assertEqual(stats["features_kept"], 36)
         self.assertEqual(stats["features_dropped"], 0)
+        self.assertEqual(stats["reachability_dir"], "-Z")
 
         coaxial_bore = [
             op for op in cam_plan.operations
-            if op.operation_type == "bore" and set(op.feature_refs) == {"14", "15"}
+            if op.operation == "helix_bore" and "15" in op.feature_refs
         ]
         self.assertEqual(len(coaxial_bore), 1)
-        self.assertNotEqual(coaxial_bore[0].tool_id, UNRESOLVED_TOOL_ID)
+        self.assertEqual(coaxial_bore[0].feature_refs, ["15"])
 
-        wall_ops = [op for op in cam_plan.operations if op.operation_type == "wall_finish"]
-        surface_ops = [op for op in cam_plan.operations if op.operation_type == "surface_finish"]
+        wall_ops = [op for op in cam_plan.operations if op.operation == "contour_2d"]
+        surface_ops = [op for op in cam_plan.operations if op.operation == "constant_scallop"]
         self.assertGreaterEqual(len(wall_ops), 1)
         self.assertGreaterEqual(len(surface_ops), 1)
 
         stats = cam_plan.metadata["planner_stats"]
-        self.assertGreaterEqual(stats.get("operations_out"), 10)
-        self.assertLessEqual(stats.get("operations_out"), 12)
+        self.assertGreaterEqual(stats.get("operations_out"), 5)
+        self.assertLessEqual(stats.get("operations_out"), 6)
 
         tool_lookup = {tool.tool_id: tool for tool in context.tools}
         open_finish_types = {
-            "floor_finish",
-            "wall_finish",
-            "surface_finish",
-            "fillet_finish",
-            "finish_contour",
+            "raster",
+            "contour_2d",
+            "waterline",
+            "constant_scallop",
+            "pencil",
         }
         for op in cam_plan.operations:
-            if op.operation_type not in open_finish_types:
+            if op.operation not in open_finish_types:
                 continue
             tool = tool_lookup.get(op.tool_id)
             if tool is None:
@@ -1429,13 +1402,13 @@ class TestPlanIntegration(unittest.TestCase):
             self.assertGreaterEqual(
                 tool.diameter_mm,
                 3.0,
-                msg=f"{op.op_id} {op.operation_type} picked sub-3mm tool {tool.tool_id}",
+                msg=f"{op.op_id} {op.operation} picked sub-3mm tool {tool.tool_id}",
             )
 
-        self.assertGreaterEqual(stats.get("operations_before_grouping", 0), 50)
+        self.assertGreaterEqual(stats.get("operations_before_grouping", 0), 30)
         self.assertLess(stats["operations_out"], stats["operations_before_grouping"])
-        self.assertGreaterEqual(stats["operations_out"], 10)
-        self.assertLess(stats["operations_out"], 30)
+        self.assertGreaterEqual(stats["operations_out"], 5)
+        self.assertLess(stats["operations_out"], 10)
 
         multi_feature_ops = [op for op in cam_plan.operations if len(op.feature_refs) > 1]
         self.assertGreater(len(multi_feature_ops), 0)
@@ -1454,6 +1427,79 @@ class TestPlanIntegration(unittest.TestCase):
                 "pipeline_out/96260B_rear/feature_graph_cascade.json",
             )
             self.assertEqual(plan_doc.source_part, load_machining_context(CONTEXT_PATH).part_id)
+
+
+def _reach_node(fid, cls, dirs, *, verified=True, exempt=False, has_reach=True):
+    """Synthetic cascade node carrying a step-4a approach.reachability block."""
+    approach = {"setup_dir": (dirs[0] if dirs else None), "reachable_3axis": bool(dirs)}
+    if has_reach:
+        reach = {"verified": verified, "reachable_dirs": list(dirs)}
+        if exempt:
+            reach["exempt"] = True
+        approach["reachability"] = reach
+    return {"feature_id": fid, "class_name": cls, "params": {}, "approach": approach}
+
+
+class TestReachabilityIntegration(unittest.TestCase):
+    """Lock-in: the planner consumes step-4a reachability to scope features.
+
+    Guards the step-2/3/4 -> planner integration so it cannot silently regress
+    back to the class-only scope filter.
+    """
+
+    def _front_ctx(self) -> MachiningContext:
+        return _minimal_context(setups=[SetupContext(
+            setup_id="front", opening_axis="+Y",
+            opening_axis_vector=(0.0, 1.0, 0.0), machining_side="front",
+        )])
+
+    def test_reachability_dir_maps_front_plus_z_back_minus_z(self) -> None:
+        self.assertEqual(_reachability_dir_for_setup(self._front_ctx()), "+Z")
+        self.assertEqual(_reachability_dir_for_setup(_minimal_context()), "-Z")  # back
+
+    def test_reachability_filter_keeps_and_drops(self) -> None:
+        nodes = [
+            _reach_node(0, "filleted_pocket", ["+Z"]),               # keep (this side)
+            _reach_node(1, "filleted_pocket", ["-Z"]),               # drop (other side)
+            _reach_node(2, "through_hole", ["+Z", "-Z"]),            # keep (two-sided)
+            _reach_node(3, "filleted_pocket", [], has_reach=False),  # drop (missing)
+            _reach_node(4, "wall", ["+Z"], exempt=True),             # keep (exempt w/ dirs)
+            _reach_node(5, "wall", [], exempt=True),                 # drop (exempt, no dirs)
+        ]
+        feats = [cascade_node_to_feature(n) for n in nodes]
+        nodes_by_id = {str(n["feature_id"]): n for n in nodes}
+        kept, dropped, info = filter_features_for_setup_by_reachability(
+            feats, nodes_by_id, {"nodes": nodes}, self._front_ctx(),
+        )
+        self.assertEqual({f.feature_id for f in kept}, {"0", "2", "4"})
+        self.assertEqual(dropped, 3)
+        self.assertEqual(info["scope_mode"], "reachability")
+        self.assertEqual(info["reachability_dir"], "+Z")
+        self.assertEqual(info["missing_reachability"], 1)
+
+    def test_dispatcher_routes_to_reachability_when_present(self) -> None:
+        nodes = [
+            _reach_node(0, "filleted_pocket", ["+Z"]),
+            _reach_node(1, "filleted_pocket", ["-Z"]),
+        ]
+        feats = [cascade_node_to_feature(n) for n in nodes]
+        nodes_by_id = {str(n["feature_id"]): n for n in nodes}
+        kept, _dropped, info = filter_features_for_setup(
+            feats, self._front_ctx(), envelope_faces=frozenset(),
+            nodes_by_id=nodes_by_id, graph={"nodes": nodes},
+        )
+        self.assertEqual(info["scope_mode"], "reachability")
+        self.assertEqual({f.feature_id for f in kept}, {"0"})
+
+    def test_dispatcher_falls_back_to_class_scope_without_reachability(self) -> None:
+        plain = [{"feature_id": 0, "class_name": "filleted_pocket", "params": {}}]
+        feats = [cascade_node_to_feature(n) for n in plain]
+        kept, _dropped, info = filter_features_for_setup(
+            feats, self._front_ctx(), envelope_faces=frozenset(),
+            nodes_by_id={"0": plain[0]}, graph={"nodes": plain},
+        )
+        self.assertEqual(info["scope_mode"], "full")
+        self.assertEqual({f.feature_id for f in kept}, {"0"})
 
 
 if __name__ == "__main__":

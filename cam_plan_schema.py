@@ -40,7 +40,9 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from operation_bank import is_valid_operation
 
 SCHEMA_VERSION = "0.1.0"
 REPO_ROOT = Path(__file__).resolve().parent
@@ -118,6 +120,19 @@ class Setup(BaseModel):
         ...,
         description='Discrete approach direction, e.g. "+Z", "-Y". From setup descriptor.',
     )
+    orientation: str | None = Field(
+        default=None,
+        description=(
+            "General cardinal setup orientation the setup was evaluated from, e.g. "
+            '"+X". Extends the binary front/back convention to all six cardinals. '
+            "PROVISIONAL (lateral ±X/±Y path, no real-part validation) when set to a "
+            "non-opening-axis direction; None means the calibrated opening_axis path."
+        ),
+    )
+    orientation_provisional: bool = Field(
+        default=False,
+        description="True when orientation is a provisional lateral-axis direction.",
+    )
     fixture: str | None = Field(
         default=None,
         description="Fixture id or name when a fixture library exists; null in v0.",
@@ -148,13 +163,13 @@ class Operation(BaseModel):
         description="Recognizer / Toolpath class, e.g. through_hole, filleted_pocket.",
     )
     setup_id: str
-    operation_type: str = Field(
+    operation: str = Field(
         ...,
-        description='CAM operation kind, e.g. "drill", "pocket_mill", "finish_contour".',
-    )
-    strategy: str = Field(
-        ...,
-        description='Strategy tag, e.g. "peck_drill", "trochoidal", "spiral".',
+        description=(
+            "Canonical CAM operation from the flat operation bank "
+            "(operation_bank.Operation), e.g. \"drill\", \"pocket\", \"contour_2d\". "
+            "The operation_type/strategy split is retired."
+        ),
     )
     tool_id: str
     parameters: MachiningParameters
@@ -163,6 +178,16 @@ class Operation(BaseModel):
         default=None,
         description="Pocket access label from setup descriptor; null for non-pockets.",
     )
+
+    @field_validator("operation")
+    @classmethod
+    def _operation_in_bank(cls, value: str) -> str:
+        if not is_valid_operation(value):
+            raise ValueError(
+                f"operation {value!r} is not in the canonical operation bank "
+                f"(operation_bank.Operation)"
+            )
+        return value
 
 
 class CamPlan(BaseModel):
@@ -305,8 +330,7 @@ def example_cam_plan() -> CamPlan:
                 feature_refs=["0"],
                 feature_type="through_hole",
                 setup_id="primary",
-                operation_type="drill",
-                strategy="peck_drill",
+                operation="drill",
                 tool_id="T01",
                 parameters=MachiningParameters(
                     spindle_rpm=3000.0,
@@ -326,8 +350,7 @@ def example_cam_plan() -> CamPlan:
                 feature_refs=["1"],
                 feature_type="filleted_pocket",
                 setup_id="primary",
-                operation_type="pocket_mill",
-                strategy="spiral",
+                operation="pocket",
                 tool_id="T02",
                 parameters=MachiningParameters(
                     spindle_rpm=8000.0,

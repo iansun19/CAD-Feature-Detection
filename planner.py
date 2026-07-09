@@ -1,7 +1,12 @@
 """planner.py - v0 vertical slice: feature graph + machining context -> CamPlan.
 
 Rule-based planner covering holes, pockets, walls, surfaces, fillets, profiles, and
-faces. Ops are batched by (tool_id, strategy, setup_id) before sequencing.
+faces. Ops are batched by (tool_id, operation, setup_id) before sequencing.
+
+Operations are drawn from the single flat canonical bank in operation_bank.py; the
+former operation_type/strategy split is retired. Which bank op a feature maps to is
+geometry-driven (see map_feature_to_operations): the 3D_surface flag splits 2.5D
+vs 3D roughing/finishing, pocket access splits closed vs open clearing.
 """
 from __future__ import annotations
 
@@ -20,7 +25,17 @@ from cam_plan_schema import (
     ToolRef,
     write_cam_plan,
 )
-from machining_context import MachiningContext, SetupScopeSpec, Tool, ToolPreset, load_feature_graph
+from operation_bank import FINISH_PHASE_OPS, ROUGH_PHASE_OPS
+from operation_bank import Operation as BankOp
+from sequence_search import SeqSearchStrategy, search_sequence
+from machining_context import (
+    MachiningContext,
+    SetupScopeSpec,
+    Tool,
+    ToolPreset,
+    load_feature_graph,
+    vector_to_opening_axis_label,
+)
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parent
@@ -52,30 +67,27 @@ PLANNER_FEATURE_CLASSES = (
     | FILLET_CLASSES | PROFILE_CLASSES | FACE_CLASSES
 )
 
-ROUGH_OPERATION_TYPES = frozenset({"pocket_mill", "adaptive_rough", "rough", "bore", "facing"})
-FINISH_OPERATION_TYPES = frozenset({
-    "finish_contour",
-    "finish",
-    "wall_finish",
-    "floor_finish",
-    "surface_finish",
-    "fillet_finish",
-})
+# --- Canonical operation bank groupings (operation_bank.Operation values) ---
+# Roughing / clearing ops -> phase 0; finish ops -> phase 1. Sourced from the bank so
+# the planner and the sequence scorer share one classification. helix_bore/facing run
+# in the rough phase (the former "bore"/"facing" were rough-phase ops).
+ROUGH_OPS = ROUGH_PHASE_OPS
+FINISH_OPS = FINISH_PHASE_OPS
+# Hole ops that plunge a drill/tap tool along an axis (no open tool sizing).
+HOLE_OPS = frozenset({BankOp.DRILL, BankOp.CHIP_BREAK_DRILL, BankOp.THREAD_MILL})
+# Finish ops that carry a fillet radius and cap the tool at 2*fillet.
+FILLET_CAP_FINISH_OPS = frozenset({BankOp.CONTOUR_2D, BankOp.WATERLINE, BankOp.PENCIL})
+# Deep-hole peck threshold: depth/diameter above this -> chip-break drilling.
+CHIP_BREAK_DEPTH_RATIO = 4.0
 
-# Tie-break ordering after precedence is satisfied (documented shop approximation):
-#   1) rough ops before finish (hard precedence edges)
-#   2) rough ops: descending tool diameter (coarse before fine)
-#   3) finish ops: floor -> wall -> surface -> fillet, then descending tool diameter
-FINISH_STRATEGY_ORDER: dict[str, int] = {
-    "facing": -1,
-    "finishing_floor": 0,
-    "finishing_wall": 1,
-    "finishing": 2,
-    "finishing_fillet": 3,
-    "helical_bore": 4,
-    "peck_drill": 5,
-    "rigid_tap": 6,
-}
+# Finish-phase tie-break rank (floor -> wall -> surface -> fillet -> bore -> hole).
+# Computed per op because contour_2d/waterline serve both floor (pocket) and wall
+# roles; the sub-role comes from the source feature class. See _finish_order().
+_SURFACE_FINISH_ORDER_OPS = frozenset({
+    BankOp.CONSTANT_SCALLOP,
+    BankOp.RADIAL_SPIRAL,
+    BankOp.STEEP_SHALLOW,
+})
 
 _PARAM_TOLERANCE = 1e-3
 BORE_MIN_DIA_MM = 0.375 * 25.4
@@ -88,21 +100,16 @@ OPEN_DEFAULT_MAX_DIA_MM = 0.5 * 25.4  # 12.7 mm
 _AXIS_TOLERANCE = 1e-3
 
 # Ops without a hole/bore diameter cap: pick largest fitting tool up to extent/default band.
-OPEN_MILLING_OPERATION_TYPES = frozenset({
-    "pocket_mill",
-    "adaptive_rough",
-    "finish_contour",
-    "floor_finish",
-    "wall_finish",
-    "surface_finish",
-    "fillet_finish",
-})
+# = all milling roughing + finishing ops (excludes holes, helix_bore, facing).
+OPEN_MILLING_OPS = (ROUGH_OPS | FINISH_OPS) - {BankOp.FACING, BankOp.HELIX_BORE}
 
-# Finishing strategies where the shop prefers bullnose over plain endmill (floor/wall/fillet).
-_BULLNOSE_PREFERRED_STRATEGIES = frozenset({
-    "finishing_floor",
-    "finishing_wall",
-    "finishing_fillet",
+# Finish ops where the shop prefers bullnose over plain endmill (floor/wall/fillet).
+# constant_scallop (freeform ball finish) is handled by _SURFACE_FINISH_TOOL_TYPES first.
+_BULLNOSE_PREFERRED_OPS = frozenset({
+    BankOp.RASTER,
+    BankOp.CONTOUR_2D,
+    BankOp.WATERLINE,
+    BankOp.PENCIL,
 })
 
 # Tool-type precedence for finishing selection (fit checked before advancing to next type):
@@ -152,7 +159,8 @@ class _SetupPlanSlice:
     """Internal per-setup planner output before cross-setup merge."""
 
     setup: Setup
-    ordered: list[OpSpec]
+    grouped_ops: list[OpSpec]
+    precedence: dict[str, list[str]]
     plan_tools: list[ToolRef]
     stats: dict[str, Any]
     feature_graph_ref: str
@@ -171,6 +179,7 @@ class PlannerFeature:
     axis_point: tuple[float, float, float] | None = None
     axis_direction: tuple[float, float, float] | None = None
     is_tapped: bool = False
+    is_threaded: bool = False  # non-tap threading (thread-milled); tap wins if both set
     raw_params: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -182,8 +191,7 @@ class OpSpec:
     feature_refs: list[str] = field(default_factory=list)
     feature_type: str = ""
     setup_id: str = ""
-    operation_type: str = ""
-    strategy: str = ""
+    operation: str = ""
     tool_id: str = ""
     tool_type_needed: str = ""
     diameter_mm: float | None = None
@@ -260,8 +268,11 @@ def cascade_node_to_feature(node: Mapping[str, Any]) -> PlannerFeature:
     axis_point = _vec3(axis.get("point"))
     axis_direction = _vec3(axis.get("direction"))
 
-    is_tapped = any(
-        params.get(key) for key in ("is_tapped", "tapped", "threaded", "has_thread")
+    # Tapping is one specific kind of threading -> drill (tap cycle). Any other
+    # threading -> thread mill. Tap-specific flags win when both are present.
+    is_tapped = any(params.get(key) for key in ("is_tapped", "tapped"))
+    is_threaded = (not is_tapped) and any(
+        params.get(key) for key in ("threaded", "has_thread", "is_threaded")
     )
 
     return PlannerFeature(
@@ -274,6 +285,7 @@ def cascade_node_to_feature(node: Mapping[str, Any]) -> PlannerFeature:
         axis_point=axis_point,
         axis_direction=axis_direction,
         is_tapped=bool(is_tapped),
+        is_threaded=bool(is_threaded),
         raw_params=params,
     )
 
@@ -317,6 +329,90 @@ def _resolve_envelope_stock_faces(
         return frozenset()
 
 
+_REACHABILITY_FRAME_DIRS = frozenset({"+Z", "-Z"})
+
+
+class SetupApproachAxisError(ValueError):
+    """Raised when a setup lacks a descriptor-sourced opening axis for reachability scoping."""
+
+
+def _resolve_setup_opening_axis_vector(context: MachiningContext) -> tuple[float, float, float]:
+    """Return the setup's unit opening-axis vector (descriptor-sourced, fail-loud)."""
+    setup = context.setups[0]
+    vec = setup.opening_axis_vector
+    if vec is None:
+        raise SetupApproachAxisError(
+            f"setup {setup.setup_id!r}: opening_axis_vector is missing; "
+            "build context from the setup descriptor"
+        )
+    norm = float(sum(v * v for v in vec) ** 0.5)
+    if norm <= 1e-12:
+        raise SetupApproachAxisError(
+            f"setup {setup.setup_id!r}: opening_axis_vector is zero: {vec!r}"
+        )
+    if abs(norm - 1.0) > 1e-6:
+        raise SetupApproachAxisError(
+            f"setup {setup.setup_id!r}: opening_axis_vector is not unit length "
+            f"(norm={norm:.6f}): {vec!r}"
+        )
+    if vec in ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0)) and setup.opening_axis in _REACHABILITY_FRAME_DIRS:
+        raise SetupApproachAxisError(
+            f"setup {setup.setup_id!r}: opening_axis_vector looks like a reachability "
+            f"frame literal, not a descriptor axis: {vec!r}"
+        )
+    return vec
+
+
+def _primary_setup_approach_dir(context: MachiningContext) -> str:
+    """Discrete opening-axis label from the setup descriptor (e.g. '+Y', not '+Z')."""
+    return vector_to_opening_axis_label(_resolve_setup_opening_axis_vector(context))
+
+
+def _reachability_dir_for_setup(context: MachiningContext) -> str:
+    """Map descriptor opening axis + machining_side to a reachability frame token.
+
+    Reachability annotates along approach_frame Z = opening_axis:
+      ``+Z`` = along +opening_axis, ``-Z`` = along -opening_axis.
+    Front setups approach from +opening_axis; back setups from -opening_axis.
+    """
+    setup = context.setups[0]
+    _resolve_setup_opening_axis_vector(context)
+    side = setup.machining_side
+    if side not in ("front", "back"):
+        raise SetupApproachAxisError(
+            f"setup {setup.setup_id!r}: machining_side must be 'front' or 'back' "
+            f"for reachability scoping, got {side!r}"
+        )
+    return "+Z" if side == "front" else "-Z"
+
+
+def _graph_has_verified_reachability(graph: Mapping[str, Any]) -> bool:
+    for node in graph.get("nodes", []):
+        approach = node.get("approach") or {}
+        reach = approach.get("reachability")
+        if isinstance(reach, Mapping) and reach.get("verified"):
+            return True
+    return False
+
+
+def _feature_reachable_for_setup(
+    node: Mapping[str, Any],
+    setup_approach_dir: str,
+) -> bool:
+    """True when step-4a reachability includes this setup's approach direction."""
+    approach = node.get("approach") or {}
+    reach = approach.get("reachability")
+    if not isinstance(reach, Mapping):
+        return False
+
+    if reach.get("exempt"):
+        dirs = reach.get("reachable_dirs") or []
+        return bool(dirs)
+
+    reachable_dirs = reach.get("reachable_dirs") or []
+    return setup_approach_dir in reachable_dirs
+
+
 def _feature_in_setup_scope(
     feature: PlannerFeature,
     scope: SetupScopeSpec,
@@ -349,13 +445,13 @@ def _feature_in_setup_scope(
     return feature.feature_type in allowed_types
 
 
-def filter_features_for_setup(
+def filter_features_for_setup_by_class(
     features: Sequence[PlannerFeature],
     context: MachiningContext,
     *,
     envelope_faces: frozenset[int],
 ) -> tuple[list[PlannerFeature], int, dict[str, Any]]:
-    """Drop features outside the setup's declared scope before planning."""
+    """Drop features outside the setup's declared class scope (legacy filter)."""
     setup = context.setups[0]
     scope = setup.scope
     if scope.is_full:
@@ -379,7 +475,7 @@ def filter_features_for_setup(
             )
 
     logger.info(
-        "setup %s: %d features out of scope, kept %d",
+        "setup %s: %d features out of class scope, kept %d",
         setup.setup_id,
         dropped,
         len(kept),
@@ -390,6 +486,168 @@ def filter_features_for_setup(
         "scope_feature_ids": list(scope.feature_ids),
         "envelope_stock_faces": sorted(envelope_faces),
     }
+
+
+def filter_features_for_setup_by_reachability(
+    features: Sequence[PlannerFeature],
+    nodes_by_id: Mapping[str, Mapping[str, Any]],
+    graph: Mapping[str, Any],
+    context: MachiningContext,
+) -> tuple[list[PlannerFeature], int, dict[str, Any]]:
+    """Keep features verified reachable from this setup's approach direction."""
+    setup = context.setups[0]
+    opening_axis_label = _primary_setup_approach_dir(context)
+    opening_axis_vector = _resolve_setup_opening_axis_vector(context)
+    reachability_dir = _reachability_dir_for_setup(context)
+    kept: list[PlannerFeature] = []
+    dropped = 0
+    missing_reachability = 0
+
+    for feat in features:
+        node = nodes_by_id.get(feat.feature_id)
+        if node is None:
+            dropped += 1
+            continue
+        approach = node.get("approach") or {}
+        if approach.get("reachability") is None:
+            missing_reachability += 1
+            dropped += 1
+            logger.warning(
+                "setup %s: feature_id=%s lacks verified reachability; dropped",
+                setup.setup_id,
+                feat.feature_id,
+            )
+            continue
+        if _feature_reachable_for_setup(node, reachability_dir):
+            kept.append(feat)
+        else:
+            dropped += 1
+            logger.info(
+                "setup %s: dropped unreachable feature_id=%s class_name=%s",
+                setup.setup_id,
+                feat.feature_id,
+                feat.feature_type,
+            )
+
+    if missing_reachability:
+        logger.warning(
+            "setup %s: %d features missing reachability (export cascade with step 4a)",
+            setup.setup_id,
+            missing_reachability,
+        )
+
+    logger.info(
+        "setup %s: %d features unreachable, kept %d "
+        "(opening_axis=%s reachability_dir=%s)",
+        setup.setup_id,
+        dropped,
+        len(kept),
+        opening_axis_label,
+        reachability_dir,
+    )
+    return kept, dropped, {
+        "scope_mode": "reachability",
+        "opening_axis": opening_axis_label,
+        "opening_axis_vector": list(opening_axis_vector),
+        "reachability_dir": reachability_dir,
+        "setup_approach_dir": opening_axis_label,
+        "missing_reachability": missing_reachability,
+    }
+
+
+def filter_features_for_setup(
+    features: Sequence[PlannerFeature],
+    context: MachiningContext,
+    *,
+    envelope_faces: frozenset[int],
+    nodes_by_id: Mapping[str, Mapping[str, Any]] | None = None,
+    graph: Mapping[str, Any] | None = None,
+    use_reachability: bool = True,
+) -> tuple[list[PlannerFeature], int, dict[str, Any]]:
+    """Drop features outside the setup before planning."""
+    if use_reachability and graph is not None and nodes_by_id is not None:
+        if _graph_has_verified_reachability(graph):
+            return filter_features_for_setup_by_reachability(
+                features, nodes_by_id, graph, context,
+            )
+        logger.warning(
+            "setup %s: no verified reachability on graph; falling back to class scope",
+            context.setups[0].setup_id,
+        )
+    return filter_features_for_setup_by_class(
+        features, context, envelope_faces=envelope_faces,
+    )
+
+
+def _assigned_feature_ids(
+    features: Sequence[PlannerFeature],
+    context: MachiningContext,
+    *,
+    envelope_faces: frozenset[int],
+    nodes_by_id: Mapping[str, Mapping[str, Any]] | None = None,
+    graph: Mapping[str, Any] | None = None,
+    use_reachability: bool,
+) -> set[str]:
+    kept, _, _ = filter_features_for_setup(
+        features,
+        context,
+        envelope_faces=envelope_faces,
+        nodes_by_id=nodes_by_id,
+        graph=graph,
+        use_reachability=use_reachability,
+    )
+    return {f.feature_id for f in kept}
+
+
+def print_scope_assignment_diff(
+    *,
+    setup_id: str,
+    features: Sequence[PlannerFeature],
+    context: MachiningContext,
+    nodes_by_id: Mapping[str, Mapping[str, Any]],
+    graph: Mapping[str, Any],
+    envelope_faces: frozenset[int],
+) -> list[str]:
+    """Print class-scope vs reachability assignment; return feature ids lost in new mode."""
+    class_ids = _assigned_feature_ids(
+        features,
+        context,
+        envelope_faces=envelope_faces,
+        use_reachability=False,
+    )
+    reach_ids = _assigned_feature_ids(
+        features,
+        context,
+        envelope_faces=envelope_faces,
+        nodes_by_id=nodes_by_id,
+        graph=graph,
+        use_reachability=True,
+    )
+
+    print(f"\n=== setup {setup_id}: scope assignment diff ===")
+    opening_axis = _primary_setup_approach_dir(context)
+    reach_dir = _reachability_dir_for_setup(context)
+    axis_vec = _resolve_setup_opening_axis_vector(context)
+    print(f"  opening axis (descriptor): {opening_axis}  vector={list(axis_vec)}")
+    print(f"  reachability filter dir:   {reach_dir}  (+/- along opening axis)")
+    print(f"  class filter:        {len(class_ids)} features")
+    print(f"  reachability filter: {len(reach_ids)} features")
+    only_class = sorted(class_ids - reach_ids, key=lambda x: (len(x), x))
+    only_reach = sorted(reach_ids - class_ids, key=lambda x: (len(x), x))
+    if only_class:
+        print(f"  class-only (dropped by reachability): {only_class}")
+    if only_reach:
+        print(f"  reachability-only (added vs class):   {only_reach}")
+    if not only_class and not only_reach:
+        print("  (identical assignment)")
+
+    lost_all = sorted(
+        {f.feature_id for f in features} - reach_ids,
+        key=lambda x: (len(x), x),
+    )
+    if lost_all:
+        print(f"  WARNING reachability gap (no setup assignment): {lost_all}")
+    return lost_all
 
 
 def filter_planner_features(
@@ -489,12 +747,42 @@ def identify_facing_feature_ids(
     return frozenset({best.feature_id})
 
 
-def _rough_strategy(access: PocketAccess) -> str:
-    return "roughing"
+def _is_3d_surface(feature: PlannerFeature) -> bool:
+    """True when the feature's floor/walls are sculpted (needs a 3D toolpath).
+
+    Sourced from the cascade ``3D_surface`` flag; absent -> prismatic (2.5D).
+    """
+    return bool(feature.raw_params.get("3D_surface"))
 
 
-def _finish_strategy(access: PocketAccess) -> str:
-    return "finishing_floor"
+def _rough_operation(feature: PlannerFeature, access: PocketAccess) -> BankOp:
+    """Geometry-driven roughing/clearing op for a pocket-class feature.
+
+    3D sculpted -> optirough (adaptive 3D); prismatic closed region -> pocket;
+    prismatic open region -> 2D dynamic mill.
+    """
+    if _is_3d_surface(feature):
+        return BankOp.OPTIROUGH
+    if access == PocketAccess.CLOSED:
+        return BankOp.POCKET
+    return BankOp.DYNAMIC_MILL_2D
+
+
+def _wall_contour_operation(feature: PlannerFeature) -> BankOp:
+    """Geometry-driven wall/contour finish: waterline for 3D, 2D contour otherwise."""
+    return BankOp.WATERLINE if _is_3d_surface(feature) else BankOp.CONTOUR_2D
+
+
+def _drill_operation(depth_mm: float | None, diameter_mm: float | None) -> BankOp:
+    """Plain drill vs chip-break drill by depth/diameter ratio."""
+    if (
+        depth_mm is not None
+        and diameter_mm is not None
+        and diameter_mm > 0
+        and depth_mm / diameter_mm > CHIP_BREAK_DEPTH_RATIO
+    ):
+        return BankOp.CHIP_BREAK_DRILL
+    return BankOp.DRILL
 
 
 def _needs_bore_instead_of_drill(
@@ -514,7 +802,13 @@ def map_feature_to_operations(
     *,
     facing_feature_ids: frozenset[str] = frozenset(),
 ) -> list[OpSpec]:
-    """Lookup-table mapping from feature(s) to internal OpSpec list."""
+    """Geometry-driven mapping from feature(s) to internal OpSpec list.
+
+    Every emitted OpSpec.operation is a value from the canonical bank
+    (operation_bank.Operation). Roughing/finishing op choice is 3D-vs-2.5D driven
+    (see _rough_operation / _wall_contour_operation); hole cycle (peck vs tap) is
+    carried by tool_type_needed, not the operation name.
+    """
     setup_id = context.setups[0].setup_id
 
     if isinstance(feature, PlannerFeature):
@@ -537,16 +831,18 @@ def map_feature_to_operations(
         max_diameter = max((f.diameter_mm or 0.0) for f in features)
         max_depth = max((f.depth_mm or 0.0) for f in features)
         tapped = any(f.is_tapped for f in features)
+        thread_milled = (not tapped) and any(f.is_threaded for f in features)
+        dia = max_diameter if max_diameter > 0 else None
+        depth = max_depth if max_depth > 0 else None
 
         drill_spec = OpSpec(
             feature_refs=refs,
             feature_type=feature_type,
             setup_id=setup_id,
-            operation_type="drill",
-            strategy="peck_drill",
+            operation=_drill_operation(depth, dia),
             tool_type_needed="drill",
-            diameter_mm=max_diameter if max_diameter > 0 else None,
-            depth_mm=max_depth if max_depth > 0 else None,
+            diameter_mm=dia,
+            depth_mm=depth,
             access=None,
         )
         if _needs_bore_instead_of_drill(drill_spec, context.tools, material=context.material):
@@ -555,11 +851,10 @@ def map_feature_to_operations(
                     feature_refs=refs,
                     feature_type=feature_type,
                     setup_id=setup_id,
-                    operation_type="bore",
-                    strategy="helical_bore",
+                    operation=BankOp.HELIX_BORE,
                     tool_type_needed="endmill",
-                    diameter_mm=max_diameter if max_diameter > 0 else None,
-                    depth_mm=max_depth if max_depth > 0 else None,
+                    diameter_mm=dia,
+                    depth_mm=depth,
                     access=None,
                 ),
             ]
@@ -567,16 +862,32 @@ def map_feature_to_operations(
             ops = [drill_spec]
 
         if tapped:
+            # Tapping is a drill-op cycle (per the bank); the tap tool distinguishes
+            # it from the pilot drill via tool_type_needed.
             ops.append(
                 OpSpec(
                     feature_refs=refs,
                     feature_type=feature_type,
                     setup_id=setup_id,
-                    operation_type="tap",
-                    strategy="rigid_tap",
+                    operation=BankOp.DRILL,
                     tool_type_needed="tap",
-                    diameter_mm=max_diameter if max_diameter > 0 else None,
-                    depth_mm=max_depth if max_depth > 0 else None,
+                    diameter_mm=dia,
+                    depth_mm=depth,
+                    access=None,
+                ),
+            )
+        elif thread_milled:
+            # Any non-tap threading is interpolated with a thread mill after the
+            # pilot drill/bore.
+            ops.append(
+                OpSpec(
+                    feature_refs=refs,
+                    feature_type=feature_type,
+                    setup_id=setup_id,
+                    operation=BankOp.THREAD_MILL,
+                    tool_type_needed="thread_mill",
+                    diameter_mm=dia,
+                    depth_mm=depth,
                     access=None,
                 ),
             )
@@ -591,8 +902,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="pocket_mill",
-                strategy=_rough_strategy(access),
+                operation=_rough_operation(primary, access),
                 tool_type_needed="endmill",
                 depth_mm=depth,
                 lateral_extent_mm=lateral,
@@ -603,8 +913,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="finish_contour",
-                strategy=_finish_strategy(access),
+                operation=_wall_contour_operation(primary),
                 tool_type_needed="endmill",
                 depth_mm=depth,
                 lateral_extent_mm=lateral,
@@ -619,8 +928,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="wall_finish",
-                strategy="finishing_wall",
+                operation=_wall_contour_operation(primary),
                 tool_type_needed="endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=primary.lateral_extent_mm,
@@ -636,8 +944,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="surface_finish",
-                strategy="finishing",
+                operation=BankOp.CONSTANT_SCALLOP,
                 tool_type_needed="ball_endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=lateral,
@@ -651,8 +958,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="fillet_finish",
-                strategy="finishing_fillet",
+                operation=BankOp.PENCIL,
                 tool_type_needed="endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=primary.lateral_extent_mm,
@@ -668,8 +974,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="adaptive_rough",
-                strategy="roughing",
+                operation=_rough_operation(primary, PocketAccess.OPEN),
                 tool_type_needed="endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=lateral,
@@ -680,8 +985,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="wall_finish",
-                strategy="finishing_wall",
+                operation=_wall_contour_operation(primary),
                 tool_type_needed="endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=lateral,
@@ -698,8 +1002,7 @@ def map_feature_to_operations(
                     feature_refs=[primary.feature_id],
                     feature_type=primary.feature_type,
                     setup_id=setup_id,
-                    operation_type="facing",
-                    strategy="facing",
+                    operation=BankOp.FACING,
                     tool_type_needed="face_mill",
                     depth_mm=primary.depth_mm,
                     lateral_extent_mm=lateral,
@@ -711,8 +1014,7 @@ def map_feature_to_operations(
                 feature_refs=[primary.feature_id],
                 feature_type=primary.feature_type,
                 setup_id=setup_id,
-                operation_type="floor_finish",
-                strategy="finishing_floor",
+                operation=BankOp.RASTER,
                 tool_type_needed="endmill",
                 depth_mm=primary.depth_mm,
                 lateral_extent_mm=lateral,
@@ -729,15 +1031,15 @@ def _uses_default_open_band(op_spec: OpSpec) -> bool:
         return False
     if (
         op_spec.fillet_radius_mm is not None
-        and op_spec.operation_type in ("wall_finish", "fillet_finish", "finish_contour")
+        and op_spec.operation in FILLET_CAP_FINISH_OPS
     ):
         return False
-    return op_spec.operation_type in OPEN_MILLING_OPERATION_TYPES
+    return op_spec.operation in OPEN_MILLING_OPS
 
 
 def _max_open_tool_diameter_mm(op_spec: OpSpec) -> float | None:
     """Upper bound on tool diameter for open milling ops."""
-    if op_spec.operation_type not in OPEN_MILLING_OPERATION_TYPES:
+    if op_spec.operation not in OPEN_MILLING_OPS:
         return None
 
     caps: list[float] = []
@@ -745,7 +1047,7 @@ def _max_open_tool_diameter_mm(op_spec: OpSpec) -> float | None:
         caps.append(op_spec.lateral_extent_mm)
     if (
         op_spec.fillet_radius_mm is not None
-        and op_spec.operation_type in ("wall_finish", "fillet_finish", "finish_contour")
+        and op_spec.operation in FILLET_CAP_FINISH_OPS
     ):
         caps.append(2.0 * op_spec.fillet_radius_mm)
 
@@ -756,7 +1058,7 @@ def _max_open_tool_diameter_mm(op_spec: OpSpec) -> float | None:
 
 def _tool_fits_op(tool: Tool, op_spec: OpSpec) -> bool:
     """True when ``tool`` can cut ``op_spec`` (depth reach + clearance when known)."""
-    if op_spec.tool_type_needed == "drill" or op_spec.operation_type == "drill":
+    if op_spec.tool_type_needed == "drill":
         if op_spec.diameter_mm is not None and tool.diameter_mm + 1e-6 < op_spec.diameter_mm:
             return False
         if op_spec.depth_mm is not None and tool.max_depth_mm is not None:
@@ -768,7 +1070,7 @@ def _tool_fits_op(tool: Tool, op_spec: OpSpec) -> bool:
         if op_spec.depth_mm is not None and tool.flute_length_mm is not None:
             if tool.flute_length_mm + 1e-6 < op_spec.depth_mm:
                 return False
-        if op_spec.operation_type == "bore" and op_spec.diameter_mm is not None:
+        if op_spec.operation == BankOp.HELIX_BORE and op_spec.diameter_mm is not None:
             if tool.diameter_mm > op_spec.diameter_mm + 1e-6:
                 return False
         max_dia = _max_open_tool_diameter_mm(op_spec)
@@ -781,9 +1083,9 @@ def _tool_fits_op(tool: Tool, op_spec: OpSpec) -> bool:
 
 def _tool_type_precedence(op_spec: OpSpec) -> tuple[str, ...]:
     """Return tool types to try in order for ``op_spec`` (fit before type preference)."""
-    if op_spec.operation_type == "surface_finish":
+    if op_spec.operation in _SURFACE_FINISH_ORDER_OPS:
         return _SURFACE_FINISH_TOOL_TYPES
-    if op_spec.strategy in _BULLNOSE_PREFERRED_STRATEGIES:
+    if op_spec.operation in _BULLNOSE_PREFERRED_OPS:
         return _FINISHING_TOOL_TYPES
     return (op_spec.tool_type_needed,)
 
@@ -952,7 +1254,7 @@ def _select_fitting_tool_id(
     material: str | None = None,
 ) -> str | None:
     """Pick a fitting tool of ``tool_type`` using bounded vs open sizing rules."""
-    if op_spec.operation_type == "facing" and tool_type == "face_mill":
+    if op_spec.operation == BankOp.FACING and tool_type == "face_mill":
         return _select_facing_tool_id(op_spec, tools, material=material)
 
     candidates = [t for t in tools if t.tool_type == tool_type]
@@ -963,7 +1265,7 @@ def _select_fitting_tool_id(
     if not fitting:
         return None
 
-    if op_spec.operation_type == "bore" or op_spec.strategy == "helical_bore":
+    if op_spec.operation == BankOp.HELIX_BORE:
         in_range = [
             tool
             for tool in fitting
@@ -975,14 +1277,11 @@ def _select_fitting_tool_id(
             key=lambda item: _open_tool_sort_key(item, material),
         ).tool_id
 
-    if (
-        op_spec.tool_type_needed == "drill"
-        or op_spec.operation_type in ("drill", "tap")
-    ):
+    if op_spec.tool_type_needed in ("drill", "tap"):
         fitting.sort(key=lambda t: (_tool_material_rank(t, material), t.diameter_mm))
         return fitting[0].tool_id
 
-    if op_spec.operation_type in OPEN_MILLING_OPERATION_TYPES:
+    if op_spec.operation in OPEN_MILLING_OPS:
         chosen = _select_largest_open_tool(fitting, op_spec, material=material)
         return chosen.tool_id if chosen is not None else None
 
@@ -1040,8 +1339,20 @@ def _apply_tool_selection(
             )
 
 
-def _batch_key(op: OpSpec) -> tuple[str, str, str]:
-    return (op.tool_id, op.operation_type, op.setup_id)
+def _batch_role(op: OpSpec) -> str:
+    """Sub-role that keeps distinct finishes from over-merging under the flat vocab.
+
+    contour_2d/waterline serve both a wall/profile role and a pocket-floor role; before
+    the operation_type/strategy collapse these were separate ops with different feeds,
+    so keep them in separate batches (avoids a wall+floor merge with mismatched params).
+    """
+    if op.operation in (BankOp.CONTOUR_2D, BankOp.WATERLINE):
+        return "wall" if op.feature_type in (WALL_CLASSES | PROFILE_CLASSES) else "floor"
+    return ""
+
+
+def _batch_key(op: OpSpec) -> tuple[str, str, str, str]:
+    return (op.tool_id, op.operation, op.setup_id, _batch_role(op))
 
 
 def _batch_probe_op(members: Sequence[OpSpec]) -> OpSpec:
@@ -1052,17 +1363,17 @@ def _batch_probe_op(members: Sequence[OpSpec]) -> OpSpec:
         member.lateral_extent_mm
         for member in members
         if member.lateral_extent_mm is not None
-        and member.operation_type in OPEN_MILLING_OPERATION_TYPES
+        and member.operation in OPEN_MILLING_OPS
     ]
     fillet_radii = [
         member.fillet_radius_mm
         for member in members
         if member.fillet_radius_mm is not None
-        and member.operation_type in ("wall_finish", "fillet_finish", "finish_contour")
+        and member.operation in FILLET_CAP_FINISH_OPS
     ]
     return OpSpec(
         tool_type_needed=primary.tool_type_needed,
-        operation_type=primary.operation_type,
+        operation=primary.operation,
         depth_mm=max(depths) if depths else None,
         lateral_extent_mm=min(lateral_caps) if lateral_caps else None,
         fillet_radius_mm=min(fillet_radii) if fillet_radii else None,
@@ -1102,9 +1413,9 @@ def _merge_member_group(members: Sequence[OpSpec], tool: Tool | None) -> OpSpec:
     access = primary.access if len(accesses) <= 1 else None
 
     label = (
-        f"{tool.tool_id}/{primary.operation_type}"
+        f"{tool.tool_id}/{primary.operation}"
         if tool is not None
-        else f"{primary.tool_id}/{primary.operation_type}"
+        else f"{primary.tool_id}/{primary.operation}"
     )
     if primary.parameters is not None:
         for member in members[1:]:
@@ -1117,20 +1428,19 @@ def _merge_member_group(members: Sequence[OpSpec], tool: Tool | None) -> OpSpec:
         member.lateral_extent_mm
         for member in members
         if member.lateral_extent_mm is not None
-        and member.operation_type in OPEN_MILLING_OPERATION_TYPES
+        and member.operation in OPEN_MILLING_OPS
     ]
     fillet_radii = [
         member.fillet_radius_mm
         for member in members
         if member.fillet_radius_mm is not None
-        and member.operation_type in ("wall_finish", "fillet_finish", "finish_contour")
+        and member.operation in FILLET_CAP_FINISH_OPS
     ]
     return OpSpec(
         feature_refs=merged_refs,
         feature_type=feature_type,
         setup_id=primary.setup_id,
-        operation_type=primary.operation_type,
-        strategy=primary.strategy,
+        operation=primary.operation,
         tool_id=primary.tool_id,
         tool_type_needed=primary.tool_type_needed,
         lateral_extent_mm=min(lateral_caps) if lateral_caps else primary.lateral_extent_mm,
@@ -1146,14 +1456,14 @@ def group_operations_by_tool_strategy(
     tools: Sequence[Tool],
     context: MachiningContext | None = None,
 ) -> tuple[list[OpSpec], int]:
-    """Collapse ops sharing (tool_id, operation_type, setup_id); split on reachability."""
+    """Collapse ops sharing (tool_id, operation, setup_id); split on reachability."""
     tool_lookup = _tool_by_id(tools)
     pending = list(op_specs)
     grouped: list[OpSpec] = []
     split_count = 0
 
     while pending:
-        buckets: dict[tuple[str, str, str], list[OpSpec]] = {}
+        buckets: dict[tuple[str, str, str, str], list[OpSpec]] = {}
         for op in pending:
             buckets.setdefault(_batch_key(op), []).append(op)
         pending = []
@@ -1184,8 +1494,7 @@ def group_operations_by_tool_strategy(
 
     grouped.sort(
         key=lambda op: (
-            op.strategy,
-            op.operation_type,
+            op.operation,
             op.tool_id,
             int(op.feature_refs[0]) if op.feature_refs else 0,
         )
@@ -1252,37 +1561,24 @@ def build_precedence(op_specs: Sequence[OpSpec]) -> dict[str, list[str]]:
         return tuple(sorted(op.feature_refs))
 
     for op in op_specs:
-        if op.operation_type == "tap":
+        # A thread op (tapping with a tap tool, or thread milling) follows the
+        # pilot hole-making op (drill/chip-break or helix bore) on the same refs.
+        if op.tool_type_needed == "tap" or op.operation == BankOp.THREAD_MILL:
             for other in op_specs:
+                pilot = other.tool_type_needed == "drill" or other.operation == BankOp.HELIX_BORE
                 if (
-                    other.operation_type == "drill"
+                    pilot
                     and refs_key(other) == refs_key(op)
                     and other.op_id != op.op_id
                 ):
                     precedence[op.op_id].append(other.op_id)
 
-        if op.operation_type in FINISH_OPERATION_TYPES:
+        # Every finish op follows any roughing op that overlaps its features.
+        # (Subsumes the former finish_contour<-pocket_mill and wall_finish<-rough rules.)
+        if op.operation in FINISH_OPS:
             for other in op_specs:
                 if (
-                    other.operation_type in ROUGH_OPERATION_TYPES
-                    and _refs_overlap(other.feature_refs, op.feature_refs)
-                    and other.op_id != op.op_id
-                ):
-                    precedence[op.op_id].append(other.op_id)
-
-        if op.operation_type == "finish_contour":
-            for other in op_specs:
-                if (
-                    other.operation_type == "pocket_mill"
-                    and _refs_overlap(other.feature_refs, op.feature_refs)
-                    and other.op_id != op.op_id
-                ):
-                    precedence[op.op_id].append(other.op_id)
-
-        if op.operation_type == "wall_finish":
-            for other in op_specs:
-                if (
-                    other.operation_type in ("adaptive_rough", "pocket_mill")
+                    other.operation in ROUGH_OPS
                     and _refs_overlap(other.feature_refs, op.feature_refs)
                     and other.op_id != op.op_id
                 ):
@@ -1302,9 +1598,28 @@ def build_precedence(op_specs: Sequence[OpSpec]) -> dict[str, list[str]]:
 
 
 def _operation_phase(op: OpSpec) -> int:
-    if op.operation_type in ROUGH_OPERATION_TYPES or op.strategy == "roughing":
+    return 0 if op.operation in ROUGH_OPS else 1
+
+
+def _finish_order(op: OpSpec) -> int:
+    """Finish-phase tie-break rank: floor -> wall -> surface -> fillet -> hole."""
+    o = op.operation
+    if o == BankOp.RASTER:
         return 0
-    return 1
+    if o in (BankOp.CONTOUR_2D, BankOp.WATERLINE):
+        # pocket/floor contour finish before wall/profile contour finish
+        return 1 if op.feature_type in (WALL_CLASSES | PROFILE_CLASSES) else 0
+    if o in _SURFACE_FINISH_ORDER_OPS:
+        return 2
+    if o == BankOp.PENCIL:
+        return 3
+    if o == BankOp.THREAD_MILL:
+        return 7
+    if op.tool_type_needed == "tap":
+        return 6
+    if o in (BankOp.DRILL, BankOp.CHIP_BREAK_DRILL):
+        return 5
+    return 99
 
 
 def _sequence_tie_break_key(op: OpSpec, tool_lookup: Mapping[str, Tool]) -> tuple[Any, ...]:
@@ -1312,9 +1627,9 @@ def _sequence_tie_break_key(op: OpSpec, tool_lookup: Mapping[str, Tool]) -> tupl
     diameter = tool.diameter_mm if tool is not None else 0.0
     phase = _operation_phase(op)
     if phase == 0:
-        return (phase, -diameter, op.strategy, op.tool_id, op.operation_type)
-    finish_rank = FINISH_STRATEGY_ORDER.get(op.strategy, 99)
-    return (phase, finish_rank, -diameter, op.strategy, op.tool_id, op.operation_type)
+        return (phase, -diameter, str(op.operation), op.tool_id)
+    finish_rank = _finish_order(op)
+    return (phase, finish_rank, -diameter, str(op.operation), op.tool_id)
 
 
 def sequence(
@@ -1400,7 +1715,7 @@ def _find_cycle_nodes(
 
 def _handbook_parameters(op_spec: OpSpec, diameter: float) -> MachiningParameters:
     """Conservative handbook-ish defaults keyed by tool type + diameter."""
-    if op_spec.tool_type_needed == "drill" or op_spec.operation_type == "drill":
+    if op_spec.tool_type_needed == "drill":
         rpm = max(800.0, 12000.0 / max(diameter, 0.5))
         feed = diameter * 60.0
         plunge = feed * 0.5
@@ -1414,7 +1729,7 @@ def _handbook_parameters(op_spec: OpSpec, diameter: float) -> MachiningParameter
             param_source="handbook_default",
         )
 
-    if op_spec.operation_type == "tap":
+    if op_spec.tool_type_needed == "tap":
         rpm = max(200.0, 3000.0 / max(diameter, 0.5))
         feed = diameter * 20.0
         return MachiningParameters(
@@ -1427,7 +1742,9 @@ def _handbook_parameters(op_spec: OpSpec, diameter: float) -> MachiningParameter
             param_source="handbook_default",
         )
 
-    if op_spec.operation_type == "finish_contour":
+    if op_spec.operation in (BankOp.CONTOUR_2D, BankOp.WATERLINE) and (
+        op_spec.feature_type in POCKET_CLASSES
+    ):
         rpm = max(6000.0, 24000.0 / max(diameter, 0.5))
         stepover = round(diameter * 0.15, 3)
         return MachiningParameters(
@@ -1515,66 +1832,71 @@ def _preset_name_material_rank(preset_name: str, work_material: str | None) -> i
 def _strategy_match_rank(preset_name: str, op_spec: OpSpec) -> int:
     """Rank preset name affinity to the operation (lower is better).
 
-    Simple substring heuristics on Fusion preset names, e.g. ``*_Drill`` for holes,
-    ``*_Rough`` / ``Adaptive`` for pocket roughing, ``*_Finish`` for finishing.
+    Substring heuristics on Fusion preset names, keyed by the canonical bank op
+    plus tool_type and source feature class (contour_2d/waterline serve both a
+    pocket-floor and a wall role, distinguished by feature_type).
     """
     name = preset_name.lower()
-    op = op_spec.operation_type
+    op = op_spec.operation
     tool_type = op_spec.tool_type_needed
 
-    if tool_type == "drill" or op == "drill":
-        if "drill" in name:
+    if tool_type == "drill":
+        return 0 if "drill" in name else 2
+
+    if tool_type == "tap":
+        return 0 if "tap" in name else 2
+
+    if op == BankOp.THREAD_MILL:
+        return 0 if "thread" in name else 2
+
+    if op == BankOp.HELIX_BORE:
+        if "bore" in name or "adaptive" in name or "rough" in name:
             return 0
         return 2
 
-    if tool_type == "tap" or op == "tap":
-        if "tap" in name:
-            return 0
-        return 2
-
-    if op == "finish_contour" or op == "floor_finish":
-        if op_spec.strategy == "finishing_floor" and "floor" in name:
-            return 0
-        if op == "floor_finish" and "floor" in name:
-            return 0
-        finish_tokens = ("finish", "floor", "wall", "contour", "surface")
-        if any(token in name for token in finish_tokens):
-            return 1
-        if "rough" in name or "adaptive" in name:
-            return 2
-        return 2
-
-    if op == "wall_finish" or op_spec.strategy == "finishing_wall":
-        if "wall" in name:
-            return 0
-        if "finish" in name:
-            return 1
-        return 2
-
-    if op == "surface_finish" or op_spec.strategy == "finishing":
-        if "surface" in name:
-            return 0
-        if "finish" in name:
-            return 1
-        return 2
-
-    if op == "fillet_finish" or op_spec.strategy == "finishing_fillet":
-        if "surface" in name or "fillet" in name:
-            return 0
-        return 2
-
-    if op == "facing" or op_spec.strategy == "facing":
+    if op == BankOp.FACING:
         if "face" in name and "rough" in name:
             return 0
         if "face" in name:
             return 1
         return 2
 
-    if op == "bore" or op_spec.strategy == "helical_bore":
-        if "bore" in name or "adaptive" in name or "rough" in name:
+    if op in _SURFACE_FINISH_ORDER_OPS:  # freeform ball finish (constant_scallop, ...)
+        if "surface" in name:
+            return 0
+        if "finish" in name:
+            return 1
+        return 2
+
+    if op == BankOp.PENCIL:  # fillet finish
+        if "surface" in name or "fillet" in name:
             return 0
         return 2
 
+    if op in (BankOp.CONTOUR_2D, BankOp.WATERLINE):
+        if op_spec.feature_type in (WALL_CLASSES | PROFILE_CLASSES):  # wall contour
+            if "wall" in name:
+                return 0
+            if "finish" in name:
+                return 1
+            return 2
+        # pocket-floor contour finish
+        if "floor" in name:
+            return 0
+        finish_tokens = ("finish", "floor", "wall", "contour", "surface")
+        if any(token in name for token in finish_tokens):
+            return 1
+        return 2
+
+    if op == BankOp.RASTER:  # flat floor finish
+        if "floor" in name:
+            return 0
+        finish_tokens = ("finish", "floor", "wall", "contour", "surface")
+        if any(token in name for token in finish_tokens):
+            return 1
+        return 2
+
+    # roughing default (pocket, dynamic_mill_2d, optirough, area_roughing, rest_roughing)
     if "rough" in name or "adaptive" in name or "traditional" in name:
         return 0
     if "finish" in name or "floor" in name or "wall" in name:
@@ -1663,7 +1985,7 @@ def assign_parameters(
     preset_fields: set[str] = set()
     handbook_fields: set[str] = set()
 
-    if op_spec.tool_type_needed == "drill" or op_spec.operation_type == "drill":
+    if op_spec.tool_type_needed == "drill":
         rpm = _pick_float(
             "spindle_rpm",
             preset.spindle_rpm if preset else None,
@@ -1705,7 +2027,7 @@ def assign_parameters(
             param_source=_param_source_from_fields(preset_fields, handbook_fields),
         )
 
-    if op_spec.operation_type == "tap":
+    if op_spec.tool_type_needed == "tap":
         rpm = _pick_float(
             "spindle_rpm",
             preset.spindle_rpm if preset else None,
@@ -1849,11 +2171,15 @@ def _plan_one_setup(
 
     all_features = [cascade_node_to_feature(node) for node in nodes]
     features, dropped = filter_planner_features(all_features)
+    nodes_by_id = {str(node["feature_id"]): node for node in nodes}
     envelope_faces = _resolve_envelope_stock_faces(graph, context)
     features, scope_dropped, scope_info = filter_features_for_setup(
         features,
         context,
         envelope_faces=envelope_faces,
+        nodes_by_id=nodes_by_id,
+        graph=graph,
+        use_reachability=True,
     )
     setup_id = context.setups[0].setup_id
     facing_feature_ids = identify_facing_feature_ids(
@@ -1917,26 +2243,24 @@ def _plan_one_setup(
     for op in grouped_ops:
         op.depends_on = list(precedence.get(op.op_id, []))
 
-    ordered = sequence(grouped_ops, precedence, tool_lookup=tool_lookup)
-
     param_source_counts: dict[str, int] = {
         "toolpath_preset": 0,
         "handbook_default": 0,
         "mixed": 0,
     }
 
-    for op in ordered:
+    for op in grouped_ops:
         source = (op.parameters or MachiningParameters(param_source="handbook_default")).param_source
         param_source_counts[source] = param_source_counts.get(source, 0) + 1
 
     wrong_material_ops = 0
     if context.material is not None:
-        for op in ordered:
+        for op in grouped_ops:
             tool = tool_lookup.get(op.tool_id)
             if tool is not None and _tool_material_rank(tool, context.material) >= 2:
                 wrong_material_ops += 1
 
-    used_tool_ids = {op.tool_id for op in ordered}
+    used_tool_ids = {op.tool_id for op in grouped_ops}
     plan_tools: list[ToolRef] = []
     for tool in context.tools:
         if tool.tool_id in used_tool_ids:
@@ -1948,6 +2272,8 @@ def _plan_one_setup(
     setup = Setup(
         setup_id=setup_ctx.setup_id,
         opening_axis=setup_ctx.opening_axis,
+        orientation=getattr(setup_ctx, "orientation", None),
+        orientation_provisional=bool(getattr(setup_ctx, "orientation_provisional", False)),
         fixture=setup_ctx.fixture,
         notes=None,
     )
@@ -1962,9 +2288,9 @@ def _plan_one_setup(
         "facing_feature_ids": sorted(facing_feature_ids),
         "operations_before_grouping": ops_before_grouping,
         "reachability_splits": reachability_splits,
-        "operations_out": len(ordered),
+        "operations_out": len(grouped_ops),
         "tools_used": len(used_tool_ids - {UNRESOLVED_TOOL_ID}),
-        "unresolved_ops": sum(1 for op in ordered if op.tool_id == UNRESOLVED_TOOL_ID),
+        "unresolved_ops": sum(1 for op in grouped_ops if op.tool_id == UNRESOLVED_TOOL_ID),
         "params_toolpath_preset": param_source_counts.get("toolpath_preset", 0),
         "params_handbook_default": param_source_counts.get("handbook_default", 0),
         "params_mixed": param_source_counts.get("mixed", 0),
@@ -1974,7 +2300,8 @@ def _plan_one_setup(
 
     return _SetupPlanSlice(
         setup=setup,
-        ordered=ordered,
+        grouped_ops=grouped_ops,
+        precedence=precedence,
         plan_tools=plan_tools,
         stats=stats,
         feature_graph_ref=context.feature_graph_ref,
@@ -2029,6 +2356,71 @@ def _merge_tool_catalog(slices: Sequence[_SetupPlanSlice]) -> list[ToolRef]:
     return merged
 
 
+def _setup_approach_map(setups: Sequence[Setup]) -> dict[str, str]:
+    """Map setup_id -> the discrete approach direction the scorer penalizes changes
+    between. Prefers a setup's general cardinal ``orientation`` (lateral path) when
+    present, falling back to the calibrated ``opening_axis`` label. This is what
+    makes consecutive ops in setups of different orientations incur an
+    approach-change cost (see score_sequence)."""
+    return {
+        setup.setup_id: (getattr(setup, "orientation", None) or setup.opening_axis)
+        for setup in setups
+    }
+
+
+def _run_sequence_search(
+    ops: Sequence[OpSpec],
+    precedence: Mapping[str, Sequence[str]],
+    *,
+    seq_search: SeqSearchStrategy,
+    beam_width: int,
+    tool_lookup: Mapping[str, Tool],
+    setup_approach: Mapping[str, str] | None = None,
+) -> tuple[list[OpSpec], dict[str, Any]]:
+    result = search_sequence(
+        ops,
+        precedence,
+        strategy=seq_search,
+        beam_width=beam_width,
+        setup_approach=setup_approach,
+        tie_break_key=lambda op: _sequence_tie_break_key(op, tool_lookup),
+        topo_sort_fn=sequence,
+        tool_lookup=tool_lookup,
+    )
+    metadata = {
+        "strategy": result.strategy,
+        **result.score.as_metadata(),
+    }
+    return list(result.ordered), metadata
+
+
+def _merge_for_cross_setup_boundary(
+    slices: Sequence[_SetupPlanSlice],
+    *,
+    tool_lookup: Mapping[str, Tool],
+) -> list[OpSpec]:
+    """Concatenate per-setup topo orders so fixture boundary ops stay at setup tails."""
+    merged: list[OpSpec] = []
+    for slice_ in slices:
+        per_setup_ordered = sequence(
+            slice_.grouped_ops,
+            slice_.precedence,
+            tool_lookup=tool_lookup,
+        )
+        merged.extend(per_setup_ordered)
+    return merged
+
+
+def _merge_tool_lookup_from_inputs(
+    setup_inputs: Sequence[SetupPlanInput],
+) -> dict[str, Tool]:
+    merged: dict[str, Tool] = {}
+    for item in setup_inputs:
+        for tool in item.context.tools:
+            merged[tool.tool_id] = tool
+    return merged
+
+
 def _slice_to_operations(ordered: Sequence[OpSpec]) -> list[Operation]:
     return [
         Operation(
@@ -2037,8 +2429,7 @@ def _slice_to_operations(ordered: Sequence[OpSpec]) -> list[Operation]:
             feature_refs=op.feature_refs,
             feature_type=op.feature_type,
             setup_id=op.setup_id,
-            operation_type=op.operation_type,
-            strategy=op.strategy,
+            operation=str(op.operation),
             tool_id=op.tool_id,
             parameters=op.parameters or MachiningParameters(param_source="handbook_default"),
             depends_on=op.depends_on,
@@ -2079,6 +2470,8 @@ def plan_multi_setups(
     *,
     setup_order: Sequence[str],
     source_part: str,
+    seq_search: SeqSearchStrategy = "beam",
+    seq_beam_width: int = 5,
 ) -> CamPlan:
     """Plan multiple setup slices and merge into one CamPlan.
 
@@ -2101,14 +2494,26 @@ def plan_multi_setups(
         raise ValueError(f"setup_order references unknown setup_id(s): {missing}")
 
     ordered_slices = [by_setup_id[sid] for sid in setup_order]
-    merged_ops: list[OpSpec] = []
-    for slice_ in ordered_slices:
-        merged_ops.extend(slice_.ordered)
+    tool_lookup = _merge_tool_lookup_from_inputs(setup_inputs)
+    merged_ops = _merge_for_cross_setup_boundary(ordered_slices, tool_lookup=tool_lookup)
     _reassign_global_op_ids(merged_ops)
     _apply_cross_setup_precedence(merged_ops, setup_order)
 
+    precedence = {op.op_id: list(op.depends_on) for op in merged_ops}
     setups = [slice_.setup for slice_ in ordered_slices]
-    operations = _slice_to_operations(merged_ops)
+    setup_approach = _setup_approach_map(setups)
+    ordered, sequence_score = _run_sequence_search(
+        merged_ops,
+        precedence,
+        seq_search=seq_search,
+        beam_width=seq_beam_width,
+        tool_lookup=tool_lookup,
+        setup_approach=setup_approach,
+    )
+    for op in ordered:
+        op.depends_on = list(precedence.get(op.op_id, []))
+
+    operations = _slice_to_operations(ordered)
     plan_tools = _merge_tool_catalog(ordered_slices)
 
     primary_ref = ordered_slices[0].feature_graph_ref
@@ -2129,19 +2534,38 @@ def plan_multi_setups(
             "setup_order": list(setup_order),
             "feature_graph_refs": graph_refs,
             "planner_stats": _aggregate_setup_stats(ordered_slices),
+            "sequence_score": sequence_score,
         },
     )
     CamPlan.model_validate(cam_plan.model_dump())
     return cam_plan
 
 
-def plan(feature_graph_path: str | Path, context: MachiningContext) -> CamPlan:
+def plan(
+    feature_graph_path: str | Path,
+    context: MachiningContext,
+    *,
+    seq_search: SeqSearchStrategy = "beam",
+    seq_beam_width: int = 5,
+) -> CamPlan:
     """Orchestrate adapter -> ops -> sequence -> CamPlan (single setup)."""
     if len(context.setups) != 1:
         raise ValueError("v0 planner supports exactly one setup")
 
     slice_ = _plan_one_setup(feature_graph_path, context)
-    operations = _slice_to_operations(slice_.ordered)
+    tool_lookup = _tool_by_id(context.tools)
+    setup_approach = _setup_approach_map([slice_.setup])
+    ordered, sequence_score = _run_sequence_search(
+        slice_.grouped_ops,
+        slice_.precedence,
+        seq_search=seq_search,
+        beam_width=seq_beam_width,
+        tool_lookup=tool_lookup,
+        setup_approach=setup_approach,
+    )
+    for op in ordered:
+        op.depends_on = list(slice_.precedence.get(op.op_id, []))
+    operations = _slice_to_operations(ordered)
 
     cam_plan = CamPlan(
         source_part=context.part_id,
@@ -2154,6 +2578,7 @@ def plan(feature_graph_path: str | Path, context: MachiningContext) -> CamPlan:
             "generator": "planner.plan",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "planner_stats": slice_.stats,
+            "sequence_score": sequence_score,
         },
     )
 
@@ -2213,33 +2638,107 @@ if __name__ == "__main__":
         default="supabase",
         help="Tool catalog source (default: supabase).",
     )
+    parser.add_argument(
+        "--setups",
+        choices=("authored", "generated"),
+        default="generated",
+        help="Setup descriptor source: hand-authored YAML or cascade-generated (default: generated).",
+    )
+    parser.add_argument(
+        "--setup-yaml",
+        type=Path,
+        default=REPO_ROOT / "eval" / "gt" / "96260B_setup.yaml",
+        help="Hand-authored setup descriptor YAML (used when --setups=authored).",
+    )
+    parser.add_argument(
+        "--generated-setup-yaml",
+        type=Path,
+        default=None,
+        help="Generated setup descriptor YAML (optional override for --setups=generated).",
+    )
+    parser.add_argument(
+        "--scope-diff",
+        action="store_true",
+        default=True,
+        help="Print class-scope vs reachability assignment diff before planning (default: on).",
+    )
+    parser.add_argument(
+        "--no-scope-diff",
+        action="store_false",
+        dest="scope_diff",
+        help="Skip scope assignment diff output.",
+    )
+    parser.add_argument(
+        "--seq-search",
+        choices=("none", "greedy", "beam"),
+        default="beam",
+        help="Operation sequencing strategy (default: beam).",
+    )
+    parser.add_argument(
+        "--seq-beam-width",
+        type=int,
+        default=5,
+        help="Beam width for --seq-search beam (default: 5).",
+    )
     args = parser.parse_args()
 
     from machining_context import build_context_v0
 
-    setup_yaml = REPO_ROOT / "eval" / "gt" / "96260B_setup.yaml"
+    ctx_kwargs = {
+        "material": args.material,
+        "tool_source": args.tool_source,
+        "setups_source": args.setups,
+        "generated_descriptor_path": args.generated_setup_yaml,
+    }
 
     if args.multi_setup:
         rear_graph = REPO_ROOT / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
         front_graph = REPO_ROOT / "pipeline_out" / "96260B_front" / "feature_graph_cascade.json"
         rear_step = REPO_ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy"
         front_step = REPO_ROOT / "96260B_FRONT_XR004_PCD PLATE.stp copy"
+
+        print("\n=== setups used ===")
+        print(f"  source: {args.setups}")
+        if args.setups == "authored":
+            print(f"  path:   {args.setup_yaml}")
+        else:
+            gen_path = args.generated_setup_yaml or (
+                REPO_ROOT / "pipeline_out" / "96260B" / "setup_descriptor.yaml"
+            )
+            print(f"  path:   {gen_path}")
+
         rear_ctx = build_context_v0(
             rear_step,
-            setup_yaml,
+            args.setup_yaml,
             rear_graph,
             setup_id="rear",
-            material=args.material,
-            tool_source=args.tool_source,
+            **ctx_kwargs,
         )
         front_ctx = build_context_v0(
             front_step,
-            setup_yaml,
+            args.setup_yaml,
             front_graph,
             setup_id="front",
-            material=args.material,
-            tool_source=args.tool_source,
+            **ctx_kwargs,
         )
+
+        if args.scope_diff:
+            for graph_path, ctx in ((rear_graph, rear_ctx), (front_graph, front_ctx)):
+                graph = load_feature_graph(graph_path)
+                nodes = graph.get("nodes", [])
+                all_features = [cascade_node_to_feature(n) for n in nodes]
+                features, _ = filter_planner_features(all_features)
+                nodes_by_id = {str(n["feature_id"]): n for n in nodes}
+                envelope_faces = _resolve_envelope_stock_faces(graph, ctx)
+                print_scope_assignment_diff(
+                    setup_id=ctx.setups[0].setup_id,
+                    features=features,
+                    context=ctx,
+                    nodes_by_id=nodes_by_id,
+                    graph=graph,
+                    envelope_faces=envelope_faces,
+                )
+
         cam_plan = plan_multi_setups(
             [
                 SetupPlanInput(rear_graph, rear_ctx),
@@ -2247,6 +2746,8 @@ if __name__ == "__main__":
             ],
             setup_order=("rear", "front"),
             source_part="96260B",
+            seq_search=args.seq_search,
+            seq_beam_width=args.seq_beam_width,
         )
     else:
         feature_graph = args.feature_graph or (
@@ -2254,13 +2755,32 @@ if __name__ == "__main__":
         )
         ctx = build_context_v0(
             REPO_ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy",
-            setup_yaml,
+            args.setup_yaml,
             feature_graph,
             setup_id="rear",
-            material=args.material,
-            tool_source=args.tool_source,
+            **ctx_kwargs,
         )
-        cam_plan = plan(feature_graph, ctx)
+        if args.scope_diff:
+            graph = load_feature_graph(feature_graph)
+            nodes = graph.get("nodes", [])
+            all_features = [cascade_node_to_feature(n) for n in nodes]
+            features, _ = filter_planner_features(all_features)
+            nodes_by_id = {str(n["feature_id"]): n for n in nodes}
+            envelope_faces = _resolve_envelope_stock_faces(graph, ctx)
+            print_scope_assignment_diff(
+                setup_id=ctx.setups[0].setup_id,
+                features=features,
+                context=ctx,
+                nodes_by_id=nodes_by_id,
+                graph=graph,
+                envelope_faces=envelope_faces,
+            )
+        cam_plan = plan(
+            feature_graph,
+            ctx,
+            seq_search=args.seq_search,
+            seq_beam_width=args.seq_beam_width,
+        )
     write_cam_plan(args.out, cam_plan)
     print(f"Wrote {args.out}")
     _print_summary(cam_plan)

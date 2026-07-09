@@ -18,8 +18,10 @@ except ImportError:
 
 from stock_cut_classification import (  # noqa: E402
     CLASSIFICATION_FIXTURES,
+    classify_report,
     format_flip_report,
     run_fixture_diff,
+    stock_face_ids,
 )
 
 
@@ -41,33 +43,34 @@ class StockCutClassificationFixtureTest(unittest.TestCase):
                 "missing fixture STEP files: " + ", ".join(missing)
             )
 
-    def test_fish_mold_expects_chamfer_flips(self):
-        """fish_mold: convexity-primary should flip corner chamfers CUT->STOCK."""
-        diff = run_fixture_diff("fish_mold", repo_root=ROOT)
-        corner_ids = set(CLASSIFICATION_FIXTURES["fish_mold"]["corner_chamfer_face_ids"])
+    def test_fish_mold_stock_gate_disabled(self):
+        """fish_mold is a fully-machined mold: the STOCK gate is disabled, so no
+        face is gated and the envelope-extreme planes (114, 99) plus the corner
+        chamfers all stay CUT candidates for the cascade."""
+        step = _fixture_step("fish_mold")
+        recs = classify_report(step, classifier="new")
+        stock = {r.face_id for r in recs if r.label == "STOCK"}
+        self.assertEqual(
+            stock,
+            set(),
+            f"expected no STOCK faces for fish_mold; got {sorted(stock)}",
+        )
+        self.assertEqual(stock_face_ids(step, classifier="new"), set())
 
-        self.assertGreater(
+        # Faces previously gated as envelope stock are now CUT candidates.
+        corner_ids = set(CLASSIFICATION_FIXTURES["fish_mold"]["corner_chamfer_face_ids"])
+        for fid in {114, 99} | corner_ids:
+            self.assertNotIn(fid, stock)
+
+        # With the gate off, old vs new collapse to the same all-CUT partition.
+        diff = run_fixture_diff("fish_mold", repo_root=ROOT)
+        self.assertEqual(diff.new_stock_count, 0, diff.summary_line())
+        self.assertEqual(
             diff.n_flipped,
             0,
-            "expected non-empty flip set for fish_mold convexity-primary change",
-        )
-        self.assertEqual(diff.old_bounding_stock_count, 6, diff.summary_line())
-        self.assertEqual(diff.new_bounding_stock_count, 10, diff.summary_line())
-
-        corner_flips = [
-            f for f in diff.flips
-            if f["face_id"] in corner_ids
-            and f["old_label"] == "CUT"
-            and f["new_label"] == "STOCK"
-        ]
-        self.assertEqual(
-            len(corner_flips),
-            len(corner_ids),
-            "expected all corner chamfer faces to flip CUT->STOCK:\n"
+            "gate-disabled fish_mold should have no old/new flips:\n"
             + format_flip_report(diff),
         )
-        for flip in corner_flips:
-            self.assertIn("chamfer", flip["reason"].lower())
 
     def test_96260B_front_stable(self):
         """
