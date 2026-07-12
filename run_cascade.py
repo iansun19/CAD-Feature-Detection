@@ -23,10 +23,11 @@ Toolpath outer_fillet is claimed later from hole-deferred opening-tier fillets.
 This module does NOT couple the passes. Each pass is independent; the cascade
 only threads one pass's `remaining_faces` into the next as its candidate pool.
 
-Run:
+Run (omit --graph-npz to ingest the face graph from the STEP, which is always
+correct for whatever part is passed; only pass --graph-npz for THIS part's own
+cached graph):
   /Users/iansun19/miniconda3/envs/mlcad/bin/python run_cascade.py \
-      "96260B_REAR_XR004_PCD PLATE.stp copy" \
-      --graph-npz pipeline_out/96260B_plate/graph.npz -v
+      "96260B_REAR_XR004_PCD PLATE.stp copy" -v
 """
 from __future__ import annotations
 
@@ -257,7 +258,10 @@ from residual_detection import (
 logger = logging.getLogger("run_cascade")
 
 DEFAULT_STEP = "96260B_REAR_XR004_PCD PLATE.stp copy"
-DEFAULT_GRAPH_NPZ = "pipeline_out/96260B_plate/graph.npz"
+# No default graph.npz: a per-part input must NOT default to one specific part's
+# cached graph (that silently fed the rear/plate graph to the front part). When
+# --graph-npz is omitted, _load_edges ingests the face graph from the STEP, which
+# is always correct for whatever part is passed.
 
 REFERENCE_HOLES = [
     ExpectedHole("blind_hole", 4.006, units="inch", tol=0.75),
@@ -343,6 +347,21 @@ def run_cascade(
     faces = analyze_step(step_path)
     occ_faces = load_step_faces(step_path)
     n_faces = len(faces)
+
+    # Guard: the edge graph MUST describe this exact part. A face-count mismatch
+    # means the wrong graph.npz was loaded for this STEP (see _load_edges). This
+    # is not paranoia: 348-vs-299 crashing downstream in the pocket pass was luck.
+    # A mismatch that happened to be COMPATIBLE (indices in range) would corrupt
+    # adjacency silently and yield a plausible-but-wrong plan with no crash. Fail
+    # loudly here, naming both counts, before any pass consumes the bad graph.
+    edge_nodes = int(edge_index.max()) + 1 if np.asarray(edge_index).size else 0
+    if edge_nodes != n_faces:
+        raise ValueError(
+            f"edge graph has {edge_nodes} node(s) but STEP {step_path} has "
+            f"{n_faces} face(s): the face graph does not match this part "
+            f"(wrong --graph-npz?). Pass the part's own graph or omit --graph-npz "
+            f"to ingest from the STEP."
+        )
 
     # No pre-cascade STOCK/CUT gate. STOCK is not a category in this system:
     # every B-rep face enters the cascade and must exit with exactly one feature
@@ -857,8 +876,10 @@ def _selftest() -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Feature-grouping cascade")
     ap.add_argument("step", nargs="?", default=DEFAULT_STEP, help="reference STEP file")
-    ap.add_argument("--graph-npz", type=Path, default=Path(DEFAULT_GRAPH_NPZ),
-                    help="cached face graph (edge_index/edge_attr); recomputed if absent")
+    ap.add_argument("--graph-npz", type=Path, default=None,
+                    help="cached face graph (edge_index/edge_attr) for THIS part; "
+                         "omit to ingest from the STEP (default). A mismatched graph "
+                         "is rejected loudly (face-count guard in run_cascade).")
     ap.add_argument("--max-diameter", type=float, default=150.0,
                     help="hole diameter ceiling (mm): larger concave bores are deferred")
     ap.add_argument("--wall-attach-dist", type=float, default=None,
