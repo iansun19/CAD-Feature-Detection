@@ -1,0 +1,51 @@
+# Ground truth — part1 (rectangular block: axial through-hole + two orthogonal
+# countersunk blind holes + open pocket, single primary-Z setup).
+# PROVENANCE: part1 is a FROZEN, TOOLPATH-VERIFIED ground truth (2026-07-11),
+# promoted alongside 96260B_front/rear, fish_mold, and part2. The decomposition
+# below was confirmed against toolpath and matches the frozen partition golden
+# eval/regression/golden/part1.partition.json byte-for-byte in ownership:
+# through_hole[0,15], blind_hole x2, flat[5], flat[7], profile[6,8,9,10,16,17].
+# NOTE (open-pocket over-labeling fix, 2026-07-11): pre-fix part1 was mislabeled as
+# open_pocket:1 + wall:2; the coaxial interior-recess floor gate (Predicate A) and
+# the corner-isolated prismatic cycle (Predicate B) now yield a single profile:1
+# with the walls folded in. Counts below reflect the CORRECTED, frozen output.
+#
+# AXIS PROVENANCE (verified, not inherited): part1 has no pocket seeds, so the
+# opening axis is geometry-derived from the broad-face area. The corrected no-seed
+# estimator resolves this to Z [0,0,1] (broad-face area Z 4435.7 mm^2 >> Y 1814.5),
+# NOT the old no-seed Y [0,1,0] default that the stale on-disk graph carried. The
+# Z axis is independently corroborated by the primary through-hole drill axis
+# ([0,0,-1]). The graph was regenerated on part1's own pinned graph.npz (18 faces),
+# not 96260B's edge set. So a future reader should know: axis was verified, not
+# inherited.
+#
+# Instance counts in eval_cascade Toolpath vocabulary (NOT face counts). Cascade
+# classes without a Toolpath count vocabulary (pocket, chamfer, inner_fillet) are
+# intentionally not counted here, same as 96260B / fish_mold. Attributes are in inches.
+
+part_id: "part1"
+part_step: "part1.step"
+graph_npz: "pipeline_out/part1/graph.npz"
+
+setup:
+  machining_side: back        # single primary-Z setup; opening axis auto-resolves to Z
+
+counts:
+  through_hole: 1
+  blind_hole: 2               # two countersunk blind holes on the orthogonal X axis
+  flat: 2
+  profile: 1                  # corner-isolated outer profile (post over-labeling fix)
+  open_pocket: 0              # was 1 pre-fix; interior-recess floor gate (Predicate A) released it
+  wall: 0                     # was 2 pre-fix; corner-isolated cycle (Predicate B) folded them into profile
+  contour_surface: 0          # residual bucket (informational; coverage-only)
+
+# Deep-mode attributes (inches). All holes share ⌀6.76 mm (0.266 in). The two blind
+# holes are countersunk and drilled on the ±X axis (secondary), captured as features
+# within the single-Z cascade run via their per-feature axis metadata.
+features:
+  - class: through_hole
+    diameter: 0.266           # 6.76 mm
+    depth_below_top: 0.75     # 19.05 mm
+  - class: blind_hole
+    diameter: 0.266           # 6.76 mm
+    depth_below_top: 0.858    # 21.79 mm

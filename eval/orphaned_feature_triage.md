@@ -1,11 +1,11 @@
-# Orphaned feature triage — 96260B reachability scope diff
+# Orphaned feature triage ï¿½ 96260B reachability scope diff
 
 Date: 2026-07-08. Read-only diagnosis of features dropped by verified-reachability
 scoping on the 96260B rear + front panel exports. No code or graph changes.
 
 ## Setup axes (correction)
 
-The task brief mentions “rear +Z / front ?Z”. On disk today both panels use the
+The task brief mentions ï¿½rear +Z / front ?Zï¿½. On disk today both panels use the
 **same world opening axis** and the planner applies the **same approach label** to
 both setups:
 
@@ -14,8 +14,8 @@ both setups:
 | rear  | `96260B_REAR_XR004_PCD PLATE.stp copy`  | `back`  | `[0, 1, 0]` (+Y) | `[0, 1, 0]` | **`+Z` always** (`planner._primary_setup_approach_dir`) |
 | front | `96260B_FRONT_XR004_PCD PLATE.stp copy` | `front` | `[0, 1, 0]` (+Y) | `[0, 1, 0]` | **`+Z` always** |
 
-Reachability labels `+Z` / `?Z` are **along ±opening_axis** (here ±Y world), not
-world ±Z. Rear `part_axis_top` = ?57.84 mm, `part_axis_bottom` = ?91.66 mm;
+Reachability labels `+Z` / `?Z` are **along ï¿½opening_axis** (here ï¿½Y world), not
+world ï¿½Z. Rear `part_axis_top` = ?57.84 mm, `part_axis_bottom` = ?91.66 mm;
 front `part_axis_top` = ?25.76 mm, `part_axis_bottom` = ?54.83 mm.
 
 **Root wiring gap:** `_primary_setup_approach_dir()` returns `+Z` for every setup.
@@ -33,14 +33,14 @@ rear *and* from front when both filters require `+Z`. That explains shared orpha
 | front | 43 (full scope; reachability bypasses facing class scope on v4) | **38** | `[25, 26, 34, 36, 37]` |
 
 Cross-panel IDs present in **both** graphs and unreachable from `+Z` on **both**
-panels: **`[36, 37]`** — the true orphans under current wiring.
+panels: **`[36, 37]`** ï¿½ the true orphans under current wiring.
 
 ---
 
 ## A. Orphans 36 and 37
 
 Feature IDs are **per-panel** (rear and front graphs partition different face
-index spaces). Below, “rear 36” means `feature_id: 36` on the rear export; front
+index spaces). Below, ï¿½rear 36ï¿½ means `feature_id: 36` on the rear export; front
 has different geometry at the same numeric id on some features.
 
 ### Rear feature 36
@@ -49,7 +49,7 @@ has different geometry at the same numeric id on some features.
 |-------|-------|
 | `class_name` | `contour_surface` |
 | Faces | `324` (cone), `325` (torus) |
-| Area / bbox | 3121 mm²; Y span ? 2.76 mm, full-plate X/Z extent |
+| Area / bbox | 3121 mmï¿½; Y span ? 2.76 mm, full-plate X/Z extent |
 | Face normals (viewer) | 324: `[~0, ?0.50, ?0.87]`; 325: `[0, ?0.87, ?0.50]` |
 | Centroids (viewer) | 324: Y ? ?88.34; 325: Y ? ?85.54 (bottom band of rear panel) |
 
@@ -93,17 +93,17 @@ has different geometry at the same numeric id on some features.
 }
 ```
 
-**Classification: planner wiring / ?Z back-side feature — not a third axis, not a cascade artifact**
+**Classification: planner wiring / ?Z back-side feature ï¿½ not a third axis, not a cascade artifact**
 
 **Evidence**
 
 - Geometry is the large perimeter cone+torus chamfer at the **back (low-Y) lip** of
   the plate. Face normals tilt toward ?Y/?Z; `+Z` (+Y) rays are fully occluded
-  (0% exposed), `?Z` (?Y) clears at 16.7% — consistent with machining from the
+  (0% exposed), `?Z` (?Y) clears at 16.7% ï¿½ consistent with machining from the
   back setup.
-- Step-2 aggregate axis is oblique to opening_axis (dot ? 0.69 &lt; cos 15°), so
+- Step-2 aggregate axis is oblique to opening_axis (dot ? 0.69 &lt; cos 15ï¿½), so
   candidacy was weak; step-4a verification legitimately found **only `?Z`**.
-- The same physical band appears on the front export as **front 25** (faces 275–276,
+- The same physical band appears on the front export as **front 25** (faces 275ï¿½276,
   same areas/normals, Y shifted ~+37 mm), also `reachable_dirs: ["-Z"]` only.
 - Orphanhood is because **both setups filter `+Z`**, not because reachability is
   empty or wrong for this feature type.
@@ -119,7 +119,7 @@ has different geometry at the same numeric id on some features.
 |-------|-------|
 | `class_name` | `contour_surface` |
 | Faces | `330` (plane), `331` (cylinder) |
-| Area / bbox | 123 mm²; bbox 3.43 × 0.43 × 6.10 mm |
+| Area / bbox | 123 mmï¿½; bbox 3.43 ï¿½ 0.43 ï¿½ 6.10 mm |
 | Face normals (viewer) | 330: `[-1, 0, 0]`; 331: `[0, 0, 1]` |
 | Centroids (viewer) | 330: `(?3.43, ?88.67, 70.07)`; 331: `(0, ?88.12, 77.56)` |
 
@@ -134,7 +134,7 @@ has different geometry at the same numeric id on some features.
 }
 ```
 
-(`dot(axis, opening_axis) = 0` — **oblique** to ±Y; step-2 candidacy should be null,
+(`dot(axis, opening_axis) = 0` ï¿½ **oblique** to ï¿½Y; step-2 candidacy should be null,
 but step-4a overwrote `setup_dir` from verification.)
 
 **`node.approach.reachability` (verbatim)**
@@ -171,13 +171,13 @@ but step-4a overwrote `setup_dir` from verification.)
 **Evidence**
 
 - Dominant face 330 is a **?X shelf** (normal `[?1,0,0]`); companion cylinder 331
-  is **+Z-facing**. True finishing wants **±X** (or wrapped wall/contour), not ±Y.
+  is **+Z-facing**. True finishing wants **ï¿½X** (or wrapped wall/contour), not ï¿½Y.
 - Aggregate normal is **perpendicular** to opening_axis; step-2 should mark
-  `setup_dir: null`. Step-4a still reports `?Z` reachable at 33% exposed — likely
-  edge grazing from ?Y rays, not a valid 3-axis facing strategy for a ±X plane.
+  `setup_dir: null`. Step-4a still reports `?Z` reachable at 33% exposed ï¿½ likely
+  edge grazing from ?Y rays, not a valid 3-axis facing strategy for a ï¿½X plane.
 - On the front export the same edge splits into **front 36** (face 281, normal
-  `?X`) and **front 37** (face 283, normal `+X`), each ~50 mm², also
-  `reachable_dirs: ["-Z"]` only with step-2 axes `±X` — confirming lateral intent.
+  `?X`) and **front 37** (face 283, normal `+X`), each ~50 mmï¿½, also
+  `reachable_dirs: ["-Z"]` only with step-2 axes `ï¿½X` ï¿½ confirming lateral intent.
 - Too small and geometrically distinct from the perimeter chamfer (rear 36) to
   dismiss as the same ?Y back-side part.
 
@@ -187,57 +187,57 @@ treat reported `?Z` as a ray-test artifact.
 
 ---
 
-## B. Migration check — rear drops 17, 102, 103, 104
+## B. Migration check ï¿½ rear drops 17, 102, 103, 104
 
-Question: after rear reachability drop, are these ids kept in front’s
+Question: after rear reachability drop, are these ids kept in frontï¿½s
 reachability-scoped assignment (38 features)?
 
 | Feature | In front graph? | In front reachability keep (`+Z`)? | Verdict |
 |---------|-----------------|-------------------------------------|---------|
-| **17** | Yes — but **different feature** (`filleted_open_pocket`, 11 faces, `reachable_dirs: ["+Z","-Z"]`) | **Yes** | **Yes** for id 17 on front, **No** for migrating rear flat 17 |
-| **102** | **No** (id absent) | — | **No** — additional rear-only orphan at family id |
-| **103** | **No** (id absent) | — | **No** — additional rear-only orphan at family id |
-| **104** | **No** (id absent) | — | **No** — additional rear-only orphan at family id |
+| **17** | Yes ï¿½ but **different feature** (`filleted_open_pocket`, 11 faces, `reachable_dirs: ["+Z","-Z"]`) | **Yes** | **Yes** for id 17 on front, **No** for migrating rear flat 17 |
+| **102** | **No** (id absent) | ï¿½ | **No** ï¿½ additional rear-only orphan at family id |
+| **103** | **No** (id absent) | ï¿½ | **No** ï¿½ additional rear-only orphan at family id |
+| **104** | **No** (id absent) | ï¿½ | **No** ï¿½ additional rear-only orphan at family id |
 
 **Clarification:** Front/rear graphs **do not share a global feature-id map**. Rear
-17 is a **flat** (face 326, Y ? ?85, 2463 mm², `reachable_dirs: ["-Z"]`). Front
-17 is an unrelated **filleted_open_pocket**. The id-17 “migration” is a **numeric
+17 is a **flat** (face 326, Y ? ?85, 2463 mmï¿½, `reachable_dirs: ["-Z"]`). Front
+17 is an unrelated **filleted_open_pocket**. The id-17 ï¿½migrationï¿½ is a **numeric
 collision**, not geometry hand-off.
 
-**Geometric twins on front** (same part, different ids) — all **`?Z` only**, also
-in front’s gap list, so they do **not** land in front’s 38 under `+Z` filtering:
+**Geometric twins on front** (same part, different ids) ï¿½ all **`?Z` only**, also
+in frontï¿½s gap list, so they do **not** land in frontï¿½s 38 under `+Z` filtering:
 
 | Rear drop | Rear geometry | Front twin id | Front faces |
 |-----------|---------------|---------------|-------------|
-| 102 | torus 323, 1351 mm² | **34** | 274 |
+| 102 | torus 323, 1351 mmï¿½ | **34** | 274 |
 | 103 | plane +X, 332 | **36** | 281 |
-| 104 | torus 345, 1487 mm² | **26** (partial) | 277, 296 |
+| 104 | torus 345, 1487 mmï¿½ | **26** (partial) | 277, 296 |
 
 **Additional orphans beyond 36/37:** rear **102, 103, 104** have no front id and
 their front twins are also `+Z`-filtered out.
 
 ---
 
-## C. contour_surface / flat reachability — is step-4a running?
+## C. contour_surface / flat reachability ï¿½ is step-4a running?
 
 For rear class-filter drops **17, 36, 37, 102, 103, 104** (all `flat` or
 `contour_surface`):
 
 | feature | class | `reachability.verified` | `reachable_dirs` | Points to back (`?Z` / ?Y)? | Empty / no-op? |
 |---------|-------|-------------------------|------------------|------------------------------|----------------|
-| 17 | flat | `true` | `["-Z"]` | **Yes** — flat normal ?Y, 25% exposed on `?Z` | **No** — fully populated `per_direction` |
-| 36 | contour_surface | `true` | `["-Z"]` | **Yes** — 16.7% on `?Z`, 0% on `+Z` | **No** |
-| 37 | contour_surface | `true` | `["-Z"]` | **Questionable** — lateral faces; 33% on `?Z` likely edge artifact | **No** — computation ran |
-| 102 | contour_surface | `true` | `["-Z"]` | **Yes** — torus at back lip, 58.3% on `?Z` | **No** |
-| 103 | contour_surface | `true` | `["-Z"]` | **No** — normal `+X`; `?Z` is false positive | **No** — computation ran |
-| 104 | contour_surface | `true` | `["-Z"]` | **Yes** — oblique back band, 25% on `?Z` | **No** |
+| 17 | flat | `true` | `["-Z"]` | **Yes** ï¿½ flat normal ?Y, 25% exposed on `?Z` | **No** ï¿½ fully populated `per_direction` |
+| 36 | contour_surface | `true` | `["-Z"]` | **Yes** ï¿½ 16.7% on `?Z`, 0% on `+Z` | **No** |
+| 37 | contour_surface | `true` | `["-Z"]` | **Questionable** ï¿½ lateral faces; 33% on `?Z` likely edge artifact | **No** ï¿½ computation ran |
+| 102 | contour_surface | `true` | `["-Z"]` | **Yes** ï¿½ torus at back lip, 58.3% on `?Z` | **No** |
+| 103 | contour_surface | `true` | `["-Z"]` | **No** ï¿½ normal `+X`; `?Z` is false positive | **No** ï¿½ computation ran |
+| 104 | contour_surface | `true` | `["-Z"]` | **Yes** ï¿½ oblique back band, 25% on `?Z` | **No** |
 
-**Conclusion:** Reachability is **not** silently no-op’ing for `contour_surface` /
+**Conclusion:** Reachability is **not** silently no-opï¿½ing for `contour_surface` /
 `flat`. Every node has `verified: true`, non-empty `reachable_dirs`, and full
 `per_direction` occlusion scores. Drops are because the planner requires `+Z` while
 these nodes (mostly correctly) verify only `?Z`.
 
-They are **not** “surviving by luck” with empty `reachable_dirs`; they are
+They are **not** ï¿½surviving by luckï¿½ with empty `reachable_dirs`; they are
 **correctly verified as `?Z`-reachable** and then filtered out by the uniform `+Z`
 setup filter.
 
@@ -248,9 +248,9 @@ setup filter.
 | Feature | Classification | One-line recommendation |
 |---------|----------------|-------------------------|
 | **36** (rear; twin front 25) | Back-side perimeter chamfer; `?Z` verified | **Fix approach-dir mapping** (rear ? `?Z`) |
-| **37** (rear; twins front 36/37) | Lateral ±X edge; `?Z` reachability suspect | **Add lateral setup** or **drop** as contour artifact |
+| **37** (rear; twins front 36/37) | Lateral ï¿½X edge; `?Z` reachability suspect | **Add lateral setup** or **drop** as contour artifact |
 | **17** (rear flat) | `?Z` flat; not same as front id 17 | **Fix approach-dir mapping** for rear |
-| **102–104** (rear only ids) | `?Z` back contours; no front id | **Fix approach-dir mapping**; map twins by geometry not id |
+| **102ï¿½104** (rear only ids) | `?Z` back contours; no front id | **Fix approach-dir mapping**; map twins by geometry not id |
 
 ## Findings for downstream fixes (out of scope here)
 

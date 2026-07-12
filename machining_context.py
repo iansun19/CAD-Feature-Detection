@@ -136,6 +136,17 @@ class SetupContext(BaseModel):
     opening_axis_vector: tuple[float, float, float] = Field(
         description="Unit opening-axis vector resolved from the setup descriptor.",
     )
+    opening_axis_determined: bool = Field(
+        default=True,
+        description=(
+            "True when the opening axis is authoritative: either explicitly set "
+            "in the descriptor, or auto-detected from geometry that could resolve "
+            "it. False when the cascade could not derive the axis from geometry "
+            "(approach_frame.opening_axis_determined is False) -- the planner then "
+            "fails loud and asks for an explicit axis. Defaults True for graphs "
+            "emitted before this provenance existed."
+        ),
+    )
     machining_side: str | None = Field(
         default=None,
         description="front | back from descriptor; required for reachability scoping.",
@@ -972,11 +983,22 @@ def build_setup_context(
 
     axis_vector = resolve_opening_axis_vector_for_planning(resolved, graph)
 
+    # Provenance: an explicit descriptor vector is authoritative by definition.
+    # An auto-mode axis is authoritative only if the cascade could resolve it
+    # from geometry (approach_frame.opening_axis_determined). Absent => True, so
+    # graphs predating this field keep planning unchanged.
+    if resolved.opening_axis.mode == "explicit":
+        axis_determined = True
+    else:
+        frame = graph.get("approach_frame") or {}
+        axis_determined = bool(frame.get("opening_axis_determined", True))
+
     orientation = getattr(resolved, "orientation", None)
     return SetupContext(
         setup_id=resolved.setup_id,
         opening_axis=vector_to_opening_axis_label(axis_vector),
         opening_axis_vector=axis_vector,
+        opening_axis_determined=axis_determined,
         machining_side=resolved.machining_side,
         orientation=orientation,
         orientation_provisional=orientation is not None,

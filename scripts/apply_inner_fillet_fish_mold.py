@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply inner_fillet label to fish_mold face 159 (direct graph edit)."""
+"""Apply inner_fillet label to fish_mold faces 90 and 159 (direct graph edit)."""
 from __future__ import annotations
 
 import json
@@ -23,8 +23,10 @@ from inner_fillet_detection import (
 )
 
 # Universal criteria: the geometric predicate must select exactly this set on
-# fish_mold (and, guarded below, nothing on either 96260B panel).
-EXPECTED_FISH_MATCHES = [REFERENCE_FACE_ID_FISH_MOLD]
+# fish_mold (and, guarded below, nothing on either 96260B panel). Face 90 is a
+# geometric twin of reference face 159 in a different shell; both are inner
+# fillets once the (off-by-default) shell gate is dropped.
+EXPECTED_FISH_MATCHES = sorted([90, REFERENCE_FACE_ID_FISH_MOLD])
 
 FROZEN_GRAPHS = [
     ROOT / "pipeline_out/96260B_front/feature_graph_cascade.json",

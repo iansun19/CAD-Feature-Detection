@@ -1,0 +1,64 @@
+# Ground truth — part3 (prismatic plate: 10 countersunk through-holes + two
+# exterior decks + corner-isolated outer profile).
+#
+# PROVENANCE: HAND-VERIFIED ground truth (2026-07-11) for the new `countersink`
+# feature class. The decomposition below matches the frozen partition golden
+# eval/regression/golden/part3.partition.json byte-for-byte in ownership:
+#   countersink × 10 (the 10 stated 4-face groups),
+#   flat[20], flat[25], profile[21,22,23,24];  0 orphans, all 46 faces owned.
+#
+# COUNTERSINK GEOMETRY (per-face inventory, confirmed via OCC):
+#   Each countersink is a coaxial stack of a widening conical entry (45° half-
+#   angle; cone RefRadius 4.7 mm on the 8 small holes, 6.3 mm on the 2 large
+#   holes) and a through bore (radius 2.25 / 3.3 mm), each split into two seam
+#   halves → 4 faces. Cone rmin == bore radius, rmax == RefRadius (flare ratio
+#   ~2.0), coaxial perp = 0. The cone flares toward the exterior opening.
+#   The 10 groups (cone,cone + cyl,cyl):
+#     [0,1,44,45] [2,3,42,43] [4,5,40,41] [6,7,38,39] [8,9,36,37]
+#     [10,11,34,35] [12,13,32,33] [14,15,30,31] [16,17,28,29] [18,19,26,27]
+#
+# PREDICATE (geometry-only, no ids / no part gate / no mm constants): the hole
+# pass groups each cone+bore cluster into ONE through_hole feature and flags
+# is_countersink; countersink_detection relabels the feature to the dedicated
+# `countersink` toolpath class (class_id 14) when:
+#   kind == through_hole  ∧  is_countersink  ∧  ¬is_counterbore
+#   ∧ the coaxial cone flares wider than the bore (max cone boundary radius >
+#     bore radius).
+# Empty on all five frozen parts (96260B_front/rear, fish_mold, part1, part2).
+#
+# AXIS PROVENANCE: the 10 countersinks are drilled along ±Y. Opening axis is
+# geometry-derived (no pocket seeds). Decomposition is byte-identical under
+# machining_side front/back. stock_classifier=off: every face enters the cascade
+# and exits with one label (no stock bucket). graph.npz pinned from part3's own
+# ingest (46 faces).
+#
+# Instance counts in eval_cascade Toolpath vocabulary (NOT face counts).
+
+part_id: "part3"
+part_step: "part3.step"
+graph_npz: "eval/regression/graphs/part3.graph.npz"
+
+setup:
+  machining_side: back        # single primary setup; opening axis auto-resolves
+
+counts:
+  countersink: 10             # 10 countersunk through-holes (40 faces)
+  through_hole: 0             # all through_holes here are countersinks
+  counterbore: 0              # none (no flat-bottom cylindrical enlargement)
+  flat: 2                     # two exterior decks (faces 20, 25)
+  profile: 1                  # corner-isolated outer profile (faces 21,22,23,24)
+  wall: 0
+  contour_surface: 0          # residual bucket (informational; coverage-only)
+
+# Deep-mode attributes (inches). Two distinct countersink sizes.
+features:
+  - class: countersink
+    diameter: 0.177           # bore ⌀4.5 mm
+    cone_diameter: 0.370      # cone flare ⌀9.4 mm (RefRadius 4.7 mm)
+    half_angle_deg: 45.0
+    count: 8
+  - class: countersink
+    diameter: 0.260           # bore ⌀6.6 mm
+    cone_diameter: 0.496      # cone flare ⌀12.6 mm (RefRadius 6.3 mm)
+    half_angle_deg: 45.0
+    count: 2

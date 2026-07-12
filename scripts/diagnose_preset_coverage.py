@@ -242,6 +242,43 @@ def _load_tools_local(tool_ids: Sequence[str], material: str | None) -> dict[str
     return by_id
 
 
+def _tool_from_plan_ref(ref: Any) -> Tool:
+    """Build a Tool from the plan's self-contained ToolRef metadata.
+
+    The plan carries tool_id/tool_type/diameter for every tool it uses, so a
+    ToolRef is enough for the geometry-only checks (size matching, micro-tool
+    gates). Presets are absent -- feed/rpm come from the op's own parameters,
+    not from a re-fetched library -- so no preset-dependent check regresses.
+    """
+    return Tool(
+        tool_id=ref.tool_id,
+        tool_type=ref.tool_type,
+        diameter_mm=ref.diameter_mm,
+        flute_length_mm=getattr(ref, "flute_length_mm", None),
+        max_depth_mm=getattr(ref, "max_depth_mm", None),
+        corner_radius_mm=getattr(ref, "corner_radius_mm", None),
+        source=getattr(ref, "source", None) or "plan_ref",
+        presets=[],
+    )
+
+
+def _fill_missing_from_plan(
+    resolved: dict[str, Tool], plan: CamPlan
+) -> dict[str, Tool]:
+    """Backfill unresolved tool_ids from the plan's embedded tools list.
+
+    Library lookup keys on tool_id/source and can miss when the plan was
+    generated from a different tool source than the report can reach (e.g. a
+    directory-sourced plan whose ids are not in Supabase). The plan is
+    self-contained, so trust its declared diameters rather than dropping the
+    tool (which degrades size matching to a wrong shop op).
+    """
+    for ref in plan.tools:
+        if ref.tool_id and ref.tool_id not in resolved:
+            resolved[ref.tool_id] = _tool_from_plan_ref(ref)
+    return resolved
+
+
 def _load_plan_tools(plan: CamPlan, material: str | None) -> tuple[dict[str, Tool], str]:
     tool_ids = [op.tool_id for op in plan.operations if op.tool_id]
     from_supabase = _fetch_tools_from_supabase(tool_ids)
@@ -250,12 +287,19 @@ def _load_plan_tools(plan: CamPlan, material: str | None) -> tuple[dict[str, Too
 
     from_local = _load_tools_local(tool_ids, material)
     if from_local:
+        resolved = dict(from_local)
+        _fill_missing_from_plan(resolved, plan)
         missing = sorted(set(tool_ids) - set(from_local))
         if missing:
-            print(f"Warning: {len(missing)} tool(s) missing from local libraries.")
-        return from_local, "local_tool_libraries"
+            print(
+                f"Note: {len(missing)} tool(s) not in local libraries; "
+                f"using plan-embedded tool metadata for them."
+            )
+        return resolved, "local_tool_libraries"
 
-    return from_supabase or from_local, "partial"
+    combined = dict(from_supabase or {})
+    _fill_missing_from_plan(combined, plan)
+    return combined, "partial"
 
 
 def _operation_to_op_spec(op: Operation, tool: Tool | None) -> OpSpec:

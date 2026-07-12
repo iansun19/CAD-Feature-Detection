@@ -5,16 +5,16 @@
   "face_index_scheme": "analyze_step_v1",
   "n_faces": 348,
   "run_config": {
-    "stock_classifier": "new",
+    "stock_classifier": "off",
     "max_diameter_mm": 150.0,
     "machining_side": "back",
     "pocket_access": "closed",
     "wall_attach_dist": null
   },
   "bless_meta": {
-    "blessed_at": "2026-07-08T02:22:42.444366+00:00",
-    "reason": "Initial golden bless for 96260B_rear cascade regression fixture",
-    "git_sha": "61154f2",
+    "blessed_at": "2026-07-11T19:28:26.736906+00:00",
+    "reason": "Introduce counterbore feature: merge filleted_blind_hole + through_hole coaxial stack into one counterbore (intentional GT re-baseline)",
+    "git_sha": "c77f47a",
     "git_dirty": true
   },
   "face_fingerprints": [
@@ -1415,460 +1415,180 @@
     {
       "class_name": "contour_surface",
       "face_ids": [
-        4
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        8
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        13
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        16
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        21
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        25
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        28
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        31
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        36
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        40
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        43
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        46
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        51
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        55
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        58
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        61
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        66
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        70
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        73
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        76
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        81
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        85
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        88
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        91
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        94
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        98
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        101
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        104
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        106,
-        333
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        107
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        114
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        115
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        121
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        131
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        133
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        137
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        145
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        146
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        147
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        153
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        163
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        26,
+        28,
+        31,
+        107,
+        114,
+        115,
+        121,
+        163,
         167
       ]
     },
     {
       "class_name": "contour_surface",
       "face_ids": [
-        175
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        177
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        183
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        193
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        197
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        205
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        206,
-        253
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        207
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        213
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        223
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        227
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        235
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        236
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        237
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        243
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        257
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        265
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        266,
-        267
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        273
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        283
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        287
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        295
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
+        9,
+        10,
+        11,
+        13,
+        16,
+        92,
+        94,
+        98,
+        131,
+        132,
+        133,
+        137,
+        295,
         301
       ]
     },
     {
       "class_name": "contour_surface",
       "face_ids": [
-        311
+        17,
+        18,
+        19,
+        21,
+        25,
+        41,
+        43,
+        46,
+        145,
+        146,
+        147,
+        153,
+        193,
+        197
       ]
     },
     {
       "class_name": "contour_surface",
       "face_ids": [
+        32,
+        33,
+        34,
+        36,
+        40,
+        56,
+        58,
+        61,
+        175,
+        176,
+        177,
+        183,
+        223,
+        227
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        47,
+        48,
+        49,
+        51,
+        55,
+        71,
+        73,
+        76,
+        205,
+        206,
+        207,
+        213,
+        253,
+        257
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        62,
+        63,
+        64,
+        66,
+        70,
+        86,
+        88,
+        91,
+        235,
+        236,
+        237,
+        243,
+        283,
+        287
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        77,
+        78,
+        79,
+        81,
+        85,
+        99,
+        101,
+        104,
+        265,
+        266,
+        267,
+        273,
+        311,
         315
       ]
     },
     {
       "class_name": "contour_surface",
       "face_ids": [
-        323
+        106,
+        113,
+        333,
+        337
       ]
     },
     {
       "class_name": "contour_surface",
       "face_ids": [
+        323,
         324,
         325
       ]
     },
     {
-      "class_name": "contour_surface",
-      "face_ids": [
-        330,
-        331
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        332
-      ]
-    },
-    {
-      "class_name": "contour_surface",
-      "face_ids": [
-        345
-      ]
-    },
-    {
-      "class_name": "filleted_blind_hole",
+      "class_name": "counterbore",
       "face_ids": [
         108,
         109,
         110,
+        329,
         334,
-        335
+        335,
+        347
       ]
     },
     {
       "class_name": "filleted_open_pocket",
       "face_ids": [
+        5,
+        6,
+        7,
         14,
+        15,
         105,
         116,
         117,
         118,
         119,
         120,
+        134,
         135,
         136
       ]
@@ -1876,11 +1596,18 @@
     {
       "class_name": "filleted_open_pocket",
       "face_ids": [
+        22,
         23,
+        24,
         29,
+        30,
         144,
+        148,
+        149,
+        150,
         151,
         152,
+        164,
         165,
         166
       ]
@@ -1888,9 +1615,14 @@
     {
       "class_name": "filleted_open_pocket",
       "face_ids": [
+        37,
         38,
+        39,
+        44,
+        45,
         174,
         178,
+        179,
         180,
         181,
         182,
@@ -1904,8 +1636,12 @@
       "face_ids": [
         52,
         53,
+        54,
         59,
+        60,
+        204,
         208,
+        209,
         210,
         211,
         212,
@@ -1918,10 +1654,15 @@
       "class_name": "filleted_open_pocket",
       "face_ids": [
         67,
+        68,
+        69,
         74,
+        75,
         234,
         238,
+        239,
         240,
+        241,
         242,
         254,
         255,
@@ -1933,12 +1674,17 @@
       "face_ids": [
         82,
         83,
+        84,
+        89,
+        90,
         264,
         268,
         269,
         270,
         271,
         272,
+        284,
+        285,
         286
       ]
     },
@@ -1947,12 +1693,16 @@
       "face_ids": [
         95,
         96,
+        97,
         102,
+        103,
+        294,
         296,
         297,
         298,
         299,
         300,
+        312,
         313,
         314
       ]
@@ -1963,6 +1713,8 @@
         122,
         123,
         124,
+        125,
+        126,
         127,
         128,
         129,
@@ -1982,11 +1734,16 @@
         154,
         155,
         156,
+        157,
+        158,
         159,
         160,
         161,
         162,
         168,
+        169,
+        170,
+        171,
         172,
         173,
         339
@@ -2005,6 +1762,9 @@
         191,
         192,
         198,
+        199,
+        200,
+        201,
         202,
         203,
         340
@@ -2016,10 +1776,14 @@
         214,
         215,
         216,
+        217,
+        218,
+        219,
         220,
         221,
         222,
         228,
+        229,
         230,
         231,
         232,
@@ -2075,12 +1839,15 @@
         302,
         303,
         304,
+        305,
         306,
         307,
         308,
         309,
         310,
         316,
+        317,
+        318,
         319,
         320,
         321,
@@ -2096,7 +1863,16 @@
     {
       "class_name": "flat",
       "face_ids": [
-        326
+        322
+      ]
+    },
+    {
+      "class_name": "open_pocket",
+      "face_ids": [
+        326,
+        330,
+        331,
+        332
       ]
     },
     {
@@ -2107,10 +1883,17 @@
       ]
     },
     {
-      "class_name": "through_hole",
+      "class_name": "outer_fillet",
       "face_ids": [
-        329,
-        347
+        327,
+        345
+      ]
+    },
+    {
+      "class_name": "profile",
+      "face_ids": [
+        328,
+        346
       ]
     },
     {
@@ -2198,95 +1981,6 @@
       ]
     }
   ],
-  "stock_face_ids": [
-    0,
-    1,
-    2,
-    5,
-    6,
-    7,
-    9,
-    10,
-    11,
-    15,
-    17,
-    18,
-    19,
-    22,
-    24,
-    26,
-    30,
-    32,
-    33,
-    34,
-    37,
-    39,
-    41,
-    44,
-    45,
-    47,
-    48,
-    49,
-    54,
-    56,
-    60,
-    62,
-    63,
-    64,
-    68,
-    69,
-    71,
-    75,
-    77,
-    78,
-    79,
-    84,
-    86,
-    89,
-    90,
-    92,
-    97,
-    99,
-    103,
-    113,
-    125,
-    126,
-    132,
-    134,
-    148,
-    149,
-    150,
-    157,
-    158,
-    164,
-    169,
-    170,
-    171,
-    176,
-    179,
-    199,
-    200,
-    201,
-    204,
-    209,
-    217,
-    218,
-    219,
-    229,
-    239,
-    241,
-    284,
-    285,
-    294,
-    305,
-    312,
-    317,
-    318,
-    322,
-    327,
-    328,
-    337,
-    346
-  ],
+  "stock_face_ids": [],
   "unclaimed_face_ids": []
 }

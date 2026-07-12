@@ -101,8 +101,8 @@ class TestSetupAssembly(unittest.TestCase):
             setup.source_step_file,
             "96260B_REAR_XR004_PCD PLATE.stp copy",
         )
-        self.assertIn("0", setup.pocket_access)
-        self.assertEqual(setup.pocket_access["0"], "closed")
+        self.assertIn("1", setup.pocket_access)
+        self.assertEqual(setup.pocket_access["1"], "closed")
 
     def test_pocket_with_unspecified_access_resolves_unknown(self) -> None:
         # A pocket whose setup pins no access (machining_side None, pocket_access
@@ -156,8 +156,9 @@ class TestFullExample(unittest.TestCase):
             setups_source="authored",
         )
         # Rear descriptor pins every pocket to "closed" (machining_side=back);
-        # feature 0 is a stable golden pocket. Verifies descriptor access flows in.
-        self.assertEqual(ctx.setups[0].pocket_access.get("0"), "closed")
+        # feature 1 is a stable golden pocket (feature 0 is now the through-drill).
+        # Verifies descriptor access flows in.
+        self.assertEqual(ctx.setups[0].pocket_access.get("1"), "closed")
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "ctx.json"
             write_machining_context(out, ctx)

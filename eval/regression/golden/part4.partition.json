@@ -1,0 +1,996 @@
+{
+  "schema_version": 1,
+  "kind": "cascade_face_partition",
+  "fixture_id": "part4",
+  "face_index_scheme": "analyze_step_v1",
+  "n_faces": 154,
+  "run_config": {
+    "stock_classifier": "off",
+    "max_diameter_mm": 150.0,
+    "machining_side": "back",
+    "pocket_access": "unknown",
+    "wall_attach_dist": null
+  },
+  "bless_meta": {
+    "blessed_at": "2026-07-12T03:44:27.738887+00:00",
+    "reason": "Initial golden bless for part4 cascade regression fixture: outer boundary resolved to ONE profile of exactly 30 faces via pass reorder (prismatic-profile before holes, so scallop notches 57,58,59 and boundary arc 153 are claimed by the profile instead of grabbed as through_holes and fragmenting the loop). Hand-verified 30-face degree-2 exterior cycle; ownership complete 154/154, 0 orphans; 21 interior through-holes + counterbore preserved; all six prior frozen parts byte-identical.",
+    "git_sha": "c77f47a",
+    "git_dirty": true
+  },
+  "face_fingerprints": [
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 100.743
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 100.743
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 84.105
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 84.105
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 200795.177
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 43.815
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 738.505
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 738.505
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 4516.12
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1979.295
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 5887.085
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 5887.085
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 202604.734
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1209.675
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1774.19
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 109.72
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.293
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.293
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.293
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.293
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.293
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.293
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 66.445
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 113.097
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 188.496
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 134.856
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 84.105
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 84.105
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 100.743
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 100.743
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 63.338
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 190.015
+    }
+  ],
+  "instances": [
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        12,
+        13,
+        127,
+        128,
+        129
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        14,
+        15,
+        124,
+        125,
+        126
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        16,
+        17,
+        121,
+        122,
+        123
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        18,
+        19,
+        118,
+        119,
+        120
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        20,
+        21,
+        115,
+        116,
+        117
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        22,
+        23,
+        112,
+        113,
+        114
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        24,
+        25,
+        109,
+        110,
+        111
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        26,
+        27,
+        106,
+        107,
+        108
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        28,
+        29,
+        103,
+        104,
+        105
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        30,
+        31,
+        100,
+        101,
+        102
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        32,
+        33,
+        97,
+        98,
+        99
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        34,
+        35,
+        94,
+        95,
+        96
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        36,
+        37,
+        91,
+        92,
+        93
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        38,
+        39,
+        88,
+        89,
+        90
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        40,
+        41,
+        85,
+        86,
+        87
+      ]
+    },
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        42,
+        43,
+        82,
+        83,
+        84
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        53
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        64
+      ]
+    },
+    {
+      "class_name": "profile",
+      "face_ids": [
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        65,
+        66,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        0,
+        141
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        1,
+        140
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        2,
+        139
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        3,
+        138
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        4,
+        137
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        5,
+        136
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        6,
+        135
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        7,
+        134
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        8,
+        133
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        9,
+        132
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        10,
+        131
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        11,
+        130
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        44,
+        75
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        45,
+        74
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        46,
+        73
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        47,
+        72
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        48,
+        71
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        49,
+        70
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        50,
+        69
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        51,
+        68
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        52,
+        67
+      ]
+    }
+  ],
+  "stock_face_ids": [],
+  "unclaimed_face_ids": []
+}

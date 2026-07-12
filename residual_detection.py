@@ -211,12 +211,19 @@ def detect_residual_candidates(
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
-# Post outer-fillet pass residual pool sizes (outer-fillet output -> profile pass input).
-REFERENCE_RESIDUAL_POOL_REAR = 160
-# Post profile pass: 14 wall + 2 hub profile cylinders claimed on front reference part.
-REFERENCE_RESIDUAL_POOL_FRONT = 123
+# Post-profile pass residual pool size (profile output -> residual pass input).
+# STOCK gate removed (2026-07-10): every face enters the cascade, so the residual
+# pass is the terminal partition owner and must claim its whole input pool. On the
+# rear reference part the profile pass now claims the stray ⌀6.370 bosses {328, 346}
+# (previously left to residual), so the residual pool is 102, not the old 160.
+REFERENCE_RESIDUAL_POOL_REAR = 102
+# Post-profile pass residual pool size on the front reference part. STOCK gate
+# removed (2026-07-10): every face enters the cascade, so the residual pass owns
+# the terminal partition and claims its whole 74-face input pool (was 123 under
+# the old stock-gated partition).
+REFERENCE_RESIDUAL_POOL_FRONT = 74
 REFERENCE_SANITY_FACES_REAR = {
-    "bosses": (328, 346),
+    # {328, 346} moved to the profile pass; residual now owns only the zero-cones.
     "zero-cones": (121, 137, 153),
 }
 REFERENCE_SANITY_FACES_FRONT = {
@@ -246,7 +253,7 @@ def validate_residual(
     """Reference-part contract: claim entire pool; key deferred faces present."""
     if sanity_faces is None:
         sanity_faces = {
-            "bosses": (328, 346),
+            # {328, 346} now claimed by the profile pass; residual owns the zero-cones.
             "zero-cones": (121, 137, 153),
         }
 

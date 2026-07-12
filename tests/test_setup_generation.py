@@ -128,7 +128,7 @@ class SetupGenerationFromCascadeTests(unittest.TestCase):
         )
         ei, ea = _load_edges(Path(npz), step_p)
         faces = analyze_step(step_p)
-        _, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
+        _, pk, hl, cx, fl, of, wl, pr, rs, *_ = run_cascade(
             step_p, ei, ea, pocket_config=cfg,
         )
         graph = build_cascade_feature_graph(

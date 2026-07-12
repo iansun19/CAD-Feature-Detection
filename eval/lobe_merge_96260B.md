@@ -1,4 +1,4 @@
-# Lobe contour merge — 96260B validation
+# Lobe contour merge ï¿½ 96260B validation
 
 Generated: 2026-07-08
 
@@ -21,7 +21,7 @@ Per lobe (angular mouth-step sector + exterior axial band `Y > mouth_axial`):
 
 1. **Candidates**: single-lobe `contour_surface` nodes in the cap band.
 2. **Partition**: machining anchors (`-Z` reachable on rear) stay **unchanged**; `+Z`-only fragments are debris.
-3. **Debris merge**: per lobe, union-find not needed — all debris candidates collapse to **one sink node** when ?2 debris fragments exist.
+3. **Debris merge**: per lobe, union-find not needed ï¿½ all debris candidates collapse to **one sink node** when ?2 debris fragments exist.
 4. **Provenance**: `params.merged_from_fragment_ids`, `params.lobe_contour_merge_kind` (`debris`), `params.lobe_id`.
 5. **Reachability**: debris sinks get `reachable_dirs: []` (not planner-selected, not KEPT_FRONT orphans).
 
@@ -39,7 +39,7 @@ Per lobe (angular mouth-step sector + exterior axial band `Y > mouth_axial`):
 | L5 N | **35** | 35,89,90,94,95,96,97 | 58,59,60,61 | 8 |
 | L6 SW | **63** | 63,65,70,98,99,100,101 | 62,64 | 7 |
 
-All **38** prior KEPT_FRONT orphan ids (44,45,48,…,101) are **eliminated** — absorbed into the seven debris nodes above, not re-labeled.
+All **38** prior KEPT_FRONT orphan ids (44,45,48,ï¿½,101) are **eliminated** ï¿½ absorbed into the seven debris nodes above, not re-labeled.
 
 ---
 
@@ -85,17 +85,17 @@ Zero orphans from **node elimination** (43 fragment nodes removed; 7 debris sink
 |---------------|-------------|-------------|---------|--------------|
 | **96260B rear** | 105 | 62 | 43 | `contour_surface` 72?29 only |
 | **96260B front** | 44 | 44 | 0 | none |
-| fish mold | — | — | — | skipped (non-lobed pocket setup) |
+| fish mold | ï¿½ | ï¿½ | ï¿½ | skipped (non-lobed pocket setup) |
 
-**Regression guard: PASS** — only 96260B rear lobe-cap `contour_surface` fragmentation changes; front panel and non-lobed parts untouched.
+**Regression guard: PASS** ï¿½ only 96260B rear lobe-cap `contour_surface` fragmentation changes; front panel and non-lobed parts untouched.
 
 ---
 
 ## Files touched
 
-- `lobe_contour_merge.py` — merge pass
-- `run_cascade.py` — `--merge-lobe-contours` flag, pipeline wiring
-- `scripts/coverage_audit_96260B.py` — `MERGED_CAP_DEBRIS` bucket
-- `tests/test_lobe_contour_merge.py` — unit tests
-- `examples/cam_plan_96260B.json` — regenerated (byte-identical machining plan)
-- `pipeline_out/96260B_rear/feature_graph_cascade.json` — merged export
+- `lobe_contour_merge.py` ï¿½ merge pass
+- `run_cascade.py` ï¿½ `--merge-lobe-contours` flag, pipeline wiring
+- `scripts/coverage_audit_96260B.py` ï¿½ `MERGED_CAP_DEBRIS` bucket
+- `tests/test_lobe_contour_merge.py` ï¿½ unit tests
+- `examples/cam_plan_96260B.json` ï¿½ regenerated (byte-identical machining plan)
+- `pipeline_out/96260B_rear/feature_graph_cascade.json` ï¿½ merged export

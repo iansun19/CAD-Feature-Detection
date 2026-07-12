@@ -1,0 +1,30 @@
+fixture_id: "part1"
+step: "part1.step"
+graph_npz: "eval/regression/graphs/part1.graph.npz"
+face_index_scheme: "analyze_step_v1"
+
+setup:
+  machining_side: back
+  pocket_access: unknown
+
+run:
+  stock_classifier: "off"
+  max_diameter_mm: 150.0
+  wall_attach_dist: null
+
+golden: "eval/regression/golden/part1.partition.json"
+
+notes: |
+  part1 — rectangular block: one axial through-hole (Z), two orthogonal
+  countersunk blind holes (±X), one open pocket, two flats, two lateral pocket
+  walls. Single primary-Z setup (no separate secondary-X setup captured; the X
+  blind holes are recognized as features within the single-Z run via per-feature
+  axis metadata). STEP ("part1.step") is at repo root; graph.npz pinned from
+  part1's own ingest (18 faces) — NOT 96260B's edge set (the prior mis-invocation).
+  Opening axis is geometry-derived Z [0,0,1] (no pocket seeds → broad-face area
+  Z 4435.7 mm^2 >> Y 1814.5), which run_cascade auto-resolves natively from
+  machining_side=back; the stale on-disk graph's Y axis was the pre-correction
+  no-seed default. pocket_access=unknown: no filleted pockets, so access is N/A.
+  stock_classifier=off: every face enters the cascade and exits with one feature
+  label (no stock_face_ids bucket), matching the other fixtures. Blessed
+  partition = the corrected 8-feature graph treated as ground truth.

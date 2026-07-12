@@ -9,7 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-import env_bootstrap  # noqa: F401, E402 — loads .env
+import env_bootstrap  # noqa: F401, E402 ï¿½ loads .env
 
 from machining_context import DEFAULT_TOOL_LIBRARIES_DIR  # noqa: E402
 from tool_library_store import seed_tool_libraries  # noqa: E402

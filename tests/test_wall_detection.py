@@ -27,7 +27,7 @@ def _front_cascade():
 
 
 def test_wall_reference_face_set():
-    _faces, _pk, _hl, _cx, _fl, _of, wl, _pr, _rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, wl, _pr, _rs, *_ = _front_cascade()
     report = validate_walls(
         wl,
         expected_instances=REFERENCE_WALL_INSTANCES_FRONT,
@@ -38,13 +38,13 @@ def test_wall_reference_face_set():
 
 
 def test_wall_one_face_per_instance():
-    _faces, _pk, _hl, _cx, _fl, _of, wl, _pr, _rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, wl, _pr, _rs, *_ = _front_cascade()
     assert len(wl.features) == REFERENCE_WALL_INSTANCES_FRONT
     assert all(len(f.face_indices) == 1 for f in wl.features)
 
 
 def test_wall_seeds_match_claimed():
-    _faces, _pk, _hl, _cx, _fl, _of, wl, _pr, _rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, wl, _pr, _rs, *_ = _front_cascade()
     assert wl.seed_faces == wl.claimed_faces
 
 

@@ -84,7 +84,7 @@ import argparse
 import logging
 import math
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
@@ -171,6 +171,21 @@ class PocketDetectionConfig:
     # Opening axis: None -> auto-detect from the shared wall-axis direction; else
     # an explicit unit 3-vector (e.g. (0,1,0)).
     opening_axis: tuple[float, float, float] | None = None
+    # Auto-detect fallback guard. The mean-of-interior-wall-axes estimator is only
+    # trustworthy when the walls actually share a direction. On freeform cavities
+    # (fish_mold) the walls scatter and their mean drifts off-cardinal. When the
+    # wall-axis coherence (mean-resultant length after sign-folding, 1.0 = perfectly
+    # aligned) drops below this AND the mean disagrees with the broad-face estimator
+    # on the dominant cardinal, fall back to the broad-face axis (largest total
+    # planar-face area by cardinal — the physical plate/mold opening). Threshold sits
+    # in the measured gap between fish_mold (R=0.61, needs fallback) and the
+    # prismatic parts that must stay on the mean (part1 R=0.83; 96260B/part2-4 R=1.0).
+    opening_axis_coherence_min: float = 0.72
+    # Snap the derived opening axis to the nearest cardinal only when within this
+    # angular tolerance; otherwise keep the derived vector. A no-op on the current
+    # corpus (coherent parts are already exact cardinals; the broad-face fallback is
+    # exactly cardinal) — present to clean sub-tolerance mesh noise.
+    opening_axis_snap_tol_deg: float = 5.0
 
     # --- pocket grouping ---
     # "region_grow": B-rep region grow from floor seeds through walls/fillets/step
@@ -337,6 +352,9 @@ class PocketDetectionResult:
     remaining_faces: set[int]
     n_faces: int
     opening_axis: tuple[float, float, float]
+    # False only when geometry could not resolve the axis (no wall seeds and no
+    # planar broad face); opening_axis is then a blind default, not authoritative.
+    opening_axis_determined: bool
     n_clusters: int
     wall_attach_dist: float
     # Diagnostics / handoff.
@@ -347,6 +365,8 @@ class PocketDetectionResult:
     grown_faces: list[int] = field(default_factory=list)
     floor_absorbed_faces: list[int] = field(default_factory=list)
     grow_conflicts: list[dict[str, Any]] = field(default_factory=list)
+    # Faces shed by R1 structure validation; hole pass should defer these to contour.
+    structureless_released_faces: list[int] = field(default_factory=list)
     units: str = "mm"
 
     def summary(self) -> str:
@@ -385,6 +405,117 @@ def _project_uv(centroid: np.ndarray, opening_axis: np.ndarray) -> np.ndarray:
     e2 = np.cross(a, e1)
     c = np.asarray(centroid, dtype=np.float64)
     return np.array([float(np.dot(c, e1)), float(np.dot(c, e2))])
+
+
+# ---------------------------------------------------------------------------
+# Opening-axis estimation
+# ---------------------------------------------------------------------------
+def _wall_axis_coherence(axes: Sequence[np.ndarray]) -> tuple[float, np.ndarray]:
+    """(coherence, mean_unit_axis) for a bundle of interior-wall axis directions.
+
+    Coherence is the mean-resultant length after sign-folding each axis about the
+    dominant global component (axes are undirected, so +d == -d): 1.0 means the
+    walls share one direction, ~0 means they scatter. The mean is the current
+    heuristic's estimate; the coherence tells you whether to trust it.
+    """
+    A = np.array(axes, dtype=np.float64)
+    dom = int(np.argmax(np.abs(A).sum(axis=0)))
+    A = A * np.sign(A[:, dom] + 1e-12)[:, None]
+    mean = A.mean(axis=0)
+    coherence = float(np.linalg.norm(mean))
+    return coherence, _unit(mean)
+
+
+def _broad_face_axis(faces: Sequence[Any]) -> np.ndarray | None:
+    """Dominant cardinal by total planar-face area — the physical opening axis.
+
+    A plate/mold opens along the normal of its broad faces, not along its cavity
+    blend-wall axes. Sums planar-face area (OCC world-frame normals) into the three
+    cardinal buckets and returns the unit vector of the largest. Returns None when
+    there are no planar faces to measure. Uses every face: the opening axis is a
+    global part property, independent of which faces the cascade has claimed.
+    """
+    area = np.zeros(3, dtype=np.float64)
+    for f in faces:
+        if getattr(f, "surface_type", None) != "plane":
+            continue
+        n = _unit(np.asarray(f.normal, dtype=np.float64))
+        area[int(np.argmax(np.abs(n)))] += float(f.area)
+    if not area.any():
+        return None
+    axis = np.zeros(3, dtype=np.float64)
+    axis[int(np.argmax(area))] = 1.0
+    return axis
+
+
+def _dominant_cardinal(axis: np.ndarray) -> int:
+    return int(np.argmax(np.abs(np.asarray(axis, dtype=np.float64))))
+
+
+def _snap_to_cardinal(axis: np.ndarray, tol_deg: float) -> np.ndarray:
+    """Snap to the nearest signed cardinal iff within tol_deg; else return as-is."""
+    a = _unit(np.asarray(axis, dtype=np.float64))
+    k = _dominant_cardinal(a)
+    if abs(a[k]) >= math.cos(math.radians(tol_deg)):
+        snapped = np.zeros(3, dtype=np.float64)
+        snapped[k] = 1.0 if a[k] >= 0.0 else -1.0
+        return snapped
+    return a
+
+
+def _estimate_opening_axis(
+    axis_accum: Sequence[np.ndarray],
+    faces: Sequence[Any],
+    config: PocketDetectionConfig,
+) -> tuple[np.ndarray, bool]:
+    """Auto-detect the opening axis from interior-wall directions, with a
+    broad-face fallback when the walls are too scattered to trust their mean.
+
+    Returns ``(axis, determined)``. ``determined`` is ``False`` only when the
+    part has neither interior-wall seeds nor a planar broad face to measure --
+    geometry cannot recover the opening axis, so the returned vector is a blind
+    best-effort default that the caller must not treat as authoritative (see the
+    planner opening-axis guard). Every other path resolves the axis from real
+    geometry and reports ``determined=True``.
+
+    See :attr:`PocketDetectionConfig.opening_axis_coherence_min` for the guard.
+    """
+    if not axis_accum:
+        broad = _broad_face_axis(faces)
+        if broad is None:
+            logger.warning(
+                "opening axis: no interior-wall seeds AND no planar faces to "
+                "measure -> cannot derive axis from geometry; defaulting to "
+                "[0, 1, 0]. This part's opening axis is UNDETERMINED."
+            )
+            return np.array([0.0, 1.0, 0.0]), False
+        # snap (no-op on clean cardinals from _broad_face_axis, future-proofs
+        # any derived vector) and keep the positive-dominant sign convention.
+        return _snap_to_cardinal(broad, config.opening_axis_snap_tol_deg), True
+
+    coherence, mean_axis = _wall_axis_coherence(axis_accum)
+    broad_axis = _broad_face_axis(faces)
+    # Fall back to broad-face only when the wall mean is BOTH untrustworthy (low
+    # coherence) AND points at a different cardinal than the physical broad face.
+    # The coherence gate keeps moderately-coherent prismatic parts on their mean;
+    # the disagreement gate keeps low-coherence-but-consistent parts (mean already
+    # agrees with the broad face) on their mean. Only a scattered mean that also
+    # contradicts the broad face (fish_mold) is overridden.
+    if (
+        broad_axis is not None
+        and coherence < config.opening_axis_coherence_min
+        and _dominant_cardinal(mean_axis) != _dominant_cardinal(broad_axis)
+    ):
+        logger.info(
+            "opening axis: wall coherence %.3f < %.2f and mean cardinal %d != "
+            "broad-face cardinal %d -> broad-face fallback",
+            coherence, config.opening_axis_coherence_min,
+            _dominant_cardinal(mean_axis), _dominant_cardinal(broad_axis),
+        )
+        axis = broad_axis
+    else:
+        axis = mean_axis
+    return _snap_to_cardinal(axis, config.opening_axis_snap_tol_deg), True
 
 
 # ---------------------------------------------------------------------------
@@ -1332,6 +1463,63 @@ def _release_sculpted_floors(
         )
 
 
+def _pocket_passes_r1_structure(
+    feat: PocketFeature,
+    by_index: dict[int, Any],
+    opening_axis: np.ndarray,
+    config: PocketDetectionConfig,
+) -> bool:
+    """True when a pocket has fillet blends or walled+axial-floor structure (R1)."""
+    if feat.fillet_radius_mm is not None and feat.fillet_radius_mm > 0:
+        return True
+    wall_count = sum(
+        1 for i in feat.face_indices if by_index[i].surface_type in WALL_SURF_TYPES
+    )
+    if wall_count < 1:
+        return False
+    return any(
+        _is_axial_plane(by_index[i], opening_axis, config)
+        for i in feat.face_indices
+    )
+
+
+def _release_structureless_pockets(
+    features: list[PocketFeature],
+    by_index: dict[int, Any],
+    opening_axis: np.ndarray,
+    config: PocketDetectionConfig,
+    claimed: set[int],
+) -> list[int]:
+    """Release pockets that fail R1; faces flow to residual as contour_surface."""
+    from collections import defaultdict
+
+    released_all: list[int] = []
+    for feat in features:
+        if not feat.face_indices:
+            continue
+        if _pocket_passes_r1_structure(feat, by_index, opening_axis, config):
+            continue
+        to_release = set(feat.face_indices)
+        merged_by_type: dict[str, set[int]] = defaultdict(set)
+        for k, v in feat.released_by_type.items():
+            merged_by_type[k].update(v)
+        merged_by_type["structureless"].update(to_release)
+
+        feat.released_faces = sorted(set(feat.released_faces) | to_release)
+        feat.released_by_type = {k: sorted(v) for k, v in sorted(merged_by_type.items())}
+        feat.face_indices -= to_release
+        claimed -= to_release
+        released_all.extend(sorted(to_release))
+        logger.info(
+            "pocket %d released structureless sculpted band to contour (%d faces): %s",
+            feat.feature_id, len(to_release), sorted(to_release),
+        )
+
+    if released_all:
+        features[:] = [f for f in features if f.face_indices]
+    return released_all
+
+
 # ---------------------------------------------------------------------------
 # Open / closed pocket access (setup-scoped — not geometry-inferred)
 # ---------------------------------------------------------------------------
@@ -1495,10 +1683,25 @@ def detect_pockets(
                   if by_index[i].surface_type in SPHERE_TYPES]
     seed_ids = sorted(floor_ids + sphere_ids)
     if not seed_ids:
-        logger.info("no bspline/sphere floor seeds in candidate pool -> 0 pockets")
+        # No pocket seeds, but the opening axis is a global part property (used by
+        # downstream flats/wall/setup logic), so derive it from geometry instead
+        # of hardcoding a blind Y. Honor an explicit config override for parity
+        # with the normal (seeded) path below; otherwise use the shared broad-face
+        # estimator via _estimate_opening_axis (empty axis_accum -> broad-face).
+        if config.opening_axis is not None:
+            noseed_axis = _unit(np.asarray(config.opening_axis, dtype=np.float64))
+            noseed_determined = True
+        else:
+            noseed_axis, noseed_determined = _estimate_opening_axis([], faces, config)
+        logger.info(
+            "no bspline/sphere floor seeds in candidate pool -> 0 pockets "
+            "(opening axis %s derived from geometry)", noseed_axis.tolist(),
+        )
         return PocketDetectionResult(
             features=[], claimed_faces=set(), remaining_faces=set(candidate_faces),
-            n_faces=n_faces, opening_axis=(0.0, 1.0, 0.0), n_clusters=0,
+            n_faces=n_faces,
+            opening_axis=tuple(float(x) for x in noseed_axis),
+            opening_axis_determined=noseed_determined, n_clusters=0,
             wall_attach_dist=0.0, units=config.units,
         )
 
@@ -1528,17 +1731,15 @@ def detect_pockets(
                            uv=np.zeros(2)))  # uv filled after axis known
         axis_accum.append(axis_dir)
 
-    # --- opening axis (auto-detect from the shared wall-axis direction) ---
+    # --- opening axis (auto-detect from the shared wall-axis direction, with a
+    #     broad-face fallback when the walls scatter; see _estimate_opening_axis) ---
     if config.opening_axis is not None:
         opening_axis = _unit(np.asarray(config.opening_axis, dtype=np.float64))
-    elif axis_accum:
-        A = np.array(axis_accum)
-        # sign-fold (+d == -d) about the dominant global component, then average
-        dom = int(np.argmax(np.abs(A).sum(axis=0)))
-        A = A * np.sign(A[:, dom] + 1e-12)[:, None]
-        opening_axis = _unit(A.mean(axis=0))
+        opening_axis_determined = True
     else:
-        opening_axis = np.array([0.0, 1.0, 0.0])
+        opening_axis, opening_axis_determined = _estimate_opening_axis(
+            axis_accum, faces, config,
+        )
 
     # project seeds + walls into the plane perpendicular to the opening axis
     seed_uv = np.array([_project_uv(by_index[i].centroid, opening_axis) for i in seed_ids])
@@ -1707,6 +1908,10 @@ def detect_pockets(
                 _refresh_template_match(feat, config)
                 classify_pocket_open_closed(feat, config.setup)
 
+    structureless_released = _release_structureless_pockets(
+        features, by_index, opening_axis, config, claimed,
+    )
+
     remaining = set(candidate_faces) - claimed
 
     if excluded_convex:
@@ -1728,6 +1933,7 @@ def detect_pockets(
         remaining_faces=remaining,
         n_faces=n_faces,
         opening_axis=tuple(round(float(x), 4) for x in opening_axis),
+        opening_axis_determined=opening_axis_determined,
         n_clusters=n_clusters,
         wall_attach_dist=attach_dist,
         excluded_convex_faces=sorted(excluded_convex),
@@ -1737,6 +1943,7 @@ def detect_pockets(
         grown_faces=sorted(grown),
         floor_absorbed_faces=sorted(floor_absorbed),
         grow_conflicts=grow_conflicts,
+        structureless_released_faces=sorted(structureless_released),
         units=config.units,
     )
 
@@ -1916,6 +2123,7 @@ def apply_filleted_lobe_tiers_to_result(
         remaining_faces=remaining,
         n_faces=result.n_faces,
         opening_axis=result.opening_axis,
+        opening_axis_determined=result.opening_axis_determined,
         n_clusters=result.n_clusters,
         wall_attach_dist=result.wall_attach_dist,
         excluded_convex_faces=result.excluded_convex_faces,
@@ -1925,6 +2133,7 @@ def apply_filleted_lobe_tiers_to_result(
         grown_faces=result.grown_faces,
         floor_absorbed_faces=result.floor_absorbed_faces,
         grow_conflicts=result.grow_conflicts,
+        structureless_released_faces=list(result.structureless_released_faces),
         units=result.units,
     )
 
@@ -2290,6 +2499,7 @@ def _run_selftest() -> bool:
         for dx in (-6, 6):
             near_walls.append(add("cylinder", (cx + dx, 1.0), r=6.0))  # ⌀12 mm
         near_walls.append(add("cylinder", (cx, -9.0), r=30.0))          # ⌀60 mm bore
+        add("plane", (cx, -5.0))  # axial step floor (R1 keep predicate)
     # oversized blend cylinder near pocket 0 -> excluded by wall-diameter band
     blend = add("cylinder", (-60.0, 8.0), r=90.0)                        # ⌀180 mm
     # central hole cylinder far (~60 mm) from any floor -> unattached
@@ -2316,6 +2526,72 @@ def _run_selftest() -> bool:
           and sum(f.sphere_count for f in r.features) == 14)
     check("no cluster sculpted released to contour",
           all(len(f.released_faces) == 0 for f in r.features))
+
+    # Case 11: R1 structure validation (OCC-free)
+    def _case11_faces() -> tuple[list[_FakeFace], Any]:
+        ff: list[_FakeFace] = []
+        nxt = 0
+        ax = np.array([0.0, 0.0, 1.0])
+
+        def put(st: str, xy: tuple[float, float], *, r: float | None = None) -> int:
+            nonlocal nxt
+            x, y = xy
+            f = _FakeFace(
+                nxt, st, np.array([x, y, 0.0]), ax.copy(),
+                radius=r, axis=ax.copy(),
+            )
+            ff.append(f)
+            nxt += 1
+            return f.index
+
+        return ff, put
+
+    cfg11 = PocketDetectionConfig(
+        opening_axis=(0.0, 0.0, 1.0),
+        require_interior_wall=False,
+        wall_families_in=(),
+        template_floor_count=1,
+        template_sphere_count=0,
+        wall_attach_dist=8.0,
+        wall_dia_max_mm=100.0,
+        wall_dia_min_mm=3.0,
+    )
+
+    # 11a: sculpted bspline band — no walls, no axial floor, no fillet → released
+    band_faces, put = _case11_faces()
+    for dx in range(3):
+        put("bspline", (dx * 1.5, 0.0))
+    r_band = detect_pockets(
+        band_faces, None, None, occ_faces=None,
+        config=replace(cfg11, hard_k=3),
+    )
+    check("Case11a structureless band not claimed", len(r_band.claimed_faces) == 0)
+    check("Case11a structureless band has zero kept pockets", len(r_band.features) == 0)
+
+    # 11b: walled + axial floor pocket → kept
+    kept_faces, put = _case11_faces()
+    put("bspline", (0.0, 0.0))
+    put("cylinder", (3.0, 0.0), r=5.0)
+    put("plane", (1.0, 0.0))
+    r_kept = detect_pockets(
+        kept_faces, None, None, occ_faces=None, config=replace(cfg11, hard_k=1),
+    )
+    check("Case11b walled+floored pocket kept", len(r_kept.features) == 1)
+    check("Case11b walled+floored faces claimed", len(r_kept.claimed_faces) == 3)
+
+    # 11c: filleted pocket with no walls (sphere blend only) → kept via fillet branch
+    fillet_faces, put = _case11_faces()
+    put("sphere", (0.0, 0.0), r=2.54)
+    put("bspline", (1.0, 0.0))
+    r_fillet = detect_pockets(
+        fillet_faces, None, None, occ_faces=None,
+        config=replace(cfg11, hard_k=1),
+    )
+    check("Case11c filleted no-wall pocket kept", len(r_fillet.features) == 1)
+    check("Case11c fillet radius detected",
+          r_fillet.features[0].fillet_radius_mm is not None
+          and r_fillet.features[0].fillet_radius_mm > 0)
+
     print(f"\nself-test: {'ALL PASS' if passed else 'FAILURES PRESENT'}")
     return passed
 

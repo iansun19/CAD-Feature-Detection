@@ -119,6 +119,14 @@ class HoleDetectionConfig:
     # nearest this value (mm), to confirm each cluster has distinct faces.
     debug_depth_diameter: float | None = None
 
+    # A planar floor must be geometrically consistent with the bore it caps.
+    # Reject when the floor centroid's radial distance to the bore axis exceeds
+    # this multiple of the bore radius, or when the floor area exceeds this
+    # multiple of the bore cross-section (π R²). Both are dimensionless ratios
+    # derived from the candidate hole — no absolute-mm constants.
+    max_floor_centroid_dist_frac: float = 2.0
+    max_floor_area_frac: float = 9.0
+
     # Model units label, for logging/reporting only (OCCT already emits mm).
     units: str = "mm"
 
@@ -154,7 +162,7 @@ class Candidate:
 @dataclass
 class HoleFeature:
     feature_id: int
-    kind: str  # "through_hole" | "blind_hole"
+    kind: str  # "through_hole" | "blind_hole" | "drilled_blind_hole"
     face_indices: set[int]
     axis: Axis
     nominal_diameter: float
@@ -208,7 +216,7 @@ class HoleDetectionResult:
     units: str = "mm"
 
     def summary(self) -> str:
-        n_blind = sum(1 for f in self.features if f.kind == "blind_hole")
+        n_blind = sum(1 for f in self.features if f.kind in ("blind_hole", "drilled_blind_hole"))
         n_through = sum(1 for f in self.features if f.kind == "through_hole")
         return (
             f"{len(self.features)} holes ({n_blind} blind, {n_through} through); "
@@ -859,6 +867,40 @@ def _axial_position(
     return float(np.dot(centroid - axis.point, axis.direction))
 
 
+def _radial_dist_to_axis(
+    point: Sequence[float],
+    axis: Axis,
+) -> float:
+    """Perpendicular distance from a point to the bore axis line."""
+    delta = np.asarray(point, dtype=np.float64) - np.asarray(axis.point, dtype=np.float64)
+    d = _unit(axis.direction)
+    perp = delta - float(np.dot(delta, d)) * d
+    return float(np.linalg.norm(perp))
+
+
+def _floor_matches_bore(
+    face_index: int,
+    faces: Sequence[Any],
+    axis: Axis,
+    bore_radius: float,
+    config: HoleDetectionConfig,
+) -> bool:
+    """True when a planar face is a geometrically plausible blind-hole floor."""
+    if bore_radius <= 1e-9:
+        return False
+    fg = faces[face_index]
+    area = getattr(fg, "area", None)
+    centroid = np.asarray(getattr(fg, "centroid", (0.0, 0.0, 0.0)), dtype=np.float64)
+    radial = _radial_dist_to_axis(centroid, axis)
+    if radial > config.max_floor_centroid_dist_frac * bore_radius:
+        return False
+    if area is not None and float(area) > 0.0:
+        bore_area = math.pi * bore_radius * bore_radius
+        if float(area) > config.max_floor_area_frac * bore_area:
+            return False
+    return True
+
+
 def _wall_axial_span(
     occ_faces_by_index: dict[int, Any] | None,
     wall_face_ids: Sequence[int],
@@ -881,6 +923,108 @@ def _wall_axial_span(
     return float(min(projs)), float(max(projs))
 
 
+def _axial_face_extent(
+    face_index: int,
+    faces: Sequence[Any],
+    occ_faces_by_index: dict[int, Any] | None,
+    axis: Axis,
+) -> tuple[float, float]:
+    """(min, max) axial coordinate of ONE face along the axis.
+
+    Uses the OCC boundary sampler when the face is available; falls back to the
+    face centroid (a single point, so min == max) in the OCC-free path.
+    """
+    if occ_faces_by_index is not None and occ_faces_by_index.get(face_index) is not None:
+        from brep_extents import collect_boundary_points
+
+        pts = collect_boundary_points(occ_faces_by_index[face_index])
+        projs = (pts - axis.point) @ axis.direction
+        return float(projs.min()), float(projs.max())
+    p = _axial_position(face_index, faces, occ_faces_by_index, axis)
+    return p, p
+
+
+def _has_drill_tip_cap(
+    cyls: list[Candidate],
+    cones: list[Candidate],
+    cluster_ids: set[int],
+    faces: Sequence[Any],
+    graph: FaceGraph,
+    occ_faces_by_index: dict[int, Any] | None,
+    axis: Axis,
+    config: HoleDetectionConfig,
+) -> bool:
+    """True when a coaxial cone caps the bore as a DRILL POINT (blind), as opposed
+    to a countersink that merely chamfers an opening (through).
+
+    A blind drilled hole terminates in a conical point (the twist-drill tip): a
+    cone, coaxial with the wall (guaranteed by cluster membership), whose apex is
+    buried in the stock. It differs from a countersink cone in two locally
+    measurable ways, and a cone must satisfy BOTH to be read as a cap:
+
+      * it EXTENDS the bore axially OUTWARD past the cylinder-wall span on one end
+        (its outer boundary lies beyond that end by more than a small fraction of
+        the wall span) — a mid-span cone is a step, not a cap; and
+      * that end is CLOSED — the cone has NO planar neighbour, and NO convex-rim
+        opening plane sits within a small fraction of the wall span of the cone's
+        outer extreme. A countersink cone instead FLARES into an opening plane
+        (planar neighbour and/or a convex opening at its outer end).
+
+    All tolerances are fractions of THIS cluster's own cylinder span — no absolute
+    lengths, no face-id lists, no part gate. The wall span is measured from the
+    CYLINDERS only (not cones), so a capping cone can register as "beyond" it.
+    """
+    if not cones or not cyls:
+        return False
+
+    cyl_ext = [
+        _axial_face_extent(c.face_index, faces, occ_faces_by_index, axis)
+        for c in cyls
+    ]
+    wmin = min(e[0] for e in cyl_ext)
+    wmax = max(e[1] for e in cyl_ext)
+    span = max(wmax - wmin, 1e-9)
+    out_tol = max(config.cap_end_tol_frac * 0.1 * span, config.abs_colinear_floor)
+    open_tol = config.cap_end_tol_frac * span
+
+    for cone in cones:
+        ci = cone.face_index
+        cmin, cmax = _axial_face_extent(ci, faces, occ_faces_by_index, axis)
+        beyond_hi = cmax > wmax + out_tol
+        beyond_lo = cmin < wmin - out_tol
+        if not (beyond_hi or beyond_lo):
+            continue  # cone sits within the wall span — a step, not an end cap
+
+        # A drill-tip cone is buried in material: it abuts no planar face. A
+        # countersink cone flares into the opening plane it chamfers.
+        if any(
+            getattr(faces[nb], "surface_type", None) == "plane"
+            for nb in graph.neighbors.get(ci, ())
+        ):
+            continue
+
+        # No exterior opening (convex-rim plane) at the cone's OUTER end.
+        ext = cmax if beyond_hi else cmin
+        opening_at_end = False
+        for f in cluster_ids:
+            for nb in graph.neighbors.get(f, ()):
+                if getattr(faces[nb], "surface_type", None) != "plane":
+                    continue
+                if graph.edge_kind(f, nb) != "convex":
+                    continue
+                pos = _axial_position(nb, faces, occ_faces_by_index, axis)
+                if abs(pos - ext) <= open_tol:
+                    opening_at_end = True
+                    break
+            if opening_at_end:
+                break
+        if opening_at_end:
+            continue
+
+        return True
+    return False
+
+
 def _attach_faces(
     cluster: list[Candidate],
     faces: Sequence[Any],
@@ -891,6 +1035,8 @@ def _attach_faces(
     occ_faces_by_index: dict[int, Any] | None = None,
     wall_span: tuple[float, float] | None = None,
     candidate_faces: set[int] | None = None,
+    bore_radius: float = 0.0,
+    claimed_floor_faces: set[int] | None = None,
 ) -> tuple[set[int], set[int]]:
     """Return (floor_face_ids, blend_face_ids) attached to a coaxial cluster.
 
@@ -898,7 +1044,9 @@ def _attach_faces(
       * it is joined to a wall by a CONCAVE or SMOOTH edge — a hole-rim/opening
         that the wall passes THROUGH is a CONVEX edge and is never a cap;
       * its normal is ~parallel to the axis (plane ⟂ axis);
-      * it sits at an axial END of the wall span (within cap_end_tol_frac).
+      * it sits at an axial END of the wall span (within cap_end_tol_frac);
+      * its centroid and area are consistent with the bore radius (see config);
+      * it is not already the floor of another hole feature (single ownership).
     Blends: torus/bspline/bezier faces reachable from cluster faces across SMOOTH
     or CONCAVE edges (traversed transitively for multi-face fillet rings).
     """
@@ -947,6 +1095,10 @@ def _attach_faces(
                     occ_faces_by_index, axis, config,
                 ):
                     continue  # top opening flat — leave for the flat pass
+                if claimed_floor_faces is not None and nb in claimed_floor_faces:
+                    continue  # single ownership — already another hole's floor
+                if not _floor_matches_bore(nb, faces, axis, bore_radius, config):
+                    continue  # geometrically inconsistent with this bore
                 floor_ids.add(nb)
                 visited.add(nb)  # cap terminates the walk
                 continue
@@ -999,6 +1151,7 @@ def _classify_cluster(
     occ_faces_by_index: dict[int, Any] | None,
     config: HoleDetectionConfig,
     candidate_faces: set[int] | None = None,
+    claimed_floor_faces: set[int] | None = None,
 ) -> tuple[HoleFeature | None, set[int]]:
     cyls = [c for c in cluster if c.kind == "cylinder"]
     cones = [c for c in cluster if c.kind == "cone"]
@@ -1032,6 +1185,8 @@ def _classify_cluster(
         cluster, faces, graph, axis, config,
         occ_faces_by_index=occ_faces_by_index, wall_span=wall_span,
         candidate_faces=candidate_faces,
+        bore_radius=radius,
+        claimed_floor_faces=claimed_floor_faces,
     )
 
     cluster_ids = {c.face_index for c in cluster}
@@ -1045,9 +1200,18 @@ def _classify_cluster(
             sorted(cluster_ids), sorted(boundary_fillets),
         )
 
-    # Blind ⇔ exactly one end of the wall span is capped by a floor plane; a
-    # wall open at both ends (no qualifying cap) is a through hole.
-    kind = "blind_hole" if body_floors else "through_hole"
+    # Blind ⇔ one end of the wall span is capped. A planar floor gives a
+    # filleted/flat-bottom blind ("blind_hole"); a coaxial drill-tip cone with no
+    # opening beyond it gives a drilled blind ("drilled_blind_hole"). A wall open
+    # at both ends (no qualifying cap) is a through hole.
+    if body_floors:
+        kind = "blind_hole"
+    elif _has_drill_tip_cap(
+        cyls, cones, cluster_ids, faces, graph, occ_faces_by_index, axis, config,
+    ):
+        kind = "drilled_blind_hole"
+    else:
+        kind = "through_hole"
 
     n_distinct = _distinct_radii(cyls)
     is_counterbore = n_distinct > 1
@@ -1155,10 +1319,12 @@ def detect_holes(
     features: list[HoleFeature] = []
     deferred_feature_fillets: set[int] = set()
     deferred_feature_fillet_groups: list[set[int]] = []
+    claimed_floor_faces: set[int] = set()
     next_id = 0
     for cluster in clusters:
         feat, boundary = _classify_cluster(
             next_id, cluster, faces, graph, occ_map, config, pool,
+            claimed_floor_faces=claimed_floor_faces,
         )
         if feat is None:
             if all(c.kind == "cone" for c in cluster):
@@ -1171,6 +1337,7 @@ def detect_holes(
             deferred_feature_fillet_groups.append(boundary)
             deferred_feature_fillets |= boundary
         features.append(feat)
+        claimed_floor_faces |= set(feat.floor_face_indices)
         next_id += 1
 
     _log_depth_debug(features, config)
@@ -1397,6 +1564,7 @@ class _FakeFace:
     radius: float | None = None
     axis: np.ndarray | None = None
     axis_location: np.ndarray | None = None
+    area: float | None = None
 
 
 def _fake_cylinder(index, radius, axis_dir, center, *, interior=True):
@@ -1559,6 +1727,72 @@ def _run_selftest() -> bool:
     r = detect_holes(faces, ei, ea, config=HoleDetectionConfig(max_hole_diameter_mm=150.0))
     ok10 = len(r.features) == 0 and 0 in r.remaining_faces and 0 in r.oversize_faces
     check("bore above diameter ceiling deferred to remaining_faces", ok10)
+
+    # Case 11: a large shared deck plane concave-adjacent to two shallow holes
+    # must NOT be annexed as a floor (geometric mismatch + single ownership).
+    deck_area = 50.0 * 50.0  # >> 9 * pi * R^2 for R=3
+    faces = [
+        _fake_cylinder(0, 3.0, z, [10.0, 0.0, 0.0]),
+        _fake_cylinder(1, 3.0, z, [40.0, 0.0, 0.0]),
+        _FakeFace(2, "plane", np.array([25.0, 0.0, -2.0]), np.array(z, float),
+                  area=deck_area),
+    ]
+    ei, ea = _edges_from_pairs([(0, 2, "concave"), (1, 2, "concave")], 3)
+    r = detect_holes(faces, ei, ea)
+    ok11 = (
+        len(r.features) == 2
+        and all(f.kind == "through_hole" for f in r.features)
+        and 2 not in r.claimed_faces
+        and all(2 not in f.floor_face_indices for f in r.features)
+    )
+    check("shared deck plane not annexed as blind-hole floor", ok11)
+
+    # Case 12 (part1 target): a coaxial drill-tip cone that extends the bore past
+    # the cylinder wall and is buried (no plane neighbour, no opening beyond it)
+    # caps a blind DRILLED hole even with NO planar floor.
+    faces = [
+        _fake_cylinder(0, 3.0, z, [0, 0, 0]),                              # wall, axial ~0
+        _FakeFace(1, "plane", np.array([0, 0, 5.0]), np.array(z, float)),  # single mouth (opening)
+        _FakeFace(2, "cone", np.array([1.5, 0, -6.0]), np.array([-1.0, 0.0, 0.0]),
+                  radius=3.0, axis=np.array(z, float),
+                  axis_location=np.array([0.0, 0.0, 0.0])),                # drill tip beyond bottom
+    ]
+    ei, ea = _edges_from_pairs([(0, 1, "convex"), (0, 2, "concave")], 3)
+    r = detect_holes(faces, ei, ea)
+    ok12 = (len(r.features) == 1 and r.features[0].kind == "drilled_blind_hole"
+            and r.features[0].face_indices == {0, 2})
+    check("coaxial drill-tip cone (no floor) -> drilled_blind_hole", ok12)
+
+    # Case 13 (fish_mold guard): a countersink cone that FLARES into an opening
+    # plane at each end keeps the hole THROUGH — the cone is a chamfer, not a cap.
+    faces = [
+        _fake_cylinder(0, 3.0, z, [0, 0, 0]),
+        _FakeFace(1, "plane", np.array([0, 0, 5.0]), np.array(z, float)),    # top opening
+        _FakeFace(2, "plane", np.array([0, 0, -5.0]), np.array(z, float)),   # bottom opening
+        _FakeFace(3, "cone", np.array([4.0, 0, 4.5]), np.array([-1.0, 0.0, 0.0]),
+                  radius=3.0, axis=np.array(z, float),
+                  axis_location=np.array([0.0, 0.0, 0.0])),                  # countersink at top plane
+    ]
+    ei, ea = _edges_from_pairs(
+        [(0, 1, "convex"), (0, 2, "convex"), (0, 3, "concave"), (3, 1, "convex")], 4,
+    )
+    r = detect_holes(faces, ei, ea)
+    ok13 = (len(r.features) == 1 and r.features[0].kind == "through_hole"
+            and r.features[0].is_countersink)
+    check("countersink cone flaring into opening plane -> stays through_hole", ok13)
+
+    # Case 14 (golden guard): a plain through hole with NO cone stays through and
+    # yields no drilled-blind (empty on parts lacking the target geometry).
+    faces = [
+        _fake_cylinder(0, 4.0, z, [0, 0, 0]),
+        _FakeFace(1, "plane", np.array([0, 0, 5.0]), np.array(z, float)),
+        _FakeFace(2, "plane", np.array([0, 0, -5.0]), np.array(z, float)),
+    ]
+    ei, ea = _edges_from_pairs([(0, 1, "convex"), (0, 2, "convex")], 3)
+    r = detect_holes(faces, ei, ea)
+    ok14 = (len(r.features) == 1 and r.features[0].kind == "through_hole"
+            and not any(f.kind == "drilled_blind_hole" for f in r.features))
+    check("no-cone through hole -> no drilled_blind_hole (golden guard)", ok14)
 
     # Validation subset check.
     exp = [ExpectedHole("blind_hole", 6.0), ExpectedHole("through_hole", 8.0)]

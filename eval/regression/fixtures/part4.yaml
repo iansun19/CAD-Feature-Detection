@@ -1,0 +1,47 @@
+fixture_id: "part4"
+step: "part4.step"
+graph_npz: "eval/regression/graphs/part4.graph.npz"
+face_index_scheme: "analyze_step_v1"
+
+setup:
+  machining_side: back
+  pocket_access: unknown
+
+run:
+  stock_classifier: "off"
+  max_diameter_mm: 150.0
+  wall_attach_dist: null
+
+golden: "eval/regression/golden/part4.partition.json"
+
+notes: |
+  part4 — prismatic plate (154 faces, 12.7 mm thick, Z opening axis). Its outer
+  boundary is a single closed prismatic contour: 15 vertical walls (planes with
+  normal perpendicular to Z) interleaved with 15 ISOLATED vertical cylinders
+  (corner fillets R3.17, corner arc R9.53, and semicircular scallop notches
+  R2.75 cut into the top edge), all bordering only the two extreme decks
+  (top Z=12.7, bottom Z=0). This 30-face loop is exactly Predicate B's
+  corner-isolated prismatic cycle and is claimed as ONE profile:
+    54,55,56,57,58,59,60,61,62,63,65,66,76,77,78,79,80,81,
+    142,143,144,145,146,147,148,149,150,151,152,153
+  The fix that made this possible was pass ordering: the prismatic-profile pass
+  now runs BEFORE holes (like pockets-before-holes), so the scallop notches
+  (57,58,59) and boundary arc (153) are claimed by the profile instead of being
+  grabbed as through_holes — which previously broke the degree-2 cycle and
+  fragmented the boundary across through_hole + flat + wall + contour_surface.
+  The reorder is byte-identical on all six prior frozen parts (Predicate B
+  claims the same faces at the new pool position; holes are unchanged under the
+  reduced pool). The 21 genuine interior through-holes, the counterbore, and the
+  through-pockets are unaffected.
+
+  Single primary setup (machining_side=back); opening axis is geometry-derived Z.
+  stock_classifier=off: every face enters the cascade and exits with one feature
+  label (no stock bucket). graph.npz pinned from part4's own ingest (154 faces).
+  STEP ("part4.step") is at repo root.
+
+  Blessed from HAND-VERIFIED ground truth (not merely from cascade output): the
+  30-face outer boundary was confirmed by per-face geometry inventory (all
+  vertical, bordering only the two extreme decks, forming one degree-2 cycle) and
+  by confirming the vacated through_hole/flat/wall/contour features owned only
+  these faces (clean re-partition, 0 orphans/stubs). Predicate A / Predicate B /
+  countersink detectors unchanged; all six prior frozen parts diff-clean.

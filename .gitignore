@@ -40,3 +40,27 @@ local_tool_libraries/
 # Pipeline outputs (Phase 4)
 pipeline_out/
 *.parquet
+
+# Recoverable archived probe scripts (cleanup/safe-artifacts)
+archive/
+
+# Legacy GNN/LLM experiment run artifacts (regenerable via final_table.py/compare_runs.py)
+# NOTE: baseline_results.txt is a curated input and is intentionally NOT ignored
+*_run.jsonl
+*_run.errors.jsonl
+*_run.cm.csv
+*_run.report.txt
+bounded_stripped.*
+bounded_unstripped.*
+llm_feat_fixed.*
+llm_leak_demo.*
+llm_raw_fixed.*
+train_11dim.log
+
+# Generated feature-graph viewers (regenerable via feature_graph_viewer/build.py)
+*_graph_viewer.html
+# ...except the active WIP viewer, which is tracked
+!96260B_rear_graph_viewer.html
+
+# Generated CAM plan output (regenerable via seed_and_plan.py / generate_operation_plan.py)
+/plan.json

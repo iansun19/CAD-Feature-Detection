@@ -1170,13 +1170,11 @@ def run_cascade_for_fixture(
     hole_config = HoleDetectionConfig(
         max_hole_diameter_mm=float(fixture.run.get("max_diameter_mm", 150.0)),
     )
-    stock_classifier = fixture.run.get("stock_classifier", "new")
 
     cascade = run_cascade(
         step_path,
         edge_index,
         edge_attr,
-        stock_classifier=stock_classifier,
         pocket_config=pocket_config,
         hole_config=hole_config,
     )
@@ -1231,8 +1229,11 @@ def extract_partition_from_cascade(
         residual_result,
     ) = cascade_results[:9]
     inner_fillet_result = cascade_results[9]
+    chamfer_result = cascade_results[10]
+    counterbore_result = cascade_results[11]
+    countersink_result = cascade_results[12]
     if edge_index is None:
-        edge_index = cascade_results[10]
+        edge_index = cascade_results[13]
 
     n_faces = len(faces)
     stock_classifier = fixture.run.get("stock_classifier", "new")
@@ -1258,7 +1259,18 @@ def extract_partition_from_cascade(
         residual_result,
         edge_index,
         inner_fillet_result=inner_fillet_result,
+        chamfer_result=chamfer_result,
+        counterbore_result=counterbore_result,
+        countersink_result=countersink_result,
     )
+    # Plain-pocket -> contour_surface (+ deck -> flat), geometry-gated. The
+    # regression path builds the partition WITHOUT lobe-contour merge (merge only
+    # regroups contour nodes and does not change per-face class), so this runs
+    # directly after build here; in run_cascade.py it runs after the merge. No-op
+    # on any part without a plain-pocket node. See relabel_plain_pockets_as_contour.
+    from run_cascade import relabel_plain_pockets_as_contour
+
+    relabel_plain_pockets_as_contour(graph, faces, pocket_result.opening_axis)
     instances = [
         PartitionInstance(
             class_name=str(node["class_name"]),
@@ -1308,7 +1320,7 @@ def extract_partition_from_cascade(
 def extract_partition_for_fixture(fixture: RegressionFixture) -> CascadePartition:
     """Run cascade + extraction for one fixture."""
     cascade = run_cascade_for_fixture(fixture)
-    edge_index = cascade[10]
+    edge_index = cascade[13]
     return extract_partition_from_cascade(fixture, cascade, edge_index=edge_index)
 
 

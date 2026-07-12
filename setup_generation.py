@@ -130,9 +130,68 @@ def infer_machining_side(step_path: str | Path) -> str | None:
     return None
 
 
-def default_scope_for_side(machining_side: str | None) -> SetupScope | str:
-    """Process scope carried through generation (fixturing, not geometry)."""
-    if machining_side == "front":
+# Reachability frame: step-4a annotates each feature along +/- the opening axis,
+# with "+Z" = along +opening_axis. A front setup approaches from +opening_axis, a
+# back setup from -opening_axis (see planner._reachability_dir_for_setup). This is
+# the only role the fixturing side plays in scope: it selects the approach whose
+# reachable set is examined. The side string is never itself the answer.
+_SIDE_TO_APPROACH_DIR = {"front": "+Z", "back": "-Z"}
+_FACE_FEATURE_CLASSES = frozenset({"flat", "face"})
+
+
+def _node_reachable_from(node: Mapping[str, Any], approach_dir: str) -> bool:
+    """Mirror planner._feature_reachable_for_setup on a raw cascade node."""
+    reach = (node.get("approach") or {}).get("reachability")
+    if not isinstance(reach, Mapping):
+        return False
+    if reach.get("exempt"):
+        # Walls/oblique features: reachable if step-4a gave them any direction.
+        return bool(reach.get("reachable_dirs"))
+    return approach_dir in (reach.get("reachable_dirs") or [])
+
+
+def derive_setup_scope(
+    graph: Mapping[str, Any], machining_side: str | None
+) -> SetupScope | str:
+    """Scope a setup by what it can reach -- never by the part's filename.
+
+    The scope falls out of the geometry: a setup whose only reachable machining
+    work is a flat (its stock face) is a facing-only flip and is scoped to
+    ``facing`` so it cannot re-cut walls that merely happen to be reachable
+    (the split-panel over-machining the homolog gate flags). A setup that reaches
+    substantial real feature work -- pockets, walls, holes, contours, fillets,
+    profiles -- gets ``full`` scope.
+
+    This deliberately drops the old ``front -> ["facing"]`` special-case. On
+    96260B the rear owns facing because it reaches the envelope STOCK flat, and
+    the front gets full scope because 47 features are reachable from its +Z
+    approach -- both are facts read off the graph, not the word "FRONT" in the
+    STEP name. Facing itself is likewise geometry-driven downstream via
+    ``planner.identify_facing_feature_ids`` (envelope-coincident STOCK flat).
+
+    Falls back to ``full`` (plan everything reachable, narrow nothing) when the
+    side is unknown or the graph carries no verified reachability to reason from.
+    """
+    approach_dir = _SIDE_TO_APPROACH_DIR.get(machining_side or "")
+    has_verified = any(
+        isinstance((n.get("approach") or {}).get("reachability"), Mapping)
+        and (n["approach"]["reachability"]).get("verified")
+        for n in graph.get("nodes", [])
+    )
+    if approach_dir is None or not has_verified:
+        return "full"
+
+    reachable_work = 0
+    saw_stock_flat = False
+    for node in graph.get("nodes", []):
+        if not _node_reachable_from(node, approach_dir):
+            continue
+        if node.get("class_name") in _FACE_FEATURE_CLASSES:
+            saw_stock_flat = True
+        else:
+            reachable_work += 1
+
+    if reachable_work == 0 and saw_stock_flat:
         return ["facing"]
     return "full"
 
@@ -144,14 +203,24 @@ def generate_setup_entry_for_export(
     part_step: str | Path,
     machining_side: str | None = None,
 ) -> SetupEntry:
-    """Build one setup entry from an exported cascade graph + process hints."""
+    """Build one setup entry from an exported cascade graph + process hints.
+
+    The opening axis is emitted as ``mode: auto`` (not a fabricated explicit
+    vector): the cascade *auto-detects* the axis from geometry, it is not a
+    hand-authored shop decision. The planner re-derives the concrete axis from
+    ``approach_frame.z`` for auto setups and, via ``approach_frame`` provenance,
+    fails loud when geometry could not resolve it. To pin a specific axis, set
+    ``opening_axis.mode: explicit`` in the descriptor (e.g. via the wrapper's
+    ``--opening-axis``).
+    """
     side = machining_side if machining_side is not None else infer_machining_side(part_step)
     return generate_setup_entry_from_graph(
         graph,
         setup_id=setup_id,
         part_step=part_step,
         machining_side=side,
-        scope=default_scope_for_side(side),
+        scope=derive_setup_scope(graph, side),
+        opening_axis_mode="auto",
     )
 
 

@@ -265,7 +265,15 @@ class TestSequenceSearch96260B(unittest.TestCase):
         baseline_faces = _machined_faces(plans["none"], graph_refs)
         for plan in plans.values():
             self.assertEqual(_machined_faces(plan, graph_refs), baseline_faces)
-        self.assertEqual(len(baseline_faces), 257)
+        # Facing is envelope-driven: the rear machines its features and now also
+        # faces the real -Y stock face (feat 17, reachable only from its -Z
+        # approach) instead of rastering it -- same face set, one op reclassified.
+        # The front's only +Z-reachable flat is an interior seating ledge (not
+        # envelope stock), so its facing-only scope keeps nothing and it emits no
+        # ops. That drops the one spuriously-faced front face: 27 -> 26. (The old
+        # 27 counted that spurious front facing; the earlier 301 counted the front
+        # over-machining every reachable feature.)
+        self.assertEqual(len(baseline_faces), 26)
 
 
 if __name__ == "__main__":

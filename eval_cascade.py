@@ -34,6 +34,8 @@ DISCRETE_TP_CLASSES = (
     "filleted_open_pocket",
     "through_hole",
     "filleted_blind_hole",
+    "blind_hole",
+    "counterbore",
     "flat",
     "open_pocket",
 )
@@ -48,6 +50,7 @@ CASCADE_KIND_TO_TP: dict[str, str] = {
     "pocket": "filleted_pocket",
     "through_hole": "through_hole",
     "blind_hole": "filleted_blind_hole",
+    "drilled_blind_hole": "blind_hole",
     "flat": "flat",
     "outer_fillet": "outer_fillet",
 }
@@ -178,9 +181,40 @@ def _extract_cascade_instances(
     wall_result,
     profile_result,
     residual_result,
+    counterbore_result=None,
+    countersink_result=None,
 ) -> tuple[list[CascadeInstance], int, set[int]]:
     """Return discrete instances, residual instance count, all residual face indices."""
     out: list[CascadeInstance] = []
+
+    # Counterbores (hole-pass blind+through re-attributed to one feature). Emit
+    # the counterbore and suppress the absorbed hole features below.
+    counterbore_absorbed_faces: set[int] = set()
+    if counterbore_result is not None:
+        for feat in counterbore_result.features:
+            out.append(CascadeInstance(
+                tp_class="counterbore",
+                cascade_kind="counterbore",
+                face_indices=frozenset(feat.face_indices),
+                diameter_in=feat.counterbore_radius_mm * 2 / MM_PER_IN,
+                three_d_surface=False,
+            ))
+            counterbore_absorbed_faces |= {int(i) for i in feat.face_indices}
+
+    # Countersinks (hole-pass through_hole with a widening conical entry, re-
+    # attributed to one feature). Emit the countersink and suppress the absorbed
+    # through_hole below. Empty on parts without the structure.
+    countersink_absorbed_faces: set[int] = set()
+    if countersink_result is not None:
+        for feat in countersink_result.features:
+            out.append(CascadeInstance(
+                tp_class="countersink",
+                cascade_kind="countersink",
+                face_indices=frozenset(feat.face_indices),
+                diameter_in=feat.bore_radius_mm * 2 / MM_PER_IN,
+                three_d_surface=False,
+            ))
+            countersink_absorbed_faces |= {int(i) for i in feat.face_indices}
 
     for feat in pocket_result.features:
         out.append(CascadeInstance(
@@ -200,6 +234,11 @@ def _extract_cascade_instances(
         ))
 
     for feat in hole_result.features:
+        fset = {int(i) for i in feat.face_indices}
+        if counterbore_absorbed_faces and fset <= counterbore_absorbed_faces:
+            continue  # absorbed into a counterbore instance above
+        if countersink_absorbed_faces and fset <= countersink_absorbed_faces:
+            continue  # absorbed into a countersink instance above
         tp = CASCADE_KIND_TO_TP.get(feat.kind, feat.kind)
         out.append(CascadeInstance(
             tp_class=tp,
@@ -274,7 +313,21 @@ CASCADE_TP_CLASS_ID: dict[str, int] = {
     "open_pocket": 6,
     "pocket": 6,
     "filleted_blind_hole": 5,
+    "blind_hole": 5,
     "through_hole": 0,
+    # Closed side-wall cavity open on both faces (non-round profile). Its own
+    # toolpath class, not overloaded onto pocket(6)/through_hole(0). NOTE: the 12
+    # here is the cascade toolpath-class id and is UNRELATED to taxonomy.py's
+    # OLD_TO_NEW {12 -> blind_hole} MFCAD++ label remap.
+    "through_pocket": 12,
+    # Counterbored through-hole (enlarged mouth + flat shoulder + through bore).
+    # Own toolpath class, not overloaded onto hole(0/5) or countersink; 13 is the
+    # next free cascade toolpath-class id.
+    "counterbore": 13,
+    # Countersunk through-hole (conical flush-seat entry + through bore). Own
+    # toolpath class, not overloaded onto hole(0) or counterbore(13); 14 is the
+    # next free cascade toolpath-class id. See countersink_detection.py.
+    "countersink": 14,
     "flat": 11,
     "outer_fillet": 10,
     "inner_fillet": 10,
@@ -300,6 +353,9 @@ def build_cascade_feature_graph(
     opening_axis: Sequence[float] | None = None,
     *,
     inner_fillet_result: Any | None = None,
+    chamfer_result: Any | None = None,
+    counterbore_result: Any | None = None,
+    countersink_result: Any | None = None,
 ) -> dict[str, Any]:
     """Build feature_graph_cascade.json from cascade pass results.
 
@@ -332,10 +388,38 @@ def build_cascade_feature_graph(
         for feat in inner_fillet_result.features:
             _append_node("inner_fillet", feat.face_indices, feat.to_dict())
 
+    # Counterbores: a counterbored through-hole split by the hole pass into a
+    # filleted_blind_hole + through_hole, re-attributed to ONE counterbore. The
+    # absorbed hole features are suppressed below (their faces are covered by the
+    # counterbore node). Only takes effect when a counterbore_result is supplied,
+    # so callers that omit it keep the original blind+through labeling.
+    counterbore_absorbed_faces: set[int] = set()
+    if counterbore_result is not None:
+        for feat in counterbore_result.features:
+            _append_node("counterbore", feat.face_indices, feat.to_dict())
+            counterbore_absorbed_faces |= {int(i) for i in feat.face_indices}
+
+    # Countersinks: a through_hole hole feature whose conical entry flares wider
+    # than the bore (see countersink_detection). Emitted as ONE countersink node;
+    # the absorbed through_hole feature is suppressed below. Only takes effect when
+    # a countersink_result is supplied, so callers that omit it keep through_hole.
+    countersink_absorbed_faces: set[int] = set()
+    if countersink_result is not None:
+        for feat in countersink_result.features:
+            _append_node("countersink", feat.face_indices, feat.to_dict())
+            countersink_absorbed_faces |= {int(i) for i in feat.face_indices}
+
     for feat in pocket_result.features:
         _append_node(feat.toolpath_class, feat.face_indices, feat.to_dict())
 
     for feat in hole_result.features:
+        # Skip hole features fully absorbed into a counterbore/countersink (their
+        # faces are emitted by the counterbore/countersink node above).
+        fset = {int(i) for i in feat.face_indices}
+        if counterbore_absorbed_faces and fset <= counterbore_absorbed_faces:
+            continue
+        if countersink_absorbed_faces and fset <= countersink_absorbed_faces:
+            continue
         tp = CASCADE_KIND_TO_TP.get(feat.kind, feat.kind)
         _append_node(tp, feat.face_indices, feat.to_dict())
 
@@ -356,6 +440,13 @@ def build_cascade_feature_graph(
 
     for feat in residual_result.features:
         _append_node("contour_surface", feat.face_indices, feat.to_dict())
+
+    # Chamfer bands (closed oblique-bevel rings), recognized in-pipeline before
+    # flats/contour. Emitted last so other nodes keep their feature_ids; empty on
+    # parts without a reachable bevel loop (96260B), leaving output byte-identical.
+    if chamfer_result is not None:
+        for feat in chamfer_result.features:
+            _append_node("chamfer", feat.face_indices, feat.to_dict())
 
     # Feature–feature adjacency from shared B-rep edges.
     class _Inst:
@@ -730,7 +821,7 @@ def eval_part(gt_path: Path) -> PartReport:
     prev_level = logging.root.level
     logging.root.setLevel(logging.ERROR)
     try:
-        faces, pk, hl, cx, fl, of, wl, pr, rs, if_ = run_cascade(
+        faces, pk, hl, cx, fl, of, wl, pr, rs, if_, ch, cb, cs = run_cascade(
             step_path, edge_index, edge_attr, pocket_config=pocket_config,
         )
     finally:
@@ -738,13 +829,15 @@ def eval_part(gt_path: Path) -> PartReport:
     n_faces = len(faces)
 
     cascade_instances, residual_n, residual_faces = _extract_cascade_instances(
-        pk, hl, cx, fl, of, wl, pr, rs,
+        pk, hl, cx, fl, of, wl, pr, rs, counterbore_result=cb,
+        countersink_result=cs,
     )
     cascade_counts = _count_by_tp(cascade_instances)
 
     total_claimed = len(
         pk.claimed_faces | hl.claimed_faces | cx.claimed_faces | fl.claimed_faces
         | of.claimed_faces | wl.claimed_faces | pr.claimed_faces | rs.claimed_faces
+        | ch.claimed_faces | cb.claimed_faces
     )
     unclaimed = n_faces - total_claimed
     cascade_completed = unclaimed == 0
@@ -801,6 +894,9 @@ def eval_part(gt_path: Path) -> PartReport:
          int(counts_gt.get("through_hole", 0) or 0)),
         ("filleted_blind_hole", sum(1 for f in hl.features if f.kind == "blind_hole"),
          int(counts_gt.get("filleted_blind_hole", 0) or 0)),
+        ("blind_hole", sum(1 for f in hl.features if f.kind == "drilled_blind_hole"),
+         int(counts_gt.get("blind_hole", 0) or 0)),
+        ("counterbore", len(cb.features), int(counts_gt.get("counterbore", 0) or 0)),
         ("open_pocket", sum(1 for f in cx.features if f.kind == "open_pocket"),
          int(counts_gt.get("open_pocket", 0) or 0)),
         ("flat", len(fl.features), int(counts_gt.get("flat", 0) or 0)),

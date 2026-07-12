@@ -9,7 +9,7 @@ Keep your ~52 Fusion exports on disk outside the repo, or in a gitignored folder
 
 ```bash
 mkdir -p local_tool_libraries
-# copy *.json / *.tools exports here — this path is gitignored
+# copy *.json / *.tools exports here ï¿½ this path is gitignored
 ```
 
 Supported extensions: `.json`, `.tools`. Binary `.hsmlib` files are skipped; re-export
@@ -62,10 +62,10 @@ tools = load_tools_from_supabase(
 
 `tool_source` precedence in `build_context_v0`:
 
-1. `tool_library_paths` — explicit on-disk file(s) override everything
-2. `tool_source="supabase"` — normalized rows from Supabase `tools` table
-3. `tool_source="directory"` — glob `tool_library_dir` (default: bundled `tool_libraries/`)
-4. `tool_source="hardcoded"` (default) — built-in v0 catalog
+1. `tool_library_paths` ï¿½ explicit on-disk file(s) override everything
+2. `tool_source="supabase"` ï¿½ normalized rows from Supabase `tools` table
+3. `tool_source="directory"` ï¿½ glob `tool_library_dir` (default: bundled `tool_libraries/`)
+4. `tool_source="hardcoded"` (default) ï¿½ built-in v0 catalog
 
 ## Bundled samples
 

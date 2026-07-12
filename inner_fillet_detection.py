@@ -96,6 +96,13 @@ class InnerFilletDetectionConfig:
     # breaks parts whose STOCK gate is disabled (e.g. fully-machined molds like
     # fish_mold, where the reference face 159 is no longer in any stock set).
     require_stock_gated: bool = False
+    # Same story for the shell gate: requiring the candidate to live in the same
+    # shell as the reference face is an extra guard, but it excludes genuine
+    # inner_fillets that are geometrically identical yet sit in a different shell
+    # (e.g. fish_mold face 90, an exact twin of reference face 159 in shell 0
+    # rather than shell 1). Off by default; the template alone is discriminative
+    # (matches exactly {90, 159} on fish_mold and nothing on the 96260B panels).
+    require_core_shell: bool = False
     units: str = "mm"
 
 
@@ -198,7 +205,11 @@ def is_inner_fillet_candidate(
     parents = _tangent_concave_parents_npz(face_id, edge_index, edge_attr)
     if len(parents) != th.tangent_concave_parent_count:
         return False
-    if shell_map is not None and shell_map.get(face_id) != th.core_shell_id:
+    if (
+        config.require_core_shell
+        and shell_map is not None
+        and shell_map.get(face_id) != th.core_shell_id
+    ):
         return False
     if _envelope_coincident(face_id, ctx).coincident:
         return False
@@ -243,13 +254,17 @@ class InnerFilletFeature:
     reference_face_id: int
     kind: str = "inner_fillet"
     toolpath_class: str = "inner_fillet"
+    # True concave fillet radius (mm) from the matched face's OCC geometry. The
+    # planner uses 2*reference_radius as the FILLET_CAP tool-fit cap; None -> the
+    # adapter falls back to the reachability probe radius (its prior behaviour).
+    reference_radius_mm: float | None = None
 
     @property
     def n_faces(self) -> int:
         return len(self.face_indices)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d = {
             "feature_id": self.feature_id,
             "kind": self.kind,
             "toolpath_class": self.toolpath_class,
@@ -258,6 +273,9 @@ class InnerFilletFeature:
             "area": round(float(self.area), 3),
             "reference_face_id": self.reference_face_id,
         }
+        if self.reference_radius_mm is not None:
+            d["reference_radius_mm"] = round(float(self.reference_radius_mm), 6)
+        return d
 
 
 @dataclass
@@ -315,11 +333,19 @@ def detect_inner_fillets(
             i, faces, edge_index, edge_attr,
             config=cfg, ctx=ctx, shell_map=shell_map,
         ):
+            # True fillet radius from the matched face: cylinders carry it in
+            # `radius`, toroidal blends in `torus_minor_r`. None when neither is
+            # populated (adapter then falls back to the probe radius).
+            geom = faces[i]
+            ref_radius = getattr(geom, "radius", None)
+            if ref_radius is None:
+                ref_radius = getattr(geom, "torus_minor_r", None)
             features.append(InnerFilletFeature(
                 feature_id=len(features),
                 face_indices={i},
-                area=float(faces[i].area),
+                area=float(geom.area),
                 reference_face_id=cfg.thresholds.reference_face_id,
+                reference_radius_mm=None if ref_radius is None else float(ref_radius),
             ))
             claimed.add(i)
     return InnerFilletDetectionResult(

@@ -2,7 +2,7 @@
 # Copy to eval/gt/{part_id}_setup.yaml and fill one entry per machining setup.
 # Paths are relative to the repo root unless absolute.
 #
-# Scope: geometrically-unrecoverable setup facts ONLY ù not detection thresholds,
+# Scope: geometrically-unrecoverable setup facts ONLY ÔøΩ not detection thresholds,
 # reference face sets, or Toolpath count ground truth (those live elsewhere).
 #
 # part_id is explicit here; do NOT rely on STEP filename normalization (96260B-specific).
@@ -15,10 +15,10 @@ defaults:
   setup_id: default
   opening_axis:
     mode: auto
-    min_confidence: 0.85   # auto mode only ù below this ? error, ask for explicit vector
+    min_confidence: 0.85   # auto mode only ÔøΩ below this ? error, ask for explicit vector
   pocket_access: unknown     # all filleted pockets unless overridden per setup / per seed
 
-# One block per named machining setup (setup_id is arbitrary ù front/rear are conventional).
+# One block per named machining setup (setup_id is arbitrary ÔøΩ front/rear are conventional).
 setups:
   front:
     setup_id: front

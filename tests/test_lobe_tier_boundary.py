@@ -217,7 +217,7 @@ class LobeTierBoundaryTests(unittest.TestCase):
 
     def test_front_cascade_classes(self):
         faces, occ, edge_index, edge_attr, config = _load_front()
-        _, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
+        _, pk, hl, cx, fl, of, wl, pr, rs, *_ = run_cascade(
             FRONT_STEP, edge_index, edge_attr, pocket_config=config,
         )
         graph = build_cascade_feature_graph(

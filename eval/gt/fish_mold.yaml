@@ -1,0 +1,36 @@
+# Ground truth — fish_mold (fully-machined fish-shaped mold cavity, rear/back setup).
+# PROVENANCE: like 96260B, this baseline has been VERIFIED against the shop Toolpath
+# Feature List. Every count and attribute below was confirmed by the operator to
+# coincide with that shop program (verified 2026-07-11). This is therefore a real
+# transcription-backed ground truth, not a self-consistency oracle.
+#
+# STATUS: FROZEN. This file is the blessed, locked ground truth for fish_mold and
+# must not be regenerated, re-blessed, or otherwise overwritten. It is checked in
+# read-only; any change requires an explicit, deliberate operator override.
+#
+# Instance counts in eval_cascade Toolpath vocabulary (NOT face counts). Cascade
+# classes without a Toolpath count vocabulary (pocket, chamfer, inner_fillet) are
+# intentionally not counted here, same as 96260B. Attributes are in inches.
+
+part_id: "fish_mold"
+part_step: "fish mold.stp"
+graph_npz: "pipeline_out/fish_mold/graph.npz"
+
+setup:
+  machining_side: back        # rear setup; opening axis auto-resolves to true ±Z
+
+counts:
+  filleted_pocket: 1
+  through_hole: 2
+  flat: 8
+  profile: 1                  # wired residual: outer swept profile band (20 faces)
+  contour_surface: 45         # residual bucket (informational; coverage-only)
+
+# Deep-mode attributes (inches). filleted_pocket ⌀ is undefined (non-circular
+# cavity) so only fillet radius + depth are asserted.
+features:
+  - class: filleted_pocket
+    fillet_radius: 0.1        # 2.54 mm
+    depth_below_top: 0.9      # 22.86 mm
+  - class: through_hole
+    diameter: 0.1             # 2.54 mm

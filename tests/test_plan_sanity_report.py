@@ -462,6 +462,14 @@ class TestCoverageExpectations(unittest.TestCase):
         "96260B fixtures missing",
     )
     def test_current_plan_coverage_verdict_matches_both_setups(self) -> None:
+        # RED BY DESIGN (known-red true positive): the front over-machines.
+        # Setup scope is geometry-derived (a setup machines what it can reach),
+        # and nothing yet arbitrates which setup owns geometry both can reach, so
+        # the front is granted its full reachable milling program where the shop
+        # runs it as a single facing flip. This asserts the aspirational clean
+        # state; it goes green when setup-ownership-arbitration lands. Do NOT
+        # relax it by moving front milling into expected_present -- fix ownership.
+        # See eval/open_capability_setup_ownership_arbitration.md.
         plan = load_cam_plan(PLAN_PATH)
         report = self._build_96260b_report(plan)
         self.assertEqual(report.coverage.get("verdict"), "PASS")
@@ -469,8 +477,11 @@ class TestCoverageExpectations(unittest.TestCase):
         by_setup = {v["setup_id"]: v for v in verdicts}
         self.assertTrue(by_setup["rear"]["matches"])
         self.assertTrue(by_setup["front"]["matches"])
-        self.assertIn("facing expected-absent", by_setup["rear"]["message"])
-        self.assertIn("facing", by_setup["front"]["emitted_strategies"])
+        # Facing is envelope-driven: the rear reaches the envelope-coincident
+        # stock flat (feat 17 / face 322) and owns facing; the front reaches no
+        # envelope stock flat and faces nothing.
+        self.assertIn("facing", by_setup["rear"]["emitted_strategies"])
+        self.assertNotIn("facing", by_setup["front"]["emitted_strategies"])
 
     @unittest.skipUnless(
         PLAN_PATH.is_file() and SHOP_GT_PATH.is_file() and GRAPH_PATH.is_file(),
