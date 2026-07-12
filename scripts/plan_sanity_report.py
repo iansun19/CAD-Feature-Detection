@@ -458,10 +458,42 @@ def _setup_op_pairs(plan: CamPlan) -> dict[str, list[tuple[str, str, str]]]:
 
 
 def check_homolog_overlap(plan: CamPlan) -> list[SanityFlag]:
-    """Hard gate: homolog feature_ids machined with duplicate op types across setups."""
+    """Hard gate: homolog feature_ids machined with duplicate op types across setups.
+
+    The ``(feature_id, operation_type)`` key assumes a SHARED feature-id space
+    across setups. That holds only when every setup is scoped from ONE feature
+    graph. Split-panel parts export a separate graph per orientation (front/rear
+    STEP), each with its OWN local ids -- front id 17 is not rear id 17 -- so
+    cross-setup id equality is coincidental, not a physical homolog. Flagging it
+    is the documented false-positive (front id N == rear id N inflated the ratio
+    to 78% on 96260B; see eval/orphaned_feature_triage.md). So when the setups
+    are backed by distinct feature graphs, skip the cross-setup comparison and
+    emit a single WARN: a sound cross-panel over-machining check needs a
+    geometry-based homolog map (world-space face matching), which does not exist
+    yet. Same-graph multi-setups still get the hard gate.
+    """
     by_setup = _setup_op_pairs(plan)
     if len(by_setup) < 2:
         return []
+
+    graph_refs = (plan.metadata or {}).get("feature_graph_refs") or {}
+    distinct_graphs = {graph_refs[sid] for sid in by_setup if sid in graph_refs}
+    if len(distinct_graphs) > 1:
+        return [
+            SanityFlag(
+                gate="homolog_overlap",
+                severity=FlagSeverity.WARN,
+                op_id="+".join(sorted(by_setup)),
+                message=(
+                    "cross-setup homolog overlap NOT evaluated: setups are backed by "
+                    f"{len(distinct_graphs)} distinct feature graphs with independent "
+                    "local feature-id spaces (front id N != rear id N), so id equality "
+                    "across setups is not a physical homolog. A sound cross-panel "
+                    "over-machining check needs a geometry-based homolog map "
+                    "(world-space face matching); see eval/orphaned_feature_triage.md."
+                ),
+            )
+        ]
 
     pair_setups: dict[tuple[str, str], set[str]] = {}
     for setup_id, entries in by_setup.items():

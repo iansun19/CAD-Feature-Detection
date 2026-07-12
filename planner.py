@@ -146,7 +146,16 @@ FACE_MILL_PREFERRED_DIA_MM = 1.5 * 25.4
 FACE_MILL_MIN_DIA_MM = 1.0 * 25.4
 FACE_MILL_MAX_DIA_MM = 2.0 * 25.4
 
-# Setups whose stock-boundary flat (envelope STOCK face) maps to facing, not floor_finish.
+# Envelope-UNKNOWN fallback ONLY. When a part has no STOCK classification, this
+# label set is the sole signal for which setup faces its stock-boundary flat.
+# It is dead code for any part with an envelope: identify_facing_feature_ids
+# takes the `if envelope_faces:` branch and returns before the `elif setup_id
+# not in _FACING_SETUP_IDS` is ever reached, so the geometric (envelope) answer
+# always wins -- e.g. 96260B rear (NOT in this set) owns facing because it
+# reaches the envelope STOCK flat, and front (in this set) faces nothing because
+# its stock flat is not reachable from +Z. Do not extend this to drive facing on
+# envelope-known parts; scope is derived from reachability now (see
+# setup_generation.derive_setup_scope), not from setup-id/filename labels.
 _FACING_SETUP_IDS = frozenset({"front", "setup_2"})
 
 STOCK_BOUNDARY_SCOPE_TOKENS = frozenset({"facing", "stock_face"})
@@ -377,9 +386,6 @@ def _resolve_envelope_stock_faces(
         return frozenset()
 
 
-_REACHABILITY_FRAME_DIRS = frozenset({"+Z", "-Z"})
-
-
 class SetupApproachAxisError(ValueError):
     """Raised when a setup lacks a descriptor-sourced opening axis for reachability scoping."""
 
@@ -403,10 +409,19 @@ def _resolve_setup_opening_axis_vector(context: MachiningContext) -> tuple[float
             f"setup {setup.setup_id!r}: opening_axis_vector is not unit length "
             f"(norm={norm:.6f}): {vec!r}"
         )
-    if vec in ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0)) and setup.opening_axis in _REACHABILITY_FRAME_DIRS:
+    # Reject undetermined-ness, not a suspicious value. A genuine +Z (or +X)
+    # opening axis is legitimate; what is not plannable is an axis geometry
+    # could not resolve (no wall seeds, no planar broad face) -- there the
+    # vector is a blind default. Provenance rides on SetupContext, set from the
+    # cascade's approach_frame.opening_axis_determined (or forced True by an
+    # explicit descriptor axis). See machining_context.build_setup_context.
+    if not getattr(setup, "opening_axis_determined", True):
         raise SetupApproachAxisError(
-            f"setup {setup.setup_id!r}: opening_axis_vector looks like a reachability "
-            f"frame literal, not a descriptor axis: {vec!r}"
+            f"setup {setup.setup_id!r}: opening axis is UNDETERMINED -- geometry "
+            f"could not resolve it and {vec!r} is a blind default. Supply an "
+            f"explicit axis: run_step_to_plan.py --opening-axis <+X|-X|+Y|-Y|+Z|"
+            f"-Z or x,y,z>, or set opening_axis.mode: explicit with a vector in "
+            f"the setup descriptor."
         )
     return vec
 
@@ -615,9 +630,58 @@ def filter_features_for_setup(
     """Drop features outside the setup before planning."""
     if use_reachability and graph is not None and nodes_by_id is not None:
         if _graph_has_verified_reachability(graph):
-            return filter_features_for_setup_by_reachability(
+            kept, dropped, info = filter_features_for_setup_by_reachability(
                 features, nodes_by_id, graph, context,
             )
+            # Reachability answers "what can a tool touch from this approach";
+            # the descriptor's declared scope answers "what is this setup meant
+            # to machine" (e.g. a facing-only second setup on a split panel).
+            # A feature must satisfy BOTH -- otherwise a facing-only setup
+            # re-machines every wall that merely happens to be reachable,
+            # producing the split-panel over-machining the sanity gates flag.
+            scope = context.setups[0].scope
+            if not scope.is_full:
+                if scope.stock_boundary_only:
+                    # A facing/stock-boundary scope keeps exactly the flats a
+                    # facing op will target. Mirror identify_facing_feature_ids
+                    # (envelope-coincident preferred, largest-area fallback) so
+                    # the scope and the op that consumes it agree -- the strict
+                    # envelope-subset test in _feature_in_setup_scope drops the
+                    # real facing target when its face is not classified STOCK.
+                    facing_ids = identify_facing_feature_ids(
+                        kept, context.setups[0].setup_id,
+                        envelope_faces=envelope_faces,
+                    )
+                    in_scope = [feat for feat in kept if feat.feature_id in facing_ids]
+                else:
+                    in_scope = [
+                        feat
+                        for feat in kept
+                        if _feature_in_setup_scope(feat, scope, envelope_faces)
+                    ]
+                for feat in kept:
+                    if feat not in in_scope:
+                        logger.info(
+                            "setup %s: dropped reachable-but-out-of-scope "
+                            "feature_id=%s class_name=%s",
+                            context.setups[0].setup_id,
+                            feat.feature_id,
+                            feat.feature_type,
+                        )
+                dropped += len(kept) - len(in_scope)
+                # Report "filtered": the declared scope is the binding constraint
+                # on the emitted feature set, and the downstream setup-strategy /
+                # facing-boundary gates key on scope_mode == "filtered". The
+                # reachability fields are preserved in the merged dict.
+                info = {
+                    **info,
+                    "scope_mode": "filtered",
+                    "scope_classes": list(scope.classes),
+                    "scope_feature_ids": list(scope.feature_ids),
+                    "envelope_stock_faces": sorted(envelope_faces),
+                }
+                kept = in_scope
+            return kept, dropped, info
         logger.warning(
             "setup %s: no verified reachability on graph; falling back to class scope",
             context.setups[0].setup_id,
@@ -773,11 +837,18 @@ def identify_facing_feature_ids(
 ) -> frozenset[str]:
     """Return stock-boundary flat feature_ids that map to facing (face_mill).
 
-    Prefers envelope-coincident STOCK faces from the classifier over area-only
-    heuristics when envelope_faces is supplied.
+    Facing removes raw stock, so it must land on an envelope-coincident STOCK
+    flat. When ``envelope_faces`` is known, facing is driven purely by it: the
+    setup whose approach reaches such a flat owns the facing pass, regardless of
+    setup id. A setup whose only reachable flats are interior (non-stock) gets no
+    facing op -- e.g. a +Z front setup that reaches only a recessed seating ledge
+    while the real stock face sits on the -Z side (faced by the back setup). This
+    is what keeps facing off spurious interior flats and on the true stock face
+    the ``facing_stock_boundary`` gate demands.
+
+    ``_FACING_SETUP_IDS`` remains the fallback only when the envelope is unknown
+    (no stock classification), so parts without it don't spuriously face.
     """
-    if setup_id not in _FACING_SETUP_IDS:
-        return frozenset()
     flats = [feat for feat in features if feat.feature_type in FACE_CLASSES]
     if not flats:
         return frozenset()
@@ -788,8 +859,14 @@ def identify_facing_feature_ids(
             if _feature_face_indices(feat)
             and _feature_face_indices(feat).issubset(envelope_faces)
         ]
-        if envelope_flats:
-            flats = envelope_flats
+        if not envelope_flats:
+            # Envelope is known but no reachable flat lies on it: nothing to
+            # face from this approach. Do not fall back to the largest interior
+            # flat -- that is exactly the spurious target the gate rejects.
+            return frozenset()
+        flats = envelope_flats
+    elif setup_id not in _FACING_SETUP_IDS:
+        return frozenset()
     best = max(flats, key=_flat_area_mm)
     if _flat_area_mm(best) <= 0.0:
         return frozenset()
@@ -1669,7 +1746,16 @@ def _merge_member_group(members: Sequence[OpSpec], tool: Tool | None) -> OpSpec:
     primary = members[0]
     merged_refs = sorted({ref for member in members for ref in member.feature_refs}, key=int)
     feature_types = {member.feature_type for member in members}
-    feature_type = primary.feature_type if len(feature_types) == 1 else "batched"
+    if len(feature_types) == 1:
+        feature_type = primary.feature_type
+    elif feature_types <= (WALL_CLASSES | PROFILE_CLASSES):
+        # A batch of only walls/profile is still a wall-finish operation. Keep a
+        # wall class rather than the generic "batched" so downstream strategy
+        # attribution (contour_2d + wall -> finishing_wall) is not lost -- a
+        # "batched" label silently demotes the pass to finishing_floor.
+        feature_type = "wall"
+    else:
+        feature_type = "batched"
     accesses = {member.access for member in members if member.access is not None}
     access = primary.access if len(accesses) <= 1 else None
 
@@ -2671,6 +2757,7 @@ def _plan_one_setup(
     features, dropped_features = filter_planner_features(all_features)
     nodes_by_id = {str(node["feature_id"]): node for node in nodes}
     envelope_faces = _resolve_envelope_stock_faces(graph, context)
+    pre_scope_ids = [f.feature_id for f in features]
     features, scope_dropped, scope_info = filter_features_for_setup(
         features,
         context,
@@ -2679,6 +2766,8 @@ def _plan_one_setup(
         graph=graph,
         use_reachability=True,
     )
+    kept_ids = {f.feature_id for f in features}
+    scope_dropped_ids = [fid for fid in pre_scope_ids if fid not in kept_ids]
     setup_id = context.setups[0].setup_id
     facing_feature_ids = identify_facing_feature_ids(
         features,
@@ -2728,8 +2817,11 @@ def _plan_one_setup(
     op_specs.extend(engrave_ops)
 
     # Whole-setup deburr: one auto edge-break pass over all in-scope features,
-    # sequenced last. Emitted only when the setup has machined features.
-    if op_specs:
+    # sequenced last. Emitted only when the setup has machined features, and
+    # never on a facing/stock-boundary-only setup -- a faced stock surface has
+    # no milled edges to break, and the setup-strategy scope gate requires such
+    # a setup to emit ``facing`` alone.
+    if op_specs and not context.setups[0].scope.stock_boundary_only:
         deburr_refs = sorted({f.feature_id for f in features}, key=int)
         op_specs.append(_deburr_op(deburr_refs, setup_id))
 
@@ -2849,6 +2941,10 @@ def _plan_one_setup(
             for f in dropped_features
         ],
         "features_scope_dropped": scope_dropped,
+        # Feature ids removed by setup scoping (reachability / class filter).
+        # Recorded explicitly so a scoped-out feature is accounted for, never
+        # silent -- the third bucket alongside mapped ops and unmapped_features.
+        "features_scope_dropped_ids": scope_dropped_ids,
         "facing_feature_ids": sorted(facing_feature_ids),
         "operations_before_grouping": ops_before_grouping,
         "reachability_splits": reachability_splits,
@@ -2861,6 +2957,13 @@ def _plan_one_setup(
         "params_mixed": param_source_counts.get("mixed", 0),
         "wrong_material_tool_ops": wrong_material_ops,
         "review_flags": review_flags,
+        # Always record the setup's envelope STOCK faces so the facing_stock_boundary
+        # gate can validate facing ops regardless of scope. Previously only the
+        # stock_boundary_only (facing-scoped) path recorded these; a full-scope
+        # setup that owns the facing pass (the -Z back setup reaching the real
+        # stock face) left the set empty and the gate mis-fired. scope_info wins
+        # when it carries the same key (identical value).
+        "envelope_stock_faces": sorted(envelope_faces),
         **scope_info,
     }
 
@@ -3047,6 +3150,11 @@ def _aggregate_setup_stats(slices: Sequence[_SetupPlanSlice]) -> dict[str, Any]:
         {**entry, "setup_id": slice_.setup.setup_id}
         for slice_ in slices
         for entry in slice_.stats.get("unmapped_features", [])
+    ]
+    totals["features_scope_dropped_ids"] = [
+        {"feature_id": fid, "setup_id": slice_.setup.setup_id}
+        for slice_ in slices
+        for fid in slice_.stats.get("features_scope_dropped_ids", [])
     ]
     return totals
 

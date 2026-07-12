@@ -1,7 +1,7 @@
 {
   "schema_version": "0.1.0",
   "part_id": "96260B",
-  "description": "Per-setup strategy coverage expectations for 96260B split-panel multi-setup",
+  "description": "Per-setup strategy coverage expectations for 96260B split-panel multi-setup. Facing is envelope-driven: the setup reaching an envelope-coincident stock flat owns facing (rear, feat 17 / face 322). Front reaches no envelope stock flat, so it faces nothing. Front milling is over-machining: geometry-derived scope grants the front all reachable work, but nothing arbitrates which setup owns geometry both can reach (shop runs the front as a single facing flip). See eval/open_capability_setup_ownership_arbitration.md and eval/open_capability_homolog_map_split_panel.md.",
   "setups": {
     "rear": {
       "expected_present": {
@@ -10,45 +10,43 @@
           "finishing_floor",
           "finishing_wall",
           "finishing",
-          "finishing_fillet"
+          "finishing_fillet",
+          "facing"
         ]
+      },
+      "expected_absent": {
+        "strategies": []
+      }
+    },
+    "front": {
+      "expected_present": {
+        "strategies": []
       },
       "expected_absent": {
         "strategies": [
           {
             "name": "facing",
-            "reason": "rear panel not faced"
-          }
-        ]
-      }
-    },
-    "front": {
-      "expected_present": {
-        "strategies": [
-          "facing"
-        ]
-      },
-      "expected_absent": {
-        "strategies": [
+            "reason": "the only envelope STOCK flat (feat 17 / face 322, the -Y plate face) is reachable solely from the rear's -Z approach; the front's +Z approach reaches no envelope stock flat, so facing is rear-owned"
+          },
           {
             "name": "roughing",
-            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+            "reason": "OVER-MACHINING (true positive): shop runs the front as a single facing flip; front milling is work the rear/setup-1 owns. Geometry-derived scope grants the front all reachable geometry, but nothing arbitrates setup ownership yet. Fix by arbitrating ownership, not by moving this into expected_present. See eval/open_capability_setup_ownership_arbitration.md."
           },
           {
             "name": "finishing_floor",
-            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+            "reason": "OVER-MACHINING (true positive): front milling is rear/setup-1 work; setup ownership not yet arbitrated. See eval/open_capability_setup_ownership_arbitration.md."
           },
           {
             "name": "finishing_wall",
-            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+            "reason": "OVER-MACHINING (true positive): front milling is rear/setup-1 work; setup ownership not yet arbitrated. See eval/open_capability_setup_ownership_arbitration.md."
           },
           {
             "name": "finishing",
-            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+            "reason": "OVER-MACHINING (true positive): front milling is rear/setup-1 work; setup ownership not yet arbitrated. See eval/open_capability_setup_ownership_arbitration.md."
           },
           {
             "name": "finishing_fillet",
-            "reason": "front panel is facing-only per shop Setup 2 / declared scope"
+            "reason": "OVER-MACHINING (true positive): front milling is rear/setup-1 work; setup ownership not yet arbitrated. See eval/open_capability_setup_ownership_arbitration.md."
           }
         ]
       }

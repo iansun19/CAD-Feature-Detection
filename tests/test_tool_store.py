@@ -398,7 +398,10 @@ class TestBuildContextSupabase(unittest.TestCase):
 
         fetch_mock.assert_called_once()
         call_kwargs = fetch_mock.call_args.kwargs
-        self.assertEqual(call_kwargs.get("tool_types"), ["drill", "endmill", "tap"])
+        self.assertEqual(
+            call_kwargs.get("tool_types"),
+            ["drill", "endmill", "bullnose_endmill", "tap", "ball_endmill", "face_mill"],
+        )
         self.assertEqual(len(ctx.tools), 12)
         self.assertEqual(ctx.metadata.get("tool_library_source"), "supabase")
 

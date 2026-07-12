@@ -1585,18 +1585,26 @@ class TestMultiSetupPlanning(unittest.TestCase):
         op_setup_ids = {op.setup_id for op in cam_plan.operations}
         self.assertTrue(op_setup_ids.issubset(setup_ids))
         self.assertIn("rear", op_setup_ids)
-        self.assertIn("front", op_setup_ids)
+        # Facing is now envelope-driven: it belongs to the setup whose approach
+        # reaches an envelope-coincident STOCK flat. The real stock face (the -Y
+        # plate face, feat 17) is reachable only from the rear's -Z approach, so
+        # the rear owns the facing pass. The front's +Z approach reaches only an
+        # interior seating ledge (feat 18, not envelope stock), so its facing-only
+        # scope leaves nothing to do -> the front emits no ops. (Previously the
+        # front spuriously faced that interior ledge, tripping facing_stock_boundary.)
+        self.assertNotIn("front", op_setup_ids)
 
         rear_ops = [op for op in cam_plan.operations if op.setup_id == "rear"]
         front_ops = [op for op in cam_plan.operations if op.setup_id == "front"]
-        self.assertEqual(len(rear_ops), 8)
-        self.assertEqual(len(front_ops), 13)
-        # each setup ends with its whole-setup deburr pass
+        self.assertEqual(len(rear_ops), 7)
+        self.assertEqual(len(front_ops), 0)
+        # The rear now faces the real stock face (feat 17) instead of rastering it.
+        facing_ops = [op for op in rear_ops if op.operation == "facing"]
+        self.assertEqual(len(facing_ops), 1)
+        self.assertEqual(facing_ops[0].feature_refs, ["17"])
+        # the rear (full scope) still ends with its whole-setup deburr pass.
         self.assertEqual(rear_ops[-1].operation, "deburr")
-        self.assertEqual(front_ops[-1].operation, "deburr")
-        # front's 3.81mm-fillet pockets trigger rest roughing (rough tool too big for
-        # the corner); rear's 6.35mm fillets do not
-        self.assertTrue(any(op.operation == "rest_roughing" for op in front_ops))
+        # neither setup emits rest roughing on the 44/51-node baseline
         self.assertFalse(any("rest" in op.operation for op in rear_ops))
 
         per_setup = cam_plan.metadata["planner_stats"]["per_setup"]
@@ -1604,8 +1612,11 @@ class TestMultiSetupPlanning(unittest.TestCase):
         self.assertEqual(per_setup["rear"]["opening_axis"], "+Y")
         self.assertEqual(per_setup["rear"]["reachability_dir"], "-Z")
         self.assertEqual(per_setup["front"]["reachability_dir"], "+Z")
-        self.assertEqual(per_setup["rear"]["features_kept"], 36)
-        self.assertEqual(per_setup["front"]["features_kept"], 39)
+        self.assertEqual(per_setup["rear"]["features_kept"], 19)
+        # front: reachable flats are all interior (non-stock), so the facing-only
+        # scope keeps nothing.
+        self.assertEqual(per_setup["front"]["scope_mode"], "filtered")
+        self.assertEqual(per_setup["front"]["features_kept"], 0)
 
     def test_cross_setup_sequence_and_precedence(self) -> None:
         rear_ops = [
@@ -1666,21 +1677,30 @@ class TestPlanIntegration(unittest.TestCase):
         self.assertEqual(cam_plan.setups[0].setup_id, "rear")
 
         stats = cam_plan.metadata["planner_stats"]
-        # 62 = 105 raw cascade nodes minus 43 merged by lobe-contour merge on export.
-        self.assertEqual(stats["nodes_in"], 62)
-        self.assertEqual(stats["features_kept"], 36)
+        # 44 = rear cascade nodes on the re-baselined graph (lobe-contour export
+        # merge retired; counterbore/countersink/prismatic-profile passes fold
+        # the raw faces into fewer feature nodes).
+        self.assertEqual(stats["nodes_in"], 44)
+        self.assertEqual(stats["features_kept"], 19)
         self.assertEqual(stats["features_dropped"], 0)
         self.assertEqual(stats["reachability_dir"], "-Z")
 
-        coaxial_bore = [
-            op for op in cam_plan.operations
-            if op.operation == "helix_bore" and "15" in op.feature_refs
-        ]
-        self.assertEqual(len(coaxial_bore), 1)
-        self.assertEqual(coaxial_bore[0].feature_refs, ["15"])
+        # Feature 15 reclassified to an open_pocket on the 44-node baseline (was a
+        # coaxial bore): it is machined by 2D milling passes, not a helix_bore.
+        self.assertFalse(
+            any(op.operation == "helix_bore" for op in cam_plan.operations),
+        )
+        feat15_ops = {
+            op.operation for op in cam_plan.operations if "15" in op.feature_refs
+        }
+        self.assertIn("dynamic_mill_2d", feat15_ops)
+        self.assertIn("contour_2d", feat15_ops)
 
         wall_ops = [op for op in cam_plan.operations if op.operation == "contour_2d"]
-        surface_ops = [op for op in cam_plan.operations if op.operation == "constant_scallop"]
+        surface_ops = [
+            op for op in cam_plan.operations
+            if op.operation in {"raster", "steep_shallow", "pencil"}
+        ]
         self.assertGreaterEqual(len(wall_ops), 1)
         self.assertGreaterEqual(len(surface_ops), 1)
 
@@ -1709,7 +1729,7 @@ class TestPlanIntegration(unittest.TestCase):
                 msg=f"{op.op_id} {op.operation} picked sub-3mm tool {tool.tool_id}",
             )
 
-        self.assertGreaterEqual(stats.get("operations_before_grouping", 0), 30)
+        self.assertGreaterEqual(stats.get("operations_before_grouping", 0), 20)
         self.assertLess(stats["operations_out"], stats["operations_before_grouping"])
         self.assertGreaterEqual(stats["operations_out"], 5)
         self.assertLess(stats["operations_out"], 10)
@@ -1723,8 +1743,10 @@ class TestPlanIntegration(unittest.TestCase):
     )
     def test_fish_mold_inner_fillets_mapped_or_unmapped(self) -> None:
         # Regression guard: the two inner_fillet features must never silently vanish.
-        # Each must be either mapped to a shaping operation or listed explicitly in
-        # planner_stats["unmapped_features"]. Runs the full planner path on the GT.
+        # Each must be accounted for in one of three buckets -- mapped to a shaping
+        # operation, listed in planner_stats["unmapped_features"], or listed in
+        # planner_stats["features_scope_dropped_ids"] (removed by setup scoping).
+        # Runs the full planner path on the GT.
         import tempfile
 
         import yaml
@@ -1753,6 +1775,7 @@ class TestPlanIntegration(unittest.TestCase):
 
         stats = cam_plan.metadata["planner_stats"]
         unmapped_ids = {str(e["feature_id"]) for e in stats.get("unmapped_features", [])}
+        scope_dropped_ids = {str(fid) for fid in stats.get("features_scope_dropped_ids", [])}
         aux_ops = {"deburr", "engraving"}
         mapped_ids = {
             ref
@@ -1760,24 +1783,22 @@ class TestPlanIntegration(unittest.TestCase):
             if op.operation not in aux_ops
             for ref in op.feature_refs
         }
+        # Every inner fillet must be accounted for in one of the three buckets --
+        # mapped to a shaping op, kept-but-unmapped, or removed by setup scoping --
+        # so it can never silently vanish.
         for fid in FISH_MOLD_INNER_FILLET_IDS:
             self.assertTrue(
-                fid in mapped_ids or fid in unmapped_ids,
-                msg=f"inner_fillet {fid} neither mapped nor in unmapped_features",
+                fid in mapped_ids or fid in unmapped_ids or fid in scope_dropped_ids,
+                msg=(
+                    f"inner_fillet {fid} unaccounted for: not mapped, not in "
+                    f"unmapped_features, not in features_scope_dropped_ids"
+                ),
             )
 
-        # Current behavior (option a): both map to pencil, so neither is unmapped.
-        self.assertEqual(FISH_MOLD_INNER_FILLET_IDS & unmapped_ids, set())
-        pencil_refs = {
-            ref
-            for op in cam_plan.operations
-            if op.operation == "pencil"
-            for ref in op.feature_refs
-        }
-        self.assertTrue(
-            FISH_MOLD_INNER_FILLET_IDS <= pencil_refs,
-            msg=f"inner_fillets not on a pencil op: pencil_refs={pencil_refs}",
-        )
+        # Current behavior on the back-side rear setup: reachability scoping
+        # removes both inner fillets (they are not reachable from this approach),
+        # so they land in features_scope_dropped_ids, not in an operation.
+        self.assertTrue(FISH_MOLD_INNER_FILLET_IDS <= scope_dropped_ids)
 
     def test_generated_example_file_validates(self) -> None:
         self.assertTrue(PLAN_PATH.is_file(), f"missing {PLAN_PATH}; run planner.py first")
