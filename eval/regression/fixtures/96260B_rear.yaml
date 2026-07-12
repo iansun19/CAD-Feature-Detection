@@ -8,7 +8,7 @@ setup:
   pocket_access: closed
 
 run:
-  stock_classifier: new
+  stock_classifier: "off"
   max_diameter_mm: 150.0
   wall_attach_dist: null
 
@@ -17,3 +17,7 @@ golden: "eval/regression/golden/96260B_rear.partition.json"
 notes: |
   96260B XR004 rear setup (closed filleted pockets). STEP is gitignored at
   repo root. graph.npz pinned from the rear plate ingest (348 faces).
+  STOCK gate removed (2026-07-10): stock_classifier=off so every face enters
+  the cascade and exits with exactly one feature label — the golden carries no
+  stock_face_ids bucket. Former stray ⌀6.370 bosses {328, 346} are now claimed
+  by the profile pass, not left as residual.

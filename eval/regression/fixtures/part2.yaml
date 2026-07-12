@@ -1,0 +1,35 @@
+fixture_id: "part2"
+step: "part2.step"
+graph_npz: "eval/regression/graphs/part2.graph.npz"
+face_index_scheme: "analyze_step_v1"
+
+setup:
+  machining_side: back
+  pocket_access: unknown
+
+run:
+  stock_classifier: "off"
+  max_diameter_mm: 150.0
+  wall_attach_dist: null
+
+golden: "eval/regression/golden/part2.partition.json"
+
+notes: |
+  part2 — prismatic block (27 faces): one axial through-hole (Z), a counterbore
+  stack, two through-pockets, two flats, and a corner-isolated outer profile.
+  Single primary setup (machining_side=back); the decomposition is byte-identical
+  under front/back, so the setup choice does not move the partition. Opening axis
+  is geometry-derived +X [1,0,0] (no pocket seeds → broad-face estimator; matches
+  the approved Phase 1 broad-face table in test_noseed_opening_axis). STEP
+  ("part2.step") is at repo root; graph.npz pinned from part2's own ingest
+  (27 faces). pocket_access=unknown: no filleted pockets, so access is N/A.
+  stock_classifier=off: every face enters the cascade and exits with one feature
+  label (no stock_face_ids bucket), matching the other fixtures.
+
+  Blessed from TOOLPATH-VERIFIED ground truth (not from cascade output): the
+  open-pocket over-labeling fix (Predicate A interior-recess floor gate in
+  coaxial_stack_detection.py; Predicate B corner-isolated prismatic cycle in
+  prismatic_profile_detection.py) yields flat[5], flat[10],
+  profile[6,7,8,9,23,24,25,26], with holes/counterbore/through-pockets owning the
+  remainder and 0 orphans. Confirmed against toolpath and promoted to frozen
+  ground truth alongside 96260B_front/rear, fish_mold, and part1.

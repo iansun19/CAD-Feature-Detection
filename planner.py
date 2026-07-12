@@ -48,6 +48,7 @@ HOLE_CLASSES = frozenset({
     "hole",
     "blind_hole",
     "filleted_blind_hole",
+    "counterbore",
 })
 POCKET_CLASSES = frozenset({
     "filleted_pocket",
@@ -58,7 +59,10 @@ POCKET_CLASSES = frozenset({
 })
 WALL_CLASSES = frozenset({"wall"})
 SURFACE_CLASSES = frozenset({"contour_surface"})
-FILLET_CLASSES = frozenset({"outer_fillet", "fillet"})
+# inner_fillet is a concave internal blend; it maps to the same PENCIL corner-cleanup
+# op as the (convex) outer_fillet, but its tool is capped to fit the concave radius --
+# see cascade_node_to_feature (probe-radius cap) and FILLET_CAP_OPS.
+FILLET_CLASSES = frozenset({"outer_fillet", "fillet", "inner_fillet"})
 PROFILE_CLASSES = frozenset({"profile"})
 FACE_CLASSES = frozenset({"flat", "face"})
 CHAMFER_CLASSES = frozenset({"chamfer"})
@@ -283,6 +287,24 @@ def cascade_node_to_feature(node: Mapping[str, Any]) -> PlannerFeature:
     fillet_radius = None
     if feature_type not in HOLE_CLASSES:
         fillet_radius = _float_param(params, "fillet_radius_mm")
+
+    # Concave inner fillets carry no fillet_radius_mm param, so the FILLET_CAP_OPS
+    # tool-fit cap (2*fillet_radius_mm) would otherwise fall back to the open default
+    # band and pick a tool too big to fit the corner. Prefer the detector's true
+    # geometric radius (reference_radius_mm) as the cap source: cap = 2*true_radius
+    # (e.g. 2*3.175 = 6.35 mm). Fall back to the reachability probe radius only when
+    # the true radius is absent (older graphs) -- that cap (2*probe) is looser
+    # (~9.525 mm) and can pass a tool that overcuts the corner. Gated to inner_fillet
+    # so outer_fillet tool sizing (and the 96260B golden plan) is unchanged.
+    if feature_type == "inner_fillet" and fillet_radius is None:
+        reference_radius = _float_param(params, "reference_radius_mm")
+        if reference_radius is not None:
+            fillet_radius = reference_radius
+        else:
+            reachability = (node.get("approach") or {}).get("reachability") or {}
+            probe_radius = reachability.get("effective_tool_radius_mm")
+            if probe_radius is not None:
+                fillet_radius = float(probe_radius)
 
     axis = params.get("axis") or {}
     axis_point = _vec3(axis.get("point"))
@@ -678,15 +700,16 @@ def print_scope_assignment_diff(
 
 def filter_planner_features(
     features: Sequence[PlannerFeature],
-) -> tuple[list[PlannerFeature], int]:
-    """Keep machinable feature families; log dropped recognizer classes."""
+) -> tuple[list[PlannerFeature], list[PlannerFeature]]:
+    """Keep machinable feature families; return dropped features so callers can
+    surface them (never silently swallow a recognized class the planner can't map)."""
     kept: list[PlannerFeature] = []
-    dropped = 0
+    dropped: list[PlannerFeature] = []
     for feat in features:
         if feat.feature_type in PLANNER_FEATURE_CLASSES:
             kept.append(feat)
         else:
-            dropped += 1
+            dropped.append(feat)
             logger.info(
                 "dropped feature_id=%s class_name=%s (not in planner slice)",
                 feat.feature_id,
@@ -1690,16 +1713,77 @@ def _merge_member_group(members: Sequence[OpSpec], tool: Tool | None) -> OpSpec:
     )
 
 
+def _split_members_by_precedence(
+    members: Sequence[OpSpec],
+    feature_dag: "FeaturePrecedence",
+) -> list[list[OpSpec]]:
+    """Partition one batch bucket into the minimum number of antichains.
+
+    Members that carry a feature-level precedence relation between them (either
+    direction, direct or transitive in ``feature_dag``) MUST NOT be merged into
+    one op, or the ordering edge would be destroyed. We partition by longest-path
+    rank in the member DAG: by Mirsky's theorem the number of groups equals the
+    longest chain, which is the minimum antichain cover, so splits are minimal.
+    Members sharing a rank provably have no relation between them (an edge would
+    force a strictly greater rank), so each returned group is a valid merge.
+    With today's rules there are no cross-feature same-operation edges, so every
+    bucket returns a single group -- this is a no-op until such rules are added.
+    """
+    n = len(members)
+    member_nodes = [
+        {_feature_op_node(ref, m) for ref in m.feature_refs} for m in members
+    ]
+    # must-follow closure per member: every node reachable from its own nodes.
+    reach: list[set[tuple[str, str]]] = []
+    for nodes in member_nodes:
+        seen: set[tuple[str, str]] = set()
+        stack = [dep for node in nodes for dep in feature_dag.get(node, ())]
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            stack.extend(feature_dag.get(cur, ()))
+        reach.append(seen)
+
+    succ = [set() for _ in range(n)]  # i -> j : member i must follow member j
+    for i in range(n):
+        for j in range(n):
+            if i != j and (member_nodes[j] & reach[i]):
+                succ[i].add(j)
+
+    rank: dict[int, int] = {}
+
+    def _rank(i: int) -> int:
+        if i in rank:
+            return rank[i]
+        rank[i] = 1 + max((_rank(j) for j in succ[i]), default=-1)
+        return rank[i]
+
+    groups: dict[int, list[OpSpec]] = {}
+    for i in range(n):
+        groups.setdefault(_rank(i), []).append(members[i])
+    return [groups[k] for k in sorted(groups)]
+
+
 def group_operations_by_tool_strategy(
     op_specs: Sequence[OpSpec],
     tools: Sequence[Tool],
     context: MachiningContext | None = None,
-) -> tuple[list[OpSpec], int]:
-    """Collapse ops sharing (tool_id, operation, setup_id); split on reachability."""
+    feature_dag: "FeaturePrecedence | None" = None,
+) -> tuple[list[OpSpec], int, int]:
+    """Collapse ops sharing (tool_id, operation, setup_id, role); split first on
+    feature precedence (members must form an antichain), then on reachability.
+
+    Returns (grouped_ops, reachability_splits, precedence_splits).
+    """
     tool_lookup = _tool_by_id(tools)
+    if feature_dag is None:
+        feature_dag = build_feature_precedence(op_specs, context)
     pending = list(op_specs)
     grouped: list[OpSpec] = []
     split_count = 0
+    precedence_split_count = 0
 
     while pending:
         buckets: dict[tuple[str, str, str, str], list[OpSpec]] = {}
@@ -1709,27 +1793,33 @@ def group_operations_by_tool_strategy(
 
         for members in buckets.values():
             tool = tool_lookup.get(members[0].tool_id)
-            if tool is None:
-                grouped.append(_merge_member_group(members, tool))
-                continue
             if len(members) == 1:
                 grouped.append(_merge_member_group(members, tool))
                 continue
 
-            kept, peeled = _split_members_by_reachability(tool, list(members))
-            if kept:
-                grouped.append(_merge_member_group(kept, tool))
-            for member in peeled:
-                split_count += 1
-                prior_tool = member.tool_id
-                _apply_tool_selection(member, tools, tool_lookup)
-                if context is not None and member.tool_id != prior_tool:
-                    member.parameters = assign_parameters(
-                        member,
-                        tool_lookup.get(member.tool_id),
-                        context,
-                    )
-                pending.append(member)
+            # Precedence is the first reason a bucket splits: never merge two
+            # features that have an ordering edge between them.
+            antichain_groups = _split_members_by_precedence(members, feature_dag)
+            precedence_split_count += len(antichain_groups) - 1
+
+            for group in antichain_groups:
+                if tool is None or len(group) == 1:
+                    grouped.append(_merge_member_group(group, tool))
+                    continue
+                kept, peeled = _split_members_by_reachability(tool, list(group))
+                if kept:
+                    grouped.append(_merge_member_group(kept, tool))
+                for member in peeled:
+                    split_count += 1
+                    prior_tool = member.tool_id
+                    _apply_tool_selection(member, tools, tool_lookup)
+                    if context is not None and member.tool_id != prior_tool:
+                        member.parameters = assign_parameters(
+                            member,
+                            tool_lookup.get(member.tool_id),
+                            context,
+                        )
+                    pending.append(member)
 
     grouped.sort(
         key=lambda op: (
@@ -1738,7 +1828,7 @@ def group_operations_by_tool_strategy(
             int(op.feature_refs[0]) if op.feature_refs else 0,
         )
     )
-    return grouped, split_count
+    return grouped, split_count, precedence_split_count
 
 
 def _refs_overlap(left: Sequence[str], right: Sequence[str]) -> bool:
@@ -1784,89 +1874,225 @@ def _params_consistent(
     return True
 
 
-def build_precedence(op_specs: Sequence[OpSpec]) -> dict[str, list[str]]:
-    """Hardcoded precedence edges between op_ids.
+# A feature-level precedence node is a per-feature operation STAGE -- (feature_id,
+# operation) -- not a bare feature_id. A single feature has several stages with a
+# required internal order (drill->tap, rough->finish->rest); keying by feature_id
+# alone would collapse those into meaningless self-edges. dag[node] is the set of
+# nodes `node` must FOLLOW (its depends_on set), same direction as op-level precedence.
+FeatureOpNode = tuple[str, str, str]
+FeaturePrecedence = dict[FeatureOpNode, set[FeatureOpNode]]
 
-    Rules:
-      - drill before tap on the same feature_ref set
-      - rough (pocket_mill) before finish (finish_contour) on the same feature_ref
-      - TODO(v0): datum-first ordering across features
-      - TODO(v0): larger-before-smaller hole ordering on shared axes
+
+def _op_role(op: OpSpec) -> str:
+    """Stable per-feature stage key for a node.
+
+    The role is the operation, EXCEPT that the tapping stage shares Operation.DRILL
+    with its pilot drill (they differ only by the tap tool) -- keying by operation
+    alone would collapse tap-after-drill into a self-edge. We mark the tap stage
+    explicitly. Unlike op.tool_type_needed (which _apply_tool_selection rewrites to
+    the selected tool's type, e.g. endmill->bullnose when a finish op is re-tooled),
+    this role is stable across grouping and reachability re-tooling: the operation
+    never changes, and a re-tooled tap still resolves a tap tool.
     """
-    by_id = {op.op_id: op for op in op_specs}
-    precedence: dict[str, list[str]] = {op.op_id: [] for op in op_specs}
+    if op.operation == BankOp.DRILL and op.tool_type_needed == "tap":
+        return "tap"
+    return str(op.operation)
 
-    def refs_key(op: OpSpec) -> tuple[str, ...]:
-        return tuple(sorted(op.feature_refs))
+
+def _feature_op_node(feature_id: str, op: OpSpec) -> FeatureOpNode:
+    # setup_id is part of the node: feature_ids are only unique within a setup, so
+    # a bare (feature, role) would collide across setups (e.g. rear/23 vs front/23).
+    return (str(op.setup_id), str(feature_id), _op_role(op))
+
+
+def build_feature_precedence(
+    op_specs: Sequence[OpSpec],
+    context: MachiningContext | None = None,
+) -> FeaturePrecedence:
+    """Feature-level precedence DAG, computed BEFORE any grouping.
+
+    Rules (ported from the former op-level build_precedence, now comparing two
+    features directly instead of doing feature_refs set-overlap gymnastics):
+      - a thread stage (tap tool / thread mill) follows the pilot stage (drill /
+        helix bore) ON THE SAME FEATURE;
+      - a finish stage follows any roughing stage on the same feature (subsumes
+        the former finish_contour<-pocket and wall_finish<-rough rules);
+      - rest_roughing follows the coarser (non-rest) roughing on the same feature;
+        rest_finish follows the contour/waterline finish on the same feature;
+      - the whole-setup deburr follows every non-deburr stage in its setup.
+
+    NOTE (deliberate behavior change): the tap-after-drill rule formerly required
+    whole feature_ref-set equality (refs_key(other) == refs_key(op)). It now uses
+    a per-feature intersection, which fixes the partially-tapped coaxial case: a
+    drill op spanning {A,B,C} merged with a tap op on {A} previously produced NO
+    edge (sets unequal); it now correctly orders tap(A) after drill(A). No other
+    rules change. No NEW rules (datum-first / coaxial ordering are deferred; this
+    refactor only makes them expressible).
+    """
+    dag: FeaturePrecedence = {}
+    for op in op_specs:
+        for ref in op.feature_refs:
+            dag.setdefault(_feature_op_node(ref, op), set())
+
+    def link_same_feature(op: OpSpec, other: OpSpec) -> None:
+        for ref in set(op.feature_refs) & set(other.feature_refs):
+            dag[_feature_op_node(ref, op)].add(_feature_op_node(ref, other))
 
     for op in op_specs:
-        # A thread op (tapping with a tap tool, or thread milling) follows the
-        # pilot hole-making op (drill/chip-break or helix bore) on the same refs.
         if op.tool_type_needed == "tap" or op.operation == BankOp.THREAD_MILL:
             for other in op_specs:
-                pilot = other.tool_type_needed == "drill" or other.operation == BankOp.HELIX_BORE
-                if (
-                    pilot
-                    and refs_key(other) == refs_key(op)
-                    and other.op_id != op.op_id
-                ):
-                    precedence[op.op_id].append(other.op_id)
+                if other is op:
+                    continue
+                pilot = (
+                    other.tool_type_needed == "drill"
+                    or other.operation == BankOp.HELIX_BORE
+                )
+                if pilot:
+                    link_same_feature(op, other)
 
-        # Every finish op follows any roughing op that overlaps its features.
-        # (Subsumes the former finish_contour<-pocket_mill and wall_finish<-rough rules.)
         if op.operation in FINISH_OPS:
             for other in op_specs:
-                if (
-                    other.operation in ROUGH_OPS
-                    and _refs_overlap(other.feature_refs, op.feature_refs)
-                    and other.op_id != op.op_id
-                ):
-                    precedence[op.op_id].append(other.op_id)
+                if other is not op and other.operation in ROUGH_OPS:
+                    link_same_feature(op, other)
 
-        # A rest op follows the coarser pass it cleans up after, on the same feature(s):
-        # rest_roughing after the main roughing (then the main finish follows it via the
-        # FINISH<-ROUGH rule); rest_finish after the main contour finish.
         if op.operation == BankOp.REST_ROUGHING:
             for other in op_specs:
                 if (
-                    other.operation in ROUGH_OPS
+                    other is not op
+                    and other.operation in ROUGH_OPS
                     and other.operation != BankOp.REST_ROUGHING
-                    and _refs_overlap(other.feature_refs, op.feature_refs)
-                    and other.op_id != op.op_id
                 ):
-                    precedence[op.op_id].append(other.op_id)
+                    link_same_feature(op, other)
 
         if op.operation == BankOp.REST_FINISH:
             for other in op_specs:
-                if (
-                    other.operation in (BankOp.CONTOUR_2D, BankOp.WATERLINE)
-                    and _refs_overlap(other.feature_refs, op.feature_refs)
-                    and other.op_id != op.op_id
+                if other is not op and other.operation in (
+                    BankOp.CONTOUR_2D,
+                    BankOp.WATERLINE,
                 ):
-                    precedence[op.op_id].append(other.op_id)
+                    link_same_feature(op, other)
 
-        # Whole-setup deburr runs after every other op in its setup (edge-break last),
-        # so the sequencer/beam search cannot float it before a machining op.
+        # Whole-setup deburr runs after every other stage in its setup (edge-break
+        # last). This is genuinely setup-scoped (cross-feature), so it links every
+        # deburr node to every non-deburr node in the same setup.
         if op.operation == BankOp.DEBURR:
             for other in op_specs:
                 if (
-                    other.op_id != op.op_id
-                    and other.setup_id == op.setup_id
-                    and other.operation != BankOp.DEBURR
+                    other is op
+                    or other.setup_id != op.setup_id
+                    or other.operation == BankOp.DEBURR
                 ):
-                    precedence[op.op_id].append(other.op_id)
+                    continue
+                for ref in op.feature_refs:
+                    src = dag[_feature_op_node(ref, op)]
+                    for other_ref in other.feature_refs:
+                        src.add(_feature_op_node(other_ref, other))
 
-    # Preserve only valid op_ids and dedupe while keeping order.
-    for op_id, deps in list(precedence.items()):
-        seen: set[str] = set()
-        cleaned: list[str] = []
+    _assert_feature_dag_acyclic(dag)
+    return dag
+
+
+def _assert_feature_dag_acyclic(dag: FeaturePrecedence) -> None:
+    """Cycle check at the FEATURE level, before merging can hide a cycle inside a
+    single op. Raises on any cycle; otherwise returns None."""
+    color: dict[FeatureOpNode, int] = {}  # 1 = on stack, 2 = done
+
+    def visit(node: FeatureOpNode) -> bool:
+        color[node] = 1
+        for dep in dag.get(node, ()):  # noqa: B007
+            c = color.get(dep, 0)
+            if c == 1 or (c == 0 and visit(dep)):
+                return True
+        color[node] = 2
+        return False
+
+    if any(color.get(node, 0) == 0 and visit(node) for node in dag):
+        # _find_cycle_nodes only describes a KNOWN cycle (it returns all nodes when
+        # acyclic), so it is safe to call only here, after detection.
+        cycle = _find_cycle_nodes(dag, set(dag))
+        raise ValueError(
+            "feature precedence graph has a cycle involving features: "
+            + ", ".join(sorted(f"{setup}/{fid}/{oper}" for setup, fid, oper in cycle))
+        )
+
+
+def _feature_op_map(grouped_ops: Sequence[OpSpec]) -> dict[FeatureOpNode, str]:
+    """Map each feature-op node to the (single) grouped op that realizes it."""
+    node_to_op: dict[FeatureOpNode, str] = {}
+    for op in grouped_ops:
+        for ref in op.feature_refs:
+            node = _feature_op_node(ref, op)
+            existing = node_to_op.get(node)
+            if existing is not None and existing != op.op_id:
+                raise ValueError(
+                    f"feature-op node {node} maps to two ops "
+                    f"({existing}, {op.op_id}); feature->op mapping is not a function"
+                )
+            node_to_op[node] = op.op_id
+    return node_to_op
+
+
+def _assert_no_intra_op_precedence(
+    grouped_ops: Sequence[OpSpec],
+    feature_dag: FeaturePrecedence,
+) -> None:
+    """Hard invariant (step 4): no merged op may contain two features with a
+    precedence relation between them. A violation means grouping destroyed an
+    ordering edge -- a hard failure, never a warning."""
+    for op in grouped_ops:
+        node_set = {_feature_op_node(ref, op) for ref in op.feature_refs}
+        for node in node_set:
+            clash = feature_dag.get(node, set()) & node_set
+            if clash:
+                other = sorted(clash)[0]
+                raise ValueError(
+                    f"merged op {op.op_id!r} contains features with a precedence "
+                    f"relation ({node} must follow {other}); grouping destroyed a "
+                    f"feature-level ordering edge (antichain invariant violated)"
+                )
+
+
+def project_feature_precedence_to_ops(
+    grouped_ops: Sequence[OpSpec],
+    feature_dag: FeaturePrecedence,
+) -> dict[str, list[str]]:
+    """Project the feature DAG onto op_ids: edge A->B between features becomes
+    op(A)->op(B); dedup; drop self-edges. Because merging preserved the antichain
+    invariant (step 2), every feature edge crosses op boundaries, so the projection
+    is lossless -- a self-edge here would mean the invariant was violated, so we
+    raise rather than silently drop it."""
+    node_to_op = _feature_op_map(grouped_ops)
+    precedence: dict[str, list[str]] = {op.op_id: [] for op in grouped_ops}
+    seen: dict[str, set[str]] = {op.op_id: set() for op in grouped_ops}
+    for node, deps in feature_dag.items():
+        src_op = node_to_op.get(node)
+        if src_op is None:
+            continue
         for dep in deps:
-            if dep in by_id and dep not in seen and dep != op_id:
-                cleaned.append(dep)
-                seen.add(dep)
-        precedence[op_id] = cleaned
-
+            dep_op = node_to_op.get(dep)
+            if dep_op is None:
+                continue
+            if dep_op == src_op:
+                raise AssertionError(
+                    f"feature edge {dep}->{node} collapsed inside op {src_op!r}; "
+                    "projection would be lossy (antichain invariant violated)"
+                )
+            if dep_op not in seen[src_op]:
+                precedence[src_op].append(dep_op)
+                seen[src_op].add(dep_op)
     return precedence
+
+
+def build_precedence(op_specs: Sequence[OpSpec]) -> dict[str, list[str]]:
+    """Op-level precedence (op_id -> [op_id]).
+
+    Compatibility wrapper: builds the feature DAG for these ops and projects it
+    back onto them. Callers that pass ungrouped ops (one op per feature) get the
+    same result as if each op were its own group.
+    """
+    feature_dag = build_feature_precedence(op_specs)
+    _assert_no_intra_op_precedence(op_specs, feature_dag)
+    return project_feature_precedence_to_ops(op_specs, feature_dag)
 
 
 def _operation_phase(op: OpSpec) -> int:
@@ -2442,7 +2668,7 @@ def _plan_one_setup(
     total_nodes = len(nodes)
 
     all_features = [cascade_node_to_feature(node) for node in nodes]
-    features, dropped = filter_planner_features(all_features)
+    features, dropped_features = filter_planner_features(all_features)
     nodes_by_id = {str(node["feature_id"]): node for node in nodes}
     envelope_faces = _resolve_envelope_stock_faces(graph, context)
     features, scope_dropped, scope_info = filter_features_for_setup(
@@ -2528,14 +2754,21 @@ def _plan_one_setup(
         op.parameters = assign_parameters(op, tool, context)
 
     ops_before_grouping = len(op_specs)
-    grouped_ops, reachability_splits = group_operations_by_tool_strategy(
+    # Feature-level DAG is built BEFORE grouping (and its acyclicity is asserted
+    # there, so cycles are caught before merging can hide them). Grouping is then
+    # required to keep each merged op an antichain in this DAG; op-level depends_on
+    # is a lossless projection of it.
+    feature_precedence = build_feature_precedence(op_specs, context)
+    grouped_ops, reachability_splits, precedence_splits = group_operations_by_tool_strategy(
         op_specs,
         context.tools,
         context,
+        feature_dag=feature_precedence,
     )
     _assign_op_ids(grouped_ops)
 
-    precedence = build_precedence(grouped_ops)
+    _assert_no_intra_op_precedence(grouped_ops, feature_precedence)
+    precedence = project_feature_precedence_to_ops(grouped_ops, feature_precedence)
     for op in grouped_ops:
         op.depends_on = list(precedence.get(op.op_id, []))
 
@@ -2608,11 +2841,18 @@ def _plan_one_setup(
         "feature_graph_ref": context.feature_graph_ref,
         "nodes_in": total_nodes,
         "features_kept": len(features),
-        "features_dropped": dropped,
+        "features_dropped": len(dropped_features),
+        # Recognized classes the planner has no operation mapping for. Made explicit so
+        # an intentionally-skipped feature is visible in the plan output, never silent.
+        "unmapped_features": [
+            {"feature_id": f.feature_id, "class_name": f.feature_type}
+            for f in dropped_features
+        ],
         "features_scope_dropped": scope_dropped,
         "facing_feature_ids": sorted(facing_feature_ids),
         "operations_before_grouping": ops_before_grouping,
         "reachability_splits": reachability_splits,
+        "precedence_splits": precedence_splits,
         "operations_out": len(grouped_ops),
         "tools_used": len(used_tool_ids - {UNRESOLVED_TOOL_ID}),
         "unresolved_ops": sum(1 for op in grouped_ops if op.tool_id == UNRESOLVED_TOOL_ID),
@@ -2802,6 +3042,11 @@ def _aggregate_setup_stats(slices: Sequence[_SetupPlanSlice]) -> dict[str, Any]:
         {**flag, "setup_id": slice_.setup.setup_id}
         for slice_ in slices
         for flag in slice_.stats.get("review_flags", [])
+    ]
+    totals["unmapped_features"] = [
+        {**entry, "setup_id": slice_.setup.setup_id}
+        for slice_ in slices
+        for entry in slice_.stats.get("unmapped_features", [])
     ]
     return totals
 

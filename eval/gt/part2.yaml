@@ -1,0 +1,53 @@
+# Ground truth — part2 (prismatic block: axial through-hole + counterbore stack +
+# two through-pockets + two flats + corner-isolated outer profile).
+#
+# PROVENANCE: part2 is a FROZEN, TOOLPATH-VERIFIED ground truth (2026-07-11),
+# promoted alongside 96260B_front/rear, fish_mold, and part1. The decomposition
+# below was confirmed against toolpath and matches the frozen partition golden
+# eval/regression/golden/part2.partition.json byte-for-byte in ownership:
+# through_hole[0,22], counterbore[1,2,19,20,21], through_pocket[3,15,16,17,18],
+# through_pocket[4,11,12,13,14], flat[5], flat[10], profile[6,7,8,9,23,24,25,26];
+# 0 orphans, all 27 faces owned.
+#
+# AXIS PROVENANCE: part2 has no pocket seeds, so the opening axis is geometry-
+# derived from the broad-face area. The corrected no-seed estimator resolves this
+# to +X [1,0,0] (matches the approved Phase 1 broad-face table pinned in
+# tests/test_noseed_opening_axis.py). The through-hole and counterbore share this
+# +X drill axis. The decomposition is byte-identical under machining_side front/back.
+#
+# NOTE (open-pocket over-labeling fix, 2026-07-11): the coaxial interior-recess
+# floor gate (Predicate A) and the corner-isolated prismatic cycle (Predicate B)
+# yield a single profile:1 (faces 6,7,8,9,23,24,25,26) rather than an over-labeled
+# open_pocket + walls. Counts below reflect the CORRECTED, frozen output.
+#
+# Instance counts in eval_cascade Toolpath vocabulary (NOT face counts). The two
+# through-pockets are cascade class through_pocket, which has no Toolpath count
+# vocabulary (like pocket/chamfer/inner_fillet), so they are intentionally not
+# counted here — same convention as 96260B / fish_mold / part1. The hole pass
+# splits the counterbore into a blind_hole + through_hole that are re-attributed
+# to ONE counterbore instance, so they do not add to the hole counts. Attributes
+# are in inches.
+
+part_id: "part2"
+part_step: "part2.step"
+graph_npz: "eval/regression/graphs/part2.graph.npz"
+
+setup:
+  machining_side: back        # single primary setup; opening axis auto-resolves to +X
+
+counts:
+  through_hole: 1             # ⌀6.35 mm axial bore (faces 0, 22)
+  counterbore: 1              # flat-shoulder counterbore stack (faces 1,2,19,20,21)
+  blind_hole: 0               # hole-pass blind_hole absorbed into the counterbore
+  flat: 2
+  profile: 1                  # corner-isolated outer profile (post over-labeling fix)
+  open_pocket: 0              # never present; profile owns the perimeter
+  wall: 0                     # folded into profile by the corner-isolated cycle
+  contour_surface: 0          # residual bucket (informational; coverage-only)
+
+# Deep-mode attributes (inches). Only the clean discrete through-hole is listed;
+# the counterbore-absorbed holes are not independently matched.
+features:
+  - class: through_hole
+    diameter: 0.25            # 6.35 mm
+    depth_below_top: 1.0      # 25.4 mm

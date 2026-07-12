@@ -1,6 +1,6 @@
-# Toolpath ground truth ù 96260B REAR XR004 PCD PLATE (back panel only)
+# Toolpath ground truth ÔøΩ 96260B REAR XR004 PCD PLATE (back panel only)
 # Instance counts, NOT face counts. Toolpath "FACES" ? flat in eval_cascade vocabulary.
-# This yaml matches the REAR STEP only ù do not merge front-side counts here.
+# This yaml matches the REAR STEP only ÔøΩ do not merge front-side counts here.
 # Contour count not yet transcribed from Toolpath panel (cascade residual ? Toolpath instances).
 
 part_id: "96260B_rear"
@@ -14,16 +14,16 @@ counts:
   filleted_pocket: 7          # 7 lobes, closed deep band per lobe
   filleted_open_pocket: 7     # 7 lobes, open mouth band per lobe
   open_pocket: 1              # central hub stack (faces 326, 330, 331, 332)
-  flat: 1                     # Toolpath FACES ù rear seating plane (face 112)
-  filleted_blind_hole: 1
-  through_hole: 1
+  flat: 1                     # Toolpath FACES ÔøΩ rear seating plane (face 112)
+  counterbore: 1             # counterbored through-hole: ?4.006 recess over ?3.2 bore
   outer_fillet: 2
   profile: 1
   wall: 14
   # contour_surface: pending Toolpath panel transcription
 
+# The former filleted_blind_hole (?4.006 enlarged mouth) + through_hole (?3.2
+# bore) are one counterbore: a flat-bottomed recess enlarging a through-bore.
 features:
-  - class: filleted_blind_hole
-    diameter: 4.006
-  - class: through_hole
-    diameter: 3.2
+  - class: counterbore
+    diameter: 4.006        # counterbore (enlarged mouth) diameter
+    bore_diameter: 3.2     # through-bore diameter

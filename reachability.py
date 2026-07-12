@@ -166,6 +166,46 @@ def _direction_result(
     }
 
 
+def make_axis_reachability_probe(
+    shape: Any,
+    occ_faces: Sequence[Any],
+    axis: Sequence[float],
+):
+    """Build a reusable ``probe(face_ids) -> list[str]`` for one setup axis.
+
+    Returns the subset of ``["+Z", "-Z"]`` (interpreted as ``+axis`` / ``-axis``)
+    from which the given face group exposes a clear swept-tool corridor -- the
+    identical occlusion test :func:`annotate_reachability` runs per node, exposed
+    as a standalone callable so an in-pipeline pass (e.g. the chamfer recognizer,
+    which must gate *before* the graph/node reachability annotation exists) can
+    read the same signal. The OCC ``_Corridor`` and ray length are built once and
+    closed over, so repeated probe calls are cheap.
+    """
+    z = _unit(np.asarray(axis, dtype=np.float64))
+    directions = {"+Z": z, "-Z": -z}
+    occ_by_index = {int(getattr(f, "index", i)): f for i, f in enumerate(occ_faces)}
+
+    all_face_pts = _feature_boundary_points(occ_by_index, list(occ_by_index))
+    if all_face_pts.shape[0]:
+        diag = float(np.linalg.norm(all_face_pts.max(0) - all_face_pts.min(0)))
+    else:
+        diag = 1000.0
+    ray_length = 2.0 * diag + 10.0
+    corridor = _Corridor(shape)
+
+    def probe(face_ids: Sequence[int]) -> list[str]:
+        pts = _feature_boundary_points(occ_by_index, list(face_ids))
+        if pts.shape[0] == 0:
+            return []
+        dirs: list[str] = []
+        for name, d in directions.items():
+            if not _direction_result(corridor, pts, d, ray_length, {})["occluded"]:
+                dirs.append(name)
+        return dirs
+
+    return probe
+
+
 def annotate_reachability(
     nodes: Sequence[dict[str, Any]],
     *,

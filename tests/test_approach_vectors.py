@@ -27,7 +27,7 @@ def _build_graph(step: Path, side: str, npz: Path):
     )
     edge_index, edge_attr = _load_edges(npz, step)
     faces = analyze_step(step)
-    _, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
+    _, pk, hl, cx, fl, of, wl, pr, rs, *_ = run_cascade(
         step, edge_index, edge_attr, pocket_config=config,
     )
     graph = build_cascade_feature_graph(

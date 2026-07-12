@@ -24,7 +24,7 @@ def _rear_graph(*, merge: bool):
     )
     ei, ea = _load_edges(REAR_NPZ, REAR_STEP)
     faces = analyze_step(REAR_STEP)
-    _, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(
+    _, pk, hl, cx, fl, of, wl, pr, rs, *_ = run_cascade(
         REAR_STEP, ei, ea, pocket_config=cfg,
     )
     graph = build_cascade_feature_graph(

@@ -31,7 +31,7 @@ def _front_cascade():
 
 
 def test_profile_reference_face_set():
-    _faces, _pk, _hl, _cx, _fl, _of, _wl, pr, _rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, _wl, pr, _rs, *_ = _front_cascade()
     report = validate_profiles(
         pr,
         expected_instances=REFERENCE_PROFILE_INSTANCES_FRONT,
@@ -45,14 +45,14 @@ def test_profile_not_in_residual_or_hub():
     hub = {273, 277, 281, 282, 283, 274, 275, 276}
     hub |= set(REFERENCE_OUTER_FILLET_FACES_FRONT)
     hub |= set(REFERENCE_HUB_OUTER_FILLET_FACES_FRONT)
-    _faces, _pk, _hl, _cx, _fl, _of, _wl, pr, rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, _wl, pr, rs, *_ = _front_cascade()
     profile_faces = set().union(*(f.face_indices for f in pr.features))
     assert not (profile_faces & hub)
     assert not (profile_faces & rs.claimed_faces)
 
 
 def test_profile_hub_step_diameter():
-    _faces, _pk, _hl, _cx, _fl, _of, _wl, pr, _rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, _wl, pr, _rs, *_ = _front_cascade()
     assert len(pr.features) == 1
     feat = pr.features[0]
     assert feat.face_indices == REFERENCE_PROFILE_FACES_FRONT

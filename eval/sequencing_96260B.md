@@ -1,4 +1,4 @@
-# Operation sequencing — 96260B validation
+# Operation sequencing ï¿½ 96260B validation
 
 Generated: 2026-07-08
 
@@ -39,11 +39,11 @@ python planner.py --multi-setup --setups authored --tool-source hardcoded \
 | Tool changes | **13 ? 6** (?7 swaps) |
 | Total cost | **230 ? 158** (?72) |
 
-Greedy and beam tie on this instance; beam matches greedy’s tool-minimized order.
+Greedy and beam tie on this instance; beam matches greedyï¿½s tool-minimized order.
 
 ## Precedence validity
 
-Every emitted plan was checked with `validate_sequence_precedence()` against each operation’s `depends_on` edges (drill?tap, rough?finish, cross-setup fixture boundary). **No violations** across none / greedy / beam.
+Every emitted plan was checked with `validate_sequence_precedence()` against each operationï¿½s `depends_on` edges (drill?tap, rough?finish, cross-setup fixture boundary). **No violations** across none / greedy / beam.
 
 ## Plan-neutral geometry
 

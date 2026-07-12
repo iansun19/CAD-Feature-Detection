@@ -274,6 +274,19 @@ def _hole_wall_adjacent(
     )
 
 
+def _is_interior_recess_floor(face_idx: int, graph: FaceGraph) -> bool:
+    """A genuine open-pocket floor is an interior recess: it meets at least one
+    neighbour across a CONCAVE edge (material sits inside the pocket). An
+    exterior prism cap is bounded entirely by convex edges — no concave edge —
+    so it fails this test and cannot seed an open pocket. Pure topology: no face
+    lists, no part gate, no size constant.
+    """
+    return any(
+        graph.edge_kind(face_idx, nb) == "concave"
+        for nb in graph.neighbors.get(face_idx, set())
+    )
+
+
 def _grow_open_pocket(
     seed: int,
     coaxial: set[int],
@@ -371,6 +384,17 @@ def _decompose_hub_stack(
 
     if pocket_seed is None:
         return hub_flat, set()
+
+    # Predicate A: the floor seed must be an interior recess (>=1 concave edge).
+    # Rejects exterior prism caps that the coaxial pool grabbed via hole walls —
+    # those are convex-bounded and carry no open pocket. No hub flat is deferred
+    # when there is no genuine pocket; the faces flow to the downstream passes.
+    if not _is_interior_recess_floor(pocket_seed, graph):
+        logger.info(
+            "coaxial: floor seed %d has no concave boundary (convex-bounded "
+            "prism cap) — no open pocket", pocket_seed,
+        )
+        return set(), set()
 
     open_faces = _grow_open_pocket(
         pocket_seed,
@@ -661,12 +685,97 @@ DEFAULT_STEP = "96260B_FRONT_XR004_PCD PLATE.stp copy"
 DEFAULT_GRAPH_NPZ = "pipeline_out/96260B_front/graph.npz"
 
 
+# ---------------------------------------------------------------------------
+# OCC-free self-tests for Predicate A (interior-recess floor gate)
+# ---------------------------------------------------------------------------
+def _mk_face(index, stype, area, centroid, normal=(0, 0, 0), radius=None, axis=None):
+    from feature_params import FaceGeom
+
+    return FaceGeom(
+        index=index,
+        surface_type=stype,
+        area=float(area),
+        centroid=np.asarray(centroid, dtype=float),
+        normal=np.asarray(normal, dtype=float),
+        radius=radius,
+        axis=None if axis is None else np.asarray(axis, dtype=float),
+    )
+
+
+def _mk_graph(n, edges):
+    """edges: list of (u, v, kind) with kind in concave|convex|smooth."""
+    kind_col = {"concave": 0, "convex": 1, "smooth": 2}
+    ei = np.array([[u for u, _v, _k in edges], [v for _u, v, _k in edges]], dtype=np.int64)
+    ea = np.zeros((len(edges), 4), dtype=np.float32)
+    for row, (_u, _v, k) in enumerate(edges):
+        ea[row, kind_col[k]] = 1.0
+    return FaceGraph.from_edge_tensors(ei, ea, n)
+
+
+def _selftest() -> int:
+    """Exercise Predicate A directly: an interior-recess floor (>=1 concave
+    boundary edge) seeds an open pocket; a convex-only prism cap does not.
+    Independent of the (legacy) axial-band grow axis. numpy only, no OCC."""
+    cfg = CoaxialStackDetectionConfig()
+    opening_axis = np.array([0.0, 0.0, 1.0])
+    part_axis_top = 0.0
+    fails: list[str] = []
+
+    # Shared face layout: one hole wall (cylinder), one horizontal floor plane
+    # (hole-wall-adjacent, depth 15mm, area 1500), one vertical step wall plane.
+    def build(floor_to_wall_kind: str):
+        faces = [
+            _mk_face(0, "cylinder", 200.0, (5, 0, -10), radius=3.0, axis=(0, 0, 1)),
+            _mk_face(1, "plane", 1500.0, (0, 0, -15), normal=(0, 0, 1)),
+            _mk_face(2, "plane", 300.0, (10, 0, -15), normal=(1, 0, 0)),
+        ]
+        by_index = {int(f.index): f for f in faces}
+        graph = _mk_graph(3, [
+            (0, 1, "convex"),            # hole wall -> floor (exterior contact)
+            (1, 2, floor_to_wall_kind),  # floor -> step wall
+        ])
+        return by_index, graph
+
+    # 1. look-alike open pocket ACCEPTED: floor meets step wall concavely.
+    by_index, graph = build("concave")
+    assert _is_interior_recess_floor(1, graph), "concave floor should be recess"
+    _hub, open_faces = _decompose_hub_stack(
+        {1, 2}, {0}, by_index, graph, opening_axis, part_axis_top, cfg)
+    if not open_faces:
+        fails.append("interior-recess floor was NOT claimed as open pocket")
+    elif 1 not in open_faces:
+        fails.append(f"floor seed missing from open pocket: {sorted(open_faces)}")
+
+    # 2. convex-only prism cap REJECTED: floor meets step wall convexly.
+    by_index, graph = build("convex")
+    if _is_interior_recess_floor(1, graph):
+        fails.append("convex-only cap wrongly flagged as interior recess")
+    _hub, open_faces = _decompose_hub_stack(
+        {1, 2}, {0}, by_index, graph, opening_axis, part_axis_top, cfg)
+    if open_faces:
+        fails.append(f"convex-only cap wrongly claimed open pocket: {sorted(open_faces)}")
+
+    if fails:
+        print("coaxial_stack Predicate-A selftest: FAIL")
+        for f in fails:
+            print("  -", f)
+        return 1
+    print("coaxial_stack Predicate-A selftest: PASS "
+          "(interior-recess floor accepted; convex-only prism cap rejected)")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Coaxial hub stack pass")
     ap.add_argument("step", nargs="?", default=DEFAULT_STEP)
     ap.add_argument("--graph-npz", type=Path, default=Path(DEFAULT_GRAPH_NPZ))
+    ap.add_argument("--selftest", action="store_true",
+                    help="run OCC-free Predicate-A unit checks and exit")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
+
+    if args.selftest:
+        return _selftest()
 
     logging.basicConfig(
         level=logging.INFO if args.verbose else logging.WARNING,

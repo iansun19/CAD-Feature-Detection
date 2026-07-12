@@ -33,7 +33,7 @@ def _front_cascade():
 
 
 def test_coaxial_hub_face_sets():
-    _faces, _pk, _hl, cx, _fl, _of, _wl, _pr, _rs = _front_cascade()
+    _faces, _pk, _hl, cx, _fl, _of, _wl, _pr, _rs, *_ = _front_cascade()
     report = validate_coaxial_stack(
         cx,
         expected_hub_flat_faces=REFERENCE_HUB_FLAT_FACES_FRONT,
@@ -45,7 +45,7 @@ def test_coaxial_hub_face_sets():
 
 
 def test_flat_instances_include_hub():
-    _faces, _pk, _hl, cx, fl, _of, _wl, _pr, _rs = _front_cascade()
+    _faces, _pk, _hl, cx, fl, _of, _wl, _pr, _rs, *_ = _front_cascade()
     assert 97 in fl.claimed_faces
     assert set(REFERENCE_HUB_FLAT_FACES_FRONT) <= fl.claimed_faces
     assert cx.hub_flat_faces == set(REFERENCE_HUB_FLAT_FACES_FRONT)
@@ -58,12 +58,12 @@ def test_hub_not_in_residual():
         | set(REFERENCE_CONTOUR_FACES_FRONT)
         | set(REFERENCE_HUB_OUTER_FILLET_FACES_FRONT)
     )
-    _faces, _pk, _hl, _cx, _fl, _of, _wl, _pr, rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, _of, _wl, _pr, rs, *_ = _front_cascade()
     assert not (hub & rs.claimed_faces)
 
 
 def test_outer_fillet_opening_and_hub_tiers():
-    _faces, _pk, _hl, _cx, _fl, of_r, _wl, _pr, rs = _front_cascade()
+    _faces, _pk, _hl, _cx, _fl, of_r, _wl, _pr, rs, *_ = _front_cascade()
     exp = set(REFERENCE_OUTER_FILLET_FACES_FRONT) | set(REFERENCE_HUB_OUTER_FILLET_FACES_FRONT)
     report = validate_outer_fillets(
         of_r,

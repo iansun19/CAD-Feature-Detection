@@ -1,0 +1,45 @@
+# Ground truth — part4 (prismatic plate, 154 faces, 12.7 mm thick, Z axis).
+#
+# PROVENANCE: the OUTER-BOUNDARY profile is HAND-VERIFIED ground truth
+# (2026-07-11). The part's exterior is a single closed prismatic contour of
+# exactly 30 vertical faces bordering only the two extreme decks (top Z=12.7,
+# bottom Z=0):
+#   54,55,56,57,58,59,60,61,62,63,65,66,76,77,78,79,80,81,
+#   142,143,144,145,146,147,148,149,150,151,152,153
+# — 15 planar walls interleaved with 15 ISOLATED vertical cylinders (corner
+# fillets R3.17, corner arc R9.53, and semicircular scallop notches R2.75 cut
+# into the top edge). Confirmed by per-face geometry inventory (all vertical,
+# degree-2 single cycle, convex to the extreme decks) and by confirming the
+# vacated through_hole/flat/wall/contour features owned ONLY these faces (clean
+# re-partition, 0 orphans). This 30-face loop is exactly Predicate B's
+# corner-isolated prismatic cycle and is emitted as ONE profile.
+#
+# THE FIX (pass ordering, not a new predicate): the prismatic-profile pass now
+# runs BEFORE holes (as pockets already do), so the scallop notches (57,58,59)
+# and the boundary arc (153) are claimed by the profile instead of being grabbed
+# as through_holes — which previously broke the degree-2 cycle and fragmented the
+# boundary across through_hole + flat + wall + contour_surface. Byte-identical on
+# all six prior frozen parts (96260B_front/rear, fish_mold, part1, part2, part3).
+#
+# The remaining counts mirror the blessed frozen partition
+# (eval/regression/golden/part4.partition.json) byte-for-byte in ownership; the
+# 21 interior through-holes, 16 counterbores, and 2 exterior decks are the
+# cascade decomposition and were NOT altered by this fix (proven: 0 non-boundary
+# face labels changed). Instance counts are in eval_cascade Toolpath vocabulary
+# (NOT face counts). stock_classifier=off; graph.npz pinned from part4's own
+# ingest (154 faces). STEP ("part4.step") at repo root.
+
+part_id: "part4"
+part_step: "part4.step"
+graph_npz: "eval/regression/graphs/part4.graph.npz"
+
+setup:
+  machining_side: back        # single primary setup; opening axis auto-resolves to Z
+
+counts:
+  profile: 1                  # the corner-isolated outer boundary (30 faces)
+  through_hole: 21            # interior drilled through-bores
+  counterbore: 16             # flat-shoulder counterbore stacks
+  flat: 2                     # exterior decks
+  wall: 0                     # folded into profile by the corner-isolated cycle
+  contour_surface: 0          # residual bucket (informational; coverage-only)

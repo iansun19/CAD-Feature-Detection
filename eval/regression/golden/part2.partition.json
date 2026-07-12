@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "kind": "cascade_face_partition",
+  "fixture_id": "part2",
+  "face_index_scheme": "analyze_step_v1",
+  "n_faces": 27,
+  "run_config": {
+    "stock_classifier": "off",
+    "max_diameter_mm": 150.0,
+    "machining_side": "back",
+    "pocket_access": "unknown",
+    "wall_attach_dist": null
+  },
+  "bless_meta": {
+    "blessed_at": "2026-07-11T21:48:44.236297+00:00",
+    "reason": "Toolpath-verified ground truth: open-pocket over-labeling fix (Predicate A interior-recess floor gate; Predicate B corner-isolated prismatic cycle) yields flat[5], flat[10], profile[6,7,8,9,23,24,25,26] with holes/counterbore/through-pockets owning the remainder, 0 orphans. Promoting part2 to frozen ground truth.",
+    "git_sha": "c77f47a",
+    "git_dirty": true
+  },
+  "face_fingerprints": [
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 253.354
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 86.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 171.924
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 179.542
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 179.542
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 4467.385
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 645.16
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 3709.67
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 645.16
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 3709.67
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 4412.603
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 179.542
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 359.084
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 254.0
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 254.0
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 179.542
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 359.084
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 254.0
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 254.0
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 171.924
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 54.782
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 86.394
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 253.354
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 126.677
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 126.677
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 126.677
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 126.677
+    }
+  ],
+  "instances": [
+    {
+      "class_name": "counterbore",
+      "face_ids": [
+        1,
+        2,
+        19,
+        20,
+        21
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        5
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        10
+      ]
+    },
+    {
+      "class_name": "profile",
+      "face_ids": [
+        6,
+        7,
+        8,
+        9,
+        23,
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        0,
+        22
+      ]
+    },
+    {
+      "class_name": "through_pocket",
+      "face_ids": [
+        3,
+        15,
+        16,
+        17,
+        18
+      ]
+    },
+    {
+      "class_name": "through_pocket",
+      "face_ids": [
+        4,
+        11,
+        12,
+        13,
+        14
+      ]
+    }
+  ],
+  "stock_face_ids": [],
+  "unclaimed_face_ids": []
+}

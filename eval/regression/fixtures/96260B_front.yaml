@@ -8,7 +8,7 @@ setup:
   pocket_access: open
 
 run:
-  stock_classifier: new
+  stock_classifier: "off"
   max_diameter_mm: 150.0
   wall_attach_dist: null
 
@@ -17,3 +17,8 @@ golden: "eval/regression/golden/96260B_front.partition.json"
 notes: |
   96260B XR004 front setup (open filleted pockets). STEP is gitignored at
   repo root. graph.npz pinned from pipeline_out/96260B_front ingest.
+  STOCK gate removed (2026-07-10): stock_classifier=off so every face enters
+  the cascade and exits with exactly one feature label — the golden carries no
+  stock_face_ids bucket. GT stop-gate passed: no GT-confirmed face changed
+  label; GT-touching reassignments (277/281/282/283 -> open_pocket, 296 ->
+  outer_fillet) move toward the GT-correct label.

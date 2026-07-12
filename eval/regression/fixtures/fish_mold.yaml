@@ -1,0 +1,25 @@
+fixture_id: "fish_mold"
+step: "fish mold.stp"
+graph_npz: "eval/regression/graphs/fish_mold.graph.npz"
+face_index_scheme: "analyze_step_v1"
+
+setup:
+  machining_side: back
+  pocket_access: closed
+
+run:
+  stock_classifier: "off"
+  max_diameter_mm: 150.0
+  wall_attach_dist: null
+
+golden: "eval/regression/golden/fish_mold.partition.json"
+
+notes: |
+  fish_mold — fully-machined fish-shaped mold cavity (single rear/back setup).
+  STEP ("fish mold.stp") is gitignored at repo root; graph.npz pinned from the
+  fish_mold ingest (236 faces). Opening axis is the corrected true ±Z [0,0,1],
+  which run_cascade now auto-resolves natively from machining_side=back — the
+  earlier oblique axis was a pre-correction artifact. stock_classifier=off: this
+  mold has 0 STOCK faces (fully machined), so every face enters the cascade and
+  the golden carries no stock_face_ids bucket. Blessed partition = the corrected
+  63-feature graph treated as ground truth.

@@ -1,4 +1,4 @@
-# Orphan characterization — 96260B KEPT_FRONT orphans
+# Orphan characterization ï¿½ 96260B KEPT_FRONT orphans
 
 Generated: 2026-07-08 (read-only geometry audit)
 
@@ -14,7 +14,7 @@ Generated: 2026-07-08 (read-only geometry audit)
 
 **Root cause: CASCADE OVER-SEGMENTATION.** All 38 orphans are geometric fragments of lobe-tier contour surfaces that are **already machined** by existing rear ops (OP040/OP050) and/or front OP130 surface_finish via the seven successful front twins. None are standalone uncovered features. Recommended fix is **upstream cascade merge** in perception; planner and twin gates should remain untouched.
 
-**Merged-surface count:** 38 fragments collapse into **7 lobe contour surfaces** (one per main-torus lobe cap), **all already covered** — 0 newly uncovered surfaces after merge.
+**Merged-surface count:** 38 fragments collapse into **7 lobe contour surfaces** (one per main-torus lobe cap), **all already covered** ï¿½ 0 newly uncovered surfaces after merge.
 
 ---
 
@@ -30,9 +30,9 @@ Data sources (read-only):
 
 For each of the 38 orphan ids:
 
-1. **Spatial containment** — centroid/normal from viewer face geometry; check proximity (<20 mm XZ, <8 mm Y) to planned rear contour features (OP040/OP050) or covered main-torus twins (66/70/73/79/84/89/94 ? OP130).
-2. **Fragment clustering** — graph `adjacent` edges + lobe-tier topology (wall 19–32 ? bspline strip ? analytic patches). Each lobe cap splits into ~6–8 features: 2 bspline strips (73.6 + 20.8 mm²) + main torus (241 mm², sometimes covered via front twin) + sliver torus (4.7 mm²) + sphere (6.0 mm²) + cone (0.005 mm²).
-3. **Survivors** — anything not merging into a planned-anchored lobe group and not forming a coherent uncovered cluster ? GENUINELY_DISTINCT.
+1. **Spatial containment** ï¿½ centroid/normal from viewer face geometry; check proximity (<20 mm XZ, <8 mm Y) to planned rear contour features (OP040/OP050) or covered main-torus twins (66/70/73/79/84/89/94 ? OP130).
+2. **Fragment clustering** ï¿½ graph `adjacent` edges + lobe-tier topology (wall 19ï¿½32 ? bspline strip ? analytic patches). Each lobe cap splits into ~6ï¿½8 features: 2 bspline strips (73.6 + 20.8 mmï¿½) + main torus (241 mmï¿½, sometimes covered via front twin) + sliver torus (4.7 mmï¿½) + sphere (6.0 mmï¿½) + cone (0.005 mmï¿½).
+3. **Survivors** ï¿½ anything not merging into a planned-anchored lobe group and not forming a coherent uncovered cluster ? GENUINELY_DISTINCT.
 
 Gate probe (no retuning): re-ran area (8%), XZ (3 mm), normal-dot (0.85) checks from `scripts/kept_front_resolution_96260B.py` against front contour_surface candidates.
 
@@ -43,15 +43,15 @@ Gate probe (no retuning): re-ran area (8%), XZ (3 mm), normal-dot (0.85) checks 
 The cascade over-segments each lobe-tier **contour ring** by analytic surface type:
 
 ```
-wall (19–32) ?? bspline strip (large 73.6 mm²) ?? bspline strip (small 20.8 mm²)
+wall (19ï¿½32) ?? bspline strip (large 73.6 mmï¿½) ?? bspline strip (small 20.8 mmï¿½)
                       ?                                    ?
-                      ??? main torus (241 mm²)  ? 7 covered via OP130 front twin
-                      ??? sliver torus (4.7 mm²)
-                      ??? sphere patch (6.0 mm²)
-                      ??? cone sliver (0.005 mm²)
+                      ??? main torus (241 mmï¿½)  ? 7 covered via OP130 front twin
+                      ??? sliver torus (4.7 mmï¿½)
+                      ??? sphere patch (6.0 mmï¿½)
+                      ??? cone sliver (0.005 mmï¿½)
 ```
 
-The planner picks **one** bspline per lobe (OP040 rear) and/or the **main torus** (OP130 front twin). The unselected bspline twin and all analytic slivers become graph nodes that pass +Z reachability but have no direct op ref — the "orphans."
+The planner picks **one** bspline per lobe (OP040 rear) and/or the **main torus** (OP130 front twin). The unselected bspline twin and all analytic slivers become graph nodes that pass +Z reachability but have no direct op ref ï¿½ the "orphans."
 
 ---
 
@@ -59,7 +59,7 @@ The planner picks **one** bspline per lobe (OP040 rear) and/or the **main torus*
 
 Seven lobe groups absorb all 38 fragments. Every group has at least one planned anchor.
 
-| Group | Planned anchors | Orphan fragments | Merged area (mm²) | Types |
+| Group | Planned anchors | Orphan fragments | Merged area (mmï¿½) | Types |
 |---|---|---|---|---|
 | **L1 NW** | rear **38** (OP040), twin **66?front 40** (OP130) | 44, 45, 67, 68, 69, 77, 78 | 97.4 | 2 bspline, 1 torus, 2 sphere, 2 cone |
 | **L2 W** | rear **41** (OP040), twin **70?front 42** (OP130) | 63, 71, 72, 98, 99 | 37.5 | 1 bspline, 1 sphere, 2 cone |
@@ -75,7 +75,7 @@ Seven lobe groups absorb all 38 fragments. Every group has at least one planned 
 
 ## Gate near-miss check
 
-### Seven successful twins — all pass with clear margin
+### Seven successful twins ï¿½ all pass with clear margin
 
 | rear | front twin | area_rel | XZ (mm) | norm dot | Pass |
 |---|---|---|---|---|---|
@@ -87,15 +87,15 @@ Seven lobe groups absorb all 38 fragments. Every group has at least one planned 
 | 89 | 39 | 0.062 | 0.39 | 0.998 | ? |
 | 94 | 41 | 0.062 | 0.39 | 0.998 | ? |
 
-Headroom: ~18% on area, ~2.6 mm on XZ, dot ? 0.998 (limit 0.85). Successful matches are whole main-torus features (241 mm²), not slivers.
+Headroom: ~18% on area, ~2.6 mm on XZ, dot ? 0.998 (limit 0.85). Successful matches are whole main-torus features (241 mmï¿½), not slivers.
 
-### Orphan near-misses — none legitimate
+### Orphan near-misses ï¿½ none legitimate
 
 Every orphan's nearest same-surface-type front candidate fails **?2 gates simultaneously**:
 
-- **Area:** rel ? 0.98–1.00 (fragment 4.7/6.0/0.005 mm² vs whole 241 mm² torus, or bspline 20.8/73.6 vs different lobe) — **correct rejection**.
-- **XZ:** 13–140 mm (different lobe slot or fragment offset) — **correct rejection**.
-- **Surface type:** bspline orphans nearest front candidates are mixed cone/torus composites — **correct rejection**.
+- **Area:** rel ? 0.98ï¿½1.00 (fragment 4.7/6.0/0.005 mmï¿½ vs whole 241 mmï¿½ torus, or bspline 20.8/73.6 vs different lobe) ï¿½ **correct rejection**.
+- **XZ:** 13ï¿½140 mm (different lobe slot or fragment offset) ï¿½ **correct rejection**.
+- **Surface type:** bspline orphans nearest front candidates are mixed cone/torus composites ï¿½ **correct rejection**.
 
 **No orphan is a near-miss for a legitimate whole-feature twin.** The area and XZ gates are doing the right job: blocking fragment?whole matches. Retuning would create false COVERED_VIA_FRONT_TWIN assignments without adding real coverage.
 
@@ -103,10 +103,10 @@ Representative orphan gate failures (from `kept_front_resolution_96260B.md`):
 
 | orphan | type | area | nearest front | failure |
 |---|---|---|---|---|
-| 67 | torus 4.7 mm² | rel=0.988 | 32 | surface_type + area |
-| 68 | sphere 6.0 mm² | rel=0.985 | 32 | surface_type + area |
-| 44 | bspline 73.6 mm² | rel=0.816 | 24 | surface_type + area + xz=65 mm |
-| 99 | cone 0.005 mm² | rel=1.000 | 24 | surface_type + area + xz=13 mm |
+| 67 | torus 4.7 mmï¿½ | rel=0.988 | 32 | surface_type + area |
+| 68 | sphere 6.0 mmï¿½ | rel=0.985 | 32 | surface_type + area |
+| 44 | bspline 73.6 mmï¿½ | rel=0.816 | 24 | surface_type + area + xz=65 mm |
+| 99 | cone 0.005 mmï¿½ | rel=1.000 | 24 | surface_type + area + xz=13 mm |
 
 ---
 
@@ -161,8 +161,8 @@ Evidence columns: **faces** (STEP face index), **surf** (surface_type_histogram)
 
 Strict checks applied:
 
-- **76** (cone 0.005 mm²): only neighbor is unplanned bspline 43; still 16.5 mm from covered torus 73 centroid, same L3 cap ring as planned twin 43. Absorbing into L3 contour — not standalone.
-- **69** (cone 0.005 mm²): spatially on L1 cap despite parent internal-id collision with perimeter feature 36; cluster with torus 66 slivers at Y??66..?68 band, not the Y??87 perimeter chamfer.
+- **76** (cone 0.005 mmï¿½): only neighbor is unplanned bspline 43; still 16.5 mm from covered torus 73 centroid, same L3 cap ring as planned twin 43. Absorbing into L3 contour ï¿½ not standalone.
+- **69** (cone 0.005 mmï¿½): spatially on L1 cap despite parent internal-id collision with perimeter feature 36; cluster with torus 66 slivers at Y??66..?68 band, not the Y??87 perimeter chamfer.
 - No orphan occupies a region isolated from all planned anchors by >25 mm XZ with normal discontinuity.
 
 ---
@@ -171,8 +171,8 @@ Strict checks applied:
 
 | Fork | Result |
 |---|---|
-| Overwhelmingly DEBRIS_* ? cascade over-segmentation, upstream merge | **YES — 38/38 DEBRIS_OF_COVERED** |
-| Meaningful GENUINELY_DISTINCT ? group with 37 for lateral setup work | **NO — 0/38** |
+| Overwhelmingly DEBRIS_* ? cascade over-segmentation, upstream merge | **YES ï¿½ 38/38 DEBRIS_OF_COVERED** |
+| Meaningful GENUINELY_DISTINCT ? group with 37 for lateral setup work | **NO ï¿½ 0/38** |
 
 **One-line verdict:** 38 fragments ? **7 lobe contour surfaces**, **7/7 already covered** by OP040 rear bspline and/or OP130 front main-torus twins; **0 newly uncovered** after merge. Root cause is **cascade over-segmentation by analytic surface type**; fix upstream, planner untouched.
 
@@ -182,5 +182,5 @@ Strict checks applied:
 
 - Orphan count matches `kept_front_resolution_96260B.md`: 38.
 - Seven covered twins unchanged: 66?40, 70?42, 73?43, 79?35, 84?38, 89?39, 94?41.
-- All orphan bspline strips (44–65) pair spatially (?10 mm XZ) with either a planned bspline twin or a covered main torus on the same lobe — consistent with double bspline split, not independent features.
+- All orphan bspline strips (44ï¿½65) pair spatially (?10 mm XZ) with either a planned bspline twin or a covered main torus on the same lobe ï¿½ consistent with double bspline split, not independent features.
 - No code, graph, plan, or gate changes made.

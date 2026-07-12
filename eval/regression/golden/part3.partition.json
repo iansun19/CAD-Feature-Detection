@@ -1,0 +1,321 @@
+{
+  "schema_version": 1,
+  "kind": "cascade_face_partition",
+  "fixture_id": "part3",
+  "face_index_scheme": "analyze_step_v1",
+  "n_faces": 46,
+  "run_config": {
+    "stock_classifier": "off",
+    "max_diameter_mm": 150.0,
+    "machining_side": "back",
+    "pocket_access": "unknown",
+    "wall_attach_dist": null
+  },
+  "bless_meta": {
+    "blessed_at": "2026-07-11T22:49:40.434570+00:00",
+    "reason": "New countersink feature class: 10 countersunk through-holes on part3 (40 faces) relabeled from through_hole via geometry-only predicate (kind==through_hole & is_countersink & !is_counterbore & cone flares wider than bore). Hand-verified per-face geometry against the 10 stated 4-face groups; ownership complete 46/46, 0 orphans; empty on all 5 frozen parts.",
+    "git_sha": "c77f47a",
+    "git_dirty": true
+  },
+  "face_fingerprints": [
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 63.978
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 51.836
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 63.978
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 51.836
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 3640.023
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 502.655
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 552.0
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 502.655
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 552.0
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 3393.031
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 51.836
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 63.978
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 51.836
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 63.978
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 39.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 37.826
+    }
+  ],
+  "instances": [
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        0,
+        1,
+        44,
+        45
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        2,
+        3,
+        42,
+        43
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        4,
+        5,
+        40,
+        41
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        6,
+        7,
+        38,
+        39
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        8,
+        9,
+        36,
+        37
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        10,
+        11,
+        34,
+        35
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        12,
+        13,
+        32,
+        33
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        14,
+        15,
+        30,
+        31
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        16,
+        17,
+        28,
+        29
+      ]
+    },
+    {
+      "class_name": "countersink",
+      "face_ids": [
+        18,
+        19,
+        26,
+        27
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        20
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        25
+      ]
+    },
+    {
+      "class_name": "profile",
+      "face_ids": [
+        21,
+        22,
+        23,
+        24
+      ]
+    }
+  ],
+  "stock_face_ids": [],
+  "unclaimed_face_ids": []
+}

@@ -1,0 +1,42 @@
+fixture_id: "part3"
+step: "part3.step"
+graph_npz: "eval/regression/graphs/part3.graph.npz"
+face_index_scheme: "analyze_step_v1"
+
+setup:
+  machining_side: back
+  pocket_access: unknown
+
+run:
+  stock_classifier: "off"
+  max_diameter_mm: 150.0
+  wall_attach_dist: null
+
+golden: "eval/regression/golden/part3.partition.json"
+
+notes: |
+  part3 — prismatic plate (46 faces): 10 countersunk through-holes drilled along
+  ±Y, plus two exterior decks (flats) and a corner-isolated outer profile. Each
+  countersink is a coaxial stack of a widening conical entry (45° half-angle,
+  RefRadius > bore) and a through bore, each split into two seam halves → 4 faces:
+    [0,1,44,45] [2,3,42,43] [4,5,40,41] [6,7,38,39] [8,9,36,37]
+    [10,11,34,35] [12,13,32,33] [14,15,30,31] [16,17,28,29] [18,19,26,27]
+  The hole pass already groups each cone+bore into ONE through_hole feature and
+  flags is_countersink; countersink_detection relabels the qualifying features as
+  a dedicated `countersink` toolpath class (class_id 14). Geometry-only predicate:
+  kind==through_hole ∧ is_countersink ∧ ¬is_counterbore ∧ cone flares wider than
+  the bore. No face-id lists, no part gate, no mm constants. Empty on all frozen
+  parts (96260B_front/rear, fish_mold, part1, part2).
+
+  Single primary setup (machining_side=back); the decomposition is byte-identical
+  under front/back. Opening axis is geometry-derived. stock_classifier=off: every
+  face enters the cascade and exits with one feature label (no stock bucket).
+  graph.npz pinned from part3's own ingest (46 faces). STEP ("part3.step") is at
+  repo root.
+
+  Blessed from HAND-VERIFIED ground truth (not from cascade output): the 10 stated
+  4-face countersink groups were confirmed by per-face geometry inventory (cone
+  half-angle 45°, cone RefRadius {4.7 small, 6.3 large} > bore {2.25, 3.3},
+  coaxial perp=0, cone flares toward the exterior opening). Ownership is complete
+  (46/46 faces, 0 orphans): 10 countersink + 2 flat + 1 profile. Prior fixes hold
+  (Predicate A / Predicate B unchanged); all five frozen parts diff-clean.

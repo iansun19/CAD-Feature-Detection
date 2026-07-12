@@ -579,11 +579,12 @@
     residual_candidate: "CONTOUR SURFACES",
     flat: "FACES",
     filleted_blind_hole: "FILLETED BLIND HOLES",
-    blind_hole: "FILLETED BLIND HOLES",
+    blind_hole: "BLIND HOLES",
     open_pocket: "OPEN POCKETS",
     filleted_open_pocket: "FILLETED OPEN POCKETS",
     filleted_pocket: "FILLETED POCKETS",
     pocket: "FILLETED POCKETS",
+    through_pocket: "THROUGH POCKETS",
     outer_fillet: "OUTER FILLETS",
     profile: "PROFILES",
     through_hole: "THROUGH HOLES",
@@ -596,6 +597,7 @@
     "open_pocket",
     "filleted_open_pocket",
     "filleted_pocket", "pocket",
+    "through_pocket",
     "outer_fillet",
     "profile",
     "through_hole",
@@ -879,11 +881,7 @@
 
   function formatLabeledBy(face) {
     if (!face || !face.labeled_by) return null;
-    let text = String(face.labeled_by).replace(/_/g, " ");
-    if (face.labeled_by === "pre_cascade_gate" && face.gate_rule) {
-      text += ` · gate: ${face.gate_rule}`;
-    }
-    return text;
+    return String(face.labeled_by).replace(/_/g, " ");
   }
 
   function unassignedFaceLabel(face) {
@@ -898,10 +896,7 @@
   function labeledByDetailHtml(face) {
     const labeledBy = formatLabeledBy(face);
     if (!labeledBy) return "";
-    const stockCut = face.stock_cut_label
-      ? `<br>STOCK/CUT: ${face.stock_cut_label}`
-      : "";
-    return `<br>labeled_by: ${labeledBy}${stockCut}`;
+    return `<br>labeled_by: ${labeledBy}`;
   }
 
   function showStockFaceInfo(face) {
@@ -920,13 +915,9 @@
       confEl.style.display = "none";
     }
 
-    const gateNote = face.labeled_by === "pre_cascade_gate"
-      ? "<br>Excluded from cascade pool (pre-cascade STOCK gate)."
-      : "";
     document.getElementById("inspector-detail").innerHTML =
       `<strong>Face ${face.face_index}</strong> · not in any cascade feature instance` +
       labeledByDetailHtml(face) +
-      gateNote +
       (face.class_name ? `<br>Per-face prediction: ${face.class_name}` : "");
 
     tooltip.textContent =
@@ -1261,17 +1252,10 @@
     }
 
     const unassigned = DATA.faces.filter((f) => f.feature_id < 0);
-    const gate = unassigned.filter((f) => f.excluded_by_stock_gate);
-    const other = unassigned.filter((f) => !f.excluded_by_stock_gate);
     const lines = [];
-    if (gate.length) {
+    if (unassigned.length) {
       lines.push(
-        `STOCK gate (${gate.length}): [${gate.map((f) => f.face_index).join(", ")}]`,
-      );
-    }
-    if (other.length) {
-      lines.push(
-        `Other unassigned (${other.length}): [${other.map((f) => f.face_index).join(", ")}]`,
+        `Unassigned (${unassigned.length}): [${unassigned.map((f) => f.face_index).join(", ")}]`,
       );
     }
     document.getElementById("stock-faces").textContent =

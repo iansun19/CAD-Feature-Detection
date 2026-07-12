@@ -1,0 +1,1526 @@
+{
+  "schema_version": 1,
+  "kind": "cascade_face_partition",
+  "fixture_id": "fish_mold",
+  "face_index_scheme": "analyze_step_v1",
+  "n_faces": 236,
+  "run_config": {
+    "stock_classifier": "off",
+    "max_diameter_mm": 150.0,
+    "machining_side": "back",
+    "pocket_access": "closed",
+    "wall_attach_dist": null
+  },
+  "bless_meta": {
+    "blessed_at": "2026-07-11T19:56:56.802231+00:00",
+    "reason": "Reclassify plain-pocket features (toolpath_class=='pocket') to contour_surface and peel large +approach planar deck face 109 to flat via relabel_plain_pockets_as_contour; drains fish_mold pockets 3 and 4 (29 faces to contour, 109 to flat).",
+    "git_sha": "c77f47a",
+    "git_dirty": true
+  },
+  "face_fingerprints": [
+    {
+      "surface_type": "plane",
+      "area_mm2": 1045.159
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 2852.159
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 464.515
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1010.114
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 429.47
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 203.225
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.067
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.067
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 209.677
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 20.268
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 90.322
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 20.268
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 219.354
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 20.268
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 80.645
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.067
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 5.067
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 74.193
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 20.268
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 206.451
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 20.268
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 77.419
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 20.268
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 663.13
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 7.851
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.474
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1.759
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 25.751
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 7.28
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 86.965
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 243.035
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 31.188
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 17.329
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 484.435
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 75.023
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 74.571
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 67.147
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 0.029
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 0.029
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 55.626
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 245.196
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 18.581
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 72.731
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.758
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 6.397
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 107.145
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.894
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 40.93
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 39.814
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 160.354
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 103.809
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 2.506
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 6.126
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 1.453
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 17.322
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 41.91
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 6.391
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 3.789
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 120.667
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 11.139
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 14.866
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 8.864
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.787
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.352
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.321
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.018
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.649
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.021
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.176
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.065
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.033
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.099
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.876
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.215
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.221
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.862
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.406
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.264
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.811
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.666
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.149
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.164
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.965
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 8.163
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.068
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.148
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.669
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 6.442
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 7.857
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.004
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 198.857
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 80.112
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 91.207
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 91.207
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 91.207
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 11.401
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 11.401
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.498
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.992
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 4747.65
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 12.54
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 12.54
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 158.724
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 164.231
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.896
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 12.54
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 17.465
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 67.485
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.896
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 2924.151
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 464.515
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1010.114
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 429.47
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1045.159
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 4747.65
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 12.161
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 46.452
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 2.736
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 2.736
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 42.968
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 12.161
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 124.258
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 12.161
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 46.839
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 12.161
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 120.387
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 2.736
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 2.736
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 123.871
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 12.161
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 53.806
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 12.161
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 131.226
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 398.162
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 7.851
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.427
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 1.759
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 25.751
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 7.28
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 86.965
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 243.035
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 31.188
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 17.329
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 484.435
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 75.023
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 74.571
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 67.147
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 55.591
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 245.217
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 18.707
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 72.719
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.719
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 6.381
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 107.145
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 66.905
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 40.931
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 39.815
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 160.344
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 103.817
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 198.856
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 0.003
+    },
+    {
+      "surface_type": "sphere",
+      "area_mm2": 36.004
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 27.691
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 3.781
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 6.377
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 41.813
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.374
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.795
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 8.886
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 14.878
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 11.144
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 120.669
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 17.272
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 1.448
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 6.098
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 2.462
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.338
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.019
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.654
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.022
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.183
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.065
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.035
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.099
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.877
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.216
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 5.221
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 3.862
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.414
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.271
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.812
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.668
+    },
+    {
+      "surface_type": "torus",
+      "area_mm2": 0.105
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.166
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 1.958
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 8.159
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.067
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 2.148
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 0.67
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 6.452
+    },
+    {
+      "surface_type": "bspline",
+      "area_mm2": 7.857
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 80.112
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 91.207
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 91.207
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 91.207
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 11.401
+    },
+    {
+      "surface_type": "cylinder",
+      "area_mm2": 11.401
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 21.498
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 12.54
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 164.231
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 67.485
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 12.54
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.896
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 72.992
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 17.465
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 12.54
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.896
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 158.724
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.806
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 43.795
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.806
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 4.138
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 42.563
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 19.023
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 4.461
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 4.138
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 16.56
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 46.395
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 4.461
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 4.138
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 43.932
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 16.423
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 4.461
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.806
+    },
+    {
+      "surface_type": "plane",
+      "area_mm2": 15.191
+    },
+    {
+      "surface_type": "cone",
+      "area_mm2": 0.806
+    }
+  ],
+  "instances": [
+    {
+      "class_name": "chamfer",
+      "face_ids": [
+        98,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ]
+    },
+    {
+      "class_name": "chamfer",
+      "face_ids": [
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        1,
+        9,
+        11,
+        13,
+        23,
+        29,
+        31,
+        32,
+        34,
+        48,
+        97,
+        120,
+        122,
+        124,
+        139,
+        141,
+        142,
+        144,
+        156,
+        207,
+        224,
+        228,
+        232
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        14
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        17,
+        18
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        20,
+        21
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        22
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        24,
+        25,
+        33,
+        35,
+        36,
+        38
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        26,
+        27,
+        28
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        30
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        37,
+        40,
+        41,
+        45,
+        46,
+        51,
+        52,
+        53,
+        55,
+        56,
+        57,
+        58,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        86
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        39,
+        43,
+        44,
+        66
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        42
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        47
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        49
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        50,
+        54,
+        87,
+        158,
+        172,
+        199
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        59,
+        71
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        60
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        61,
+        62,
+        63,
+        65,
+        67,
+        68,
+        69
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        64
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        70
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        72
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        73
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        85
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        115,
+        227,
+        229
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        116,
+        117,
+        118,
+        231,
+        233,
+        235
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        119,
+        234
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        123,
+        226
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        125,
+        126,
+        127,
+        218,
+        220,
+        222
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        128,
+        129,
+        219,
+        221
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        131,
+        225
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        134,
+        135,
+        145,
+        146,
+        147,
+        150,
+        151,
+        152,
+        162,
+        166,
+        167,
+        168,
+        176,
+        177,
+        178,
+        179,
+        180,
+        181
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        136
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        137,
+        138
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        140
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        143
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        148,
+        154,
+        160,
+        163,
+        164,
+        165,
+        170,
+        171,
+        173,
+        174,
+        175,
+        183,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        193,
+        195,
+        196,
+        198
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        149
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        153
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        155
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        157
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        169
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        182
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        184
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        185
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        194
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        197
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        223
+      ]
+    },
+    {
+      "class_name": "contour_surface",
+      "face_ids": [
+        230
+      ]
+    },
+    {
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        88,
+        89,
+        161,
+        200
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        5
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        8
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        10,
+        130
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        12,
+        132
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        19,
+        121
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        99
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        109
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        114
+      ]
+    },
+    {
+      "class_name": "flat",
+      "face_ids": [
+        133
+      ]
+    },
+    {
+      "class_name": "inner_fillet",
+      "face_ids": [
+        90
+      ]
+    },
+    {
+      "class_name": "inner_fillet",
+      "face_ids": [
+        159
+      ]
+    },
+    {
+      "class_name": "profile",
+      "face_ids": [
+        0,
+        2,
+        3,
+        4,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        110,
+        111,
+        112,
+        113,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        6,
+        7
+      ]
+    },
+    {
+      "class_name": "through_hole",
+      "face_ids": [
+        15,
+        16
+      ]
+    }
+  ],
+  "stock_face_ids": [],
+  "unclaimed_face_ids": []
+}

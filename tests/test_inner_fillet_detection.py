@@ -50,9 +50,11 @@ class InnerFilletFishMoldTests(unittest.TestCase):
         self.assertEqual(th.reference_convex_edges, 4)
         self.assertEqual(th.reference_concave_edges, 0)
 
-    def test_fish_mold_matches_only_reference_face(self) -> None:
+    def test_fish_mold_matches_both_inner_fillets(self) -> None:
         # Universal geometry-only detection: no STOCK seeding. The predicate
-        # selects exactly {159} on fish_mold with an empty stock set.
+        # selects exactly {90, 159} on fish_mold with an empty stock set. Face 90
+        # is a geometric twin of reference face 159 in a different shell; the
+        # shell gate is off by default so both are detected.
         matches = matching_face_ids(
             FISH_STEP,
             self.edge_index,
@@ -60,7 +62,7 @@ class InnerFilletFishMoldTests(unittest.TestCase):
             config=self.config,
             stock_face_ids=set(),
         )
-        self.assertEqual(matches, [159])
+        self.assertEqual(matches, [90, 159])
 
     def test_96260B_panels_zero_matches(self) -> None:
         # Discriminative on geometry alone: zero matches on either panel even
@@ -88,8 +90,9 @@ class InnerFilletFishMoldTests(unittest.TestCase):
 
     def test_universal_driver_detects_and_reclaims(self) -> None:
         # apply_inner_fillets is detection-driven (no hardcoded face id): on a
-        # graph where the cascade absorbed 159 into a pocket, it detects {159}
-        # geometrically and reclaims the face into its own inner_fillet node.
+        # graph where the cascade absorbed 159 into a pocket, it detects
+        # {90, 159} geometrically, reclaims 159 from the pocket, and applies the
+        # unclaimed twin 90 as its own inner_fillet node.
         graph = {
             "nodes": [
                 {
@@ -106,21 +109,25 @@ class InnerFilletFishMoldTests(unittest.TestCase):
             graph, FISH_STEP, self.edge_index, self.edge_attr,
             config=self.config, stock_face_ids=set(),
         )
-        self.assertEqual(result["matches"], [159])
-        self.assertEqual([a["face_id"] for a in result["applied"]], [159])
+        self.assertEqual(result["matches"], [90, 159])
+        self.assertEqual([a["face_id"] for a in result["applied"]], [90, 159])
 
         pocket = next(n for n in graph["nodes"] if n["feature_id"] == 9)
         self.assertEqual(pocket["face_ids"], [187, 188])
-        fillet = next(n for n in graph["nodes"] if n["class_name"] == "inner_fillet")
-        self.assertEqual(fillet["face_ids"], [159])
+        fillet_faces = sorted(
+            f
+            for n in graph["nodes"] if n["class_name"] == "inner_fillet"
+            for f in n["face_ids"]
+        )
+        self.assertEqual(fillet_faces, [90, 159])
 
-        # Idempotent: a second pass matches 159 but applies nothing.
+        # Idempotent: a second pass matches {90, 159} but applies nothing.
         again = apply_inner_fillets(
             graph, FISH_STEP, self.edge_index, self.edge_attr,
             config=self.config, stock_face_ids=set(),
         )
         self.assertEqual(again["applied"], [])
-        self.assertEqual(again["skipped"], [159])
+        self.assertEqual(again["skipped"], [90, 159])
 
 
 class InnerFilletManualOverrideTests(unittest.TestCase):

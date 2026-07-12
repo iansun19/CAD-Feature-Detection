@@ -28,7 +28,10 @@ from planner import (  # noqa: E402
     _tool_fits_op,
     _tool_material_rank,
     assign_parameters,
+    build_feature_precedence,
     build_precedence,
+    project_feature_precedence_to_ops,
+    _split_members_by_precedence,
     cascade_node_to_feature,
     filter_planner_features,
     filter_features_for_setup,
@@ -52,6 +55,11 @@ DRILL_LIBRARY = Path(ROOT) / "tool_libraries" / "Kennametal_Standard_Drills__Inc
 CASCADE_PATH = Path(ROOT) / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
 CONTEXT_PATH = Path(ROOT) / "examples" / "machining_context_96260B.json"
 PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B.json"
+
+FISH_MOLD_GRAPH = Path(ROOT) / "pipeline_out" / "fish_mold_cascade" / "feature_graph_cascade.json"
+FISH_MOLD_DESCRIPTOR = Path(ROOT) / "pipeline_out" / "fish_mold_cascade" / "setup_descriptor.yaml"
+# feature_ids of the two inner_fillet nodes in the fish_mold GT (faces 90 and 159).
+FISH_MOLD_INNER_FILLET_IDS = {"0", "1"}
 
 
 def _minimal_context(**overrides) -> MachiningContext:
@@ -104,7 +112,8 @@ class TestFeatureFilter(unittest.TestCase):
             cascade_node_to_feature({"feature_id": 99, "class_name": "unknown_thing", "params": {}}),
         ]
         kept, dropped = filter_planner_features(features)
-        self.assertEqual(dropped, 1)
+        # dropped is now the list of unmapped features (was a bare count).
+        self.assertEqual([f.feature_id for f in dropped], ["99"])
         self.assertEqual({f.feature_id for f in kept}, {"0", "1", "2"})
 
 
@@ -284,6 +293,42 @@ class TestWidenedFeatureMapping(unittest.TestCase):
         # When the rough tool already fits the corner (r=3.0 <= 3.81), nothing fires.
         tool_lookup["BIG"] = types.SimpleNamespace(diameter_mm=6.0)
         self.assertEqual(_p._rest_machining_ops([rough, finish], tool_lookup), [])
+
+    def test_inner_fillet_maps_to_pencil_with_probe_radius_cap(self) -> None:
+        # A concave inner fillet carries no radius param, but its reachability block
+        # has a verified probe-tool radius. It maps to the same pencil corner-cleanup
+        # op as outer_fillet, and the probe radius feeds the FILLET_CAP_OPS tool-fit
+        # cap so the selected tool fits the concave corner (dia <= 2*radius).
+        ctx = _minimal_context()
+        node = {
+            "feature_id": 0, "class_name": "inner_fillet", "params": {},
+            "approach": {"reachability": {"effective_tool_radius_mm": 4.7625}},
+        }
+        feat = cascade_node_to_feature(node)
+        self.assertEqual(feat.fillet_radius_mm, 4.7625)
+
+        ops = map_feature_to_operations(feat, ctx)
+        self.assertEqual([o.operation for o in ops], ["pencil"])
+        self.assertEqual(ops[0].fillet_radius_mm, 4.7625)
+
+        # Cap = 2*4.7625 = 9.525 mm: a wider tool is rejected, a fitting one chosen.
+        tools = [
+            Tool(tool_id="TOO_BIG", tool_type="bullnose_endmill", diameter_mm=12.0, flute_length_mm=30.0),
+            Tool(tool_id="OK", tool_type="bullnose_endmill", diameter_mm=9.0, flute_length_mm=30.0),
+        ]
+        self.assertEqual(select_tool(ops[0], tools), "OK")
+
+    def test_outer_fillet_tool_sizing_unchanged_by_inner_fillet_wiring(self) -> None:
+        # The probe-radius cap is inner_fillet-only: outer_fillet must stay uncapped
+        # (fillet_radius_mm None) or the 96260B golden plan would regress.
+        feat = cascade_node_to_feature({
+            "feature_id": 9, "class_name": "outer_fillet", "params": {},
+            "approach": {"reachability": {"effective_tool_radius_mm": 4.7625}},
+        })
+        self.assertIsNone(feat.fillet_radius_mm)
+        ops = map_feature_to_operations(feat, _minimal_context())
+        self.assertEqual([o.operation for o in ops], ["pencil"])
+        self.assertIsNone(ops[0].fillet_radius_mm)
 
     def test_chamfer_feature_maps_to_chamfer_op(self) -> None:
         ctx = _minimal_context()
@@ -613,8 +658,11 @@ class TestBatchGrouping(unittest.TestCase):
                 parameters=shared_params,
             ),
         ]
-        grouped, splits = group_operations_by_tool_strategy(ops, default_tool_library())
+        grouped, splits, prec_splits = group_operations_by_tool_strategy(
+            ops, default_tool_library()
+        )
         self.assertEqual(splits, 0)
+        self.assertEqual(prec_splits, 0)
         self.assertEqual(len(grouped), 1)
         self.assertEqual(grouped[0].feature_refs, ["1", "2"])
 
@@ -649,7 +697,7 @@ class TestBatchGrouping(unittest.TestCase):
                 parameters=finish_params,
             ),
         ]
-        grouped, _ = group_operations_by_tool_strategy(ops, default_tool_library())
+        grouped, _, _ = group_operations_by_tool_strategy(ops, default_tool_library())
         self.assertEqual(len(grouped), 2)
 
     def test_different_tool_do_not_merge(self) -> None:
@@ -678,7 +726,7 @@ class TestBatchGrouping(unittest.TestCase):
                 parameters=params,
             ),
         ]
-        grouped, _ = group_operations_by_tool_strategy(ops, default_tool_library())
+        grouped, _, _ = group_operations_by_tool_strategy(ops, default_tool_library())
         self.assertEqual(len(grouped), 2)
 
     def test_reachability_splits_tight_clearance_feature(self) -> None:
@@ -709,7 +757,7 @@ class TestBatchGrouping(unittest.TestCase):
                 parameters=params,
             ),
         ]
-        grouped, splits = group_operations_by_tool_strategy(ops, default_tool_library())
+        grouped, splits, _ = group_operations_by_tool_strategy(ops, default_tool_library())
         self.assertGreaterEqual(splits, 1)
         self.assertGreaterEqual(len(grouped), 2)
         self.assertLess(len(grouped[0].feature_refs), 2)
@@ -758,6 +806,88 @@ class TestBatchGrouping(unittest.TestCase):
         rough_idx = next(i for i, op in enumerate(ordered) if op.op_id == rough_group.op_id)
         finish_idx = next(i for i, op in enumerate(ordered) if op.op_id == finish_group.op_id)
         self.assertLess(rough_idx, finish_idx)
+
+    def test_partially_tapped_coaxial_preserves_drill_before_tap(self) -> None:
+        # Three coaxial holes drilled by one batched drill op; only hole "1" is
+        # tapped. The former whole-set-equality tap-after-drill rule DROPPED this
+        # edge (merged drill refs {1,2,3} != tap refs {1}); the per-feature node
+        # rule keeps tap(1) ordered after drill(1). Pins the intended fix.
+        drills = [
+            OpSpec(
+                op_id=f"OP0{i}0",
+                feature_refs=[str(i)],
+                setup_id="rear",
+                operation="drill",
+                tool_id="TAP_DRILL",
+                tool_type_needed="drill",
+            )
+            for i in (1, 2, 3)
+        ]
+        tap = OpSpec(
+            op_id="OP040",
+            feature_refs=["1"],
+            setup_id="rear",
+            operation="tap",
+            tool_id="TAP",
+            tool_type_needed="tap",
+        )
+        ops = drills + [tap]
+        feature_dag = build_feature_precedence(ops)
+        grouped, _, _ = group_operations_by_tool_strategy(
+            ops, default_tool_library(), feature_dag=feature_dag
+        )
+        _assign_op_ids(grouped)
+        precedence = project_feature_precedence_to_ops(grouped, feature_dag)
+        drill_group = next(op for op in grouped if op.operation == "drill")
+        tap_group = next(op for op in grouped if op.operation == "tap")
+        # The three drills still batch into one op...
+        self.assertEqual(sorted(drill_group.feature_refs), ["1", "2", "3"])
+        # ...and the partially-tapped edge survives to op-level depends_on.
+        self.assertIn(drill_group.op_id, precedence[tap_group.op_id])
+
+    def test_precedence_edge_between_batchmates_forces_a_split(self) -> None:
+        # Two features that share a batch key but carry a feature-level ordering
+        # edge (the shape a future datum-first / coaxial-ordering rule produces)
+        # must NOT merge: they split into two ops so the edge stays expressible.
+        a = OpSpec(
+            op_id="OP010",
+            feature_refs=["1"],
+            setup_id="rear",
+            operation="pocket",
+            tool_id="T03",
+            tool_type_needed="endmill",
+        )
+        b = OpSpec(
+            op_id="OP020",
+            feature_refs=["2"],
+            setup_id="rear",
+            operation="pocket",
+            tool_id="T03",
+            tool_type_needed="endmill",
+        )
+        # Synthetic cross-feature, same-operation edge: pocket(2) must follow pocket(1).
+        # Nodes are (setup_id, feature_id, role).
+        feature_dag = {
+            ("rear", "1", "pocket"): set(),
+            ("rear", "2", "pocket"): {("rear", "1", "pocket")},
+        }
+        # Sanity: without the edge these two merge into one op.
+        merged, _, base_splits = group_operations_by_tool_strategy(
+            [a, b],
+            default_tool_library(),
+            feature_dag={("rear", "1", "pocket"): set(), ("rear", "2", "pocket"): set()},
+        )
+        self.assertEqual((len(merged), base_splits), (1, 0))
+        # With the edge they split.
+        grouped, _, prec_splits = group_operations_by_tool_strategy(
+            [a, b], default_tool_library(), feature_dag=feature_dag
+        )
+        self.assertEqual(prec_splits, 1)
+        self.assertEqual(len(grouped), 2)
+        self.assertEqual(sorted(op.feature_refs[0] for op in grouped), ["1", "2"])
+        # And the split makes _split_members_by_precedence yield two antichains.
+        antichains = _split_members_by_precedence([a, b], feature_dag)
+        self.assertEqual([len(g) for g in antichains], [1, 1])
 
 
 def _tool_by_id(tools):
@@ -1586,6 +1716,68 @@ class TestPlanIntegration(unittest.TestCase):
 
         multi_feature_ops = [op for op in cam_plan.operations if len(op.feature_refs) > 1]
         self.assertGreater(len(multi_feature_ops), 0)
+
+    @unittest.skipUnless(
+        FISH_MOLD_GRAPH.is_file() and FISH_MOLD_DESCRIPTOR.is_file(),
+        "fish_mold cascade artifacts missing",
+    )
+    def test_fish_mold_inner_fillets_mapped_or_unmapped(self) -> None:
+        # Regression guard: the two inner_fillet features must never silently vanish.
+        # Each must be either mapped to a shaping operation or listed explicitly in
+        # planner_stats["unmapped_features"]. Runs the full planner path on the GT.
+        import tempfile
+
+        import yaml
+
+        from machining_context import build_context_v0
+
+        descriptor = yaml.safe_load(FISH_MOLD_DESCRIPTOR.read_text())
+        # fish_mold rear is a back-side setup (guard_planning_inputs); reachability
+        # scoping needs machining_side. Patch a temp copy; leave the GT descriptor as-is.
+        descriptor.setdefault("setups", {}).setdefault("rear", {})["machining_side"] = "back"
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as fh:
+            yaml.safe_dump(descriptor, fh)
+            setup_yaml = fh.name
+        try:
+            context = build_context_v0(
+                {"min": [-100.0, -100.0, -100.0], "max": [100.0, 100.0, 100.0]},
+                setup_yaml,
+                FISH_MOLD_GRAPH,
+                setup_id="rear",
+                setups_source="authored",
+                tool_source="hardcoded",
+            )
+            cam_plan = plan(FISH_MOLD_GRAPH, context)
+        finally:
+            Path(setup_yaml).unlink(missing_ok=True)
+
+        stats = cam_plan.metadata["planner_stats"]
+        unmapped_ids = {str(e["feature_id"]) for e in stats.get("unmapped_features", [])}
+        aux_ops = {"deburr", "engraving"}
+        mapped_ids = {
+            ref
+            for op in cam_plan.operations
+            if op.operation not in aux_ops
+            for ref in op.feature_refs
+        }
+        for fid in FISH_MOLD_INNER_FILLET_IDS:
+            self.assertTrue(
+                fid in mapped_ids or fid in unmapped_ids,
+                msg=f"inner_fillet {fid} neither mapped nor in unmapped_features",
+            )
+
+        # Current behavior (option a): both map to pencil, so neither is unmapped.
+        self.assertEqual(FISH_MOLD_INNER_FILLET_IDS & unmapped_ids, set())
+        pencil_refs = {
+            ref
+            for op in cam_plan.operations
+            if op.operation == "pencil"
+            for ref in op.feature_refs
+        }
+        self.assertTrue(
+            FISH_MOLD_INNER_FILLET_IDS <= pencil_refs,
+            msg=f"inner_fillets not on a pencil op: pencil_refs={pencil_refs}",
+        )
 
     def test_generated_example_file_validates(self) -> None:
         self.assertTrue(PLAN_PATH.is_file(), f"missing {PLAN_PATH}; run planner.py first")

@@ -28,7 +28,7 @@ def _graph(step: str, side: str, npz: str):
     cfg = PocketDetectionConfig(setup=resolve_pocket_setup_for_run(sp, machining_side=side))
     ei, ea = _load_edges(Path(npz), sp)
     faces = analyze_step(sp)
-    _, pk, hl, cx, fl, of, wl, pr, rs = run_cascade(sp, ei, ea, pocket_config=cfg)
+    _, pk, hl, cx, fl, of, wl, pr, rs, *_ = run_cascade(sp, ei, ea, pocket_config=cfg)
     g = build_cascade_feature_graph(
         f"96260B_{side}", len(faces), pk, hl, cx, fl, of, wl, pr, rs, ei,
         faces=faces, opening_axis=pk.opening_axis,

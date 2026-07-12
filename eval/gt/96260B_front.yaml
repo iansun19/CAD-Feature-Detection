@@ -15,21 +15,21 @@ setup:
 counts:
   contour_surface: 37
   flat: 2                   # Toolpath FACES (1) — front panel
-  filleted_blind_hole: 1
+  counterbore: 1           # counterbored through-hole: ⌀4.006 recess over ⌀3.2 bore
   filleted_open_pocket: 7   # all 7 lobes open toward central bore on front STEP
   filleted_pocket: 7
   open_pocket: 1            # central hub stepped pocket (Toolpath OPEN POCKETS panel)
   outer_fillet: 2           # opening-tier torus at blind-hole stack cap (faces 96, 287)
   profile: 1
-  through_hole: 1
   wall: 14                  # exterior OD notch segments (Toolpath WALLS panel)
 
 
-# Deep-mode attributes from Toolpath Feature Details (inches).
+# Deep-mode attributes from Toolpath Feature Details (inches). The former
+# filleted_blind_hole (⌀4.006 enlarged mouth) + through_hole (⌀3.2 bore) are one
+# counterbore: a flat-bottomed recess enlarging the mouth of a through-bore.
 features:
-  - class: filleted_blind_hole
-    diameter: 4.006
-  - class: through_hole
-    diameter: 3.2
+  - class: counterbore
+    diameter: 4.006        # counterbore (enlarged mouth) diameter
+    bore_diameter: 3.2     # through-bore diameter
 
 

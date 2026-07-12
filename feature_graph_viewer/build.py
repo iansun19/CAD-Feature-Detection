@@ -56,34 +56,6 @@ def face_feature_maps(graph: dict, n_faces: int) -> tuple[dict[int, int], dict[i
     return face_to_feature, feature_colors
 
 
-def cascade_face_ids_for_labeling(graph: dict) -> set[int] | None:
-    """Cascade feature face ids when graph carries stock-gate metadata."""
-    if graph.get("source") != "cascade" and "stock_face_ids" not in graph:
-        return None
-    ids: set[int] = set()
-    for node in graph.get("nodes", []):
-        for face_idx in node.get("face_ids", []):
-            ids.add(int(face_idx))
-    return ids
-
-
-def classification_by_face(
-    step_path: Path,
-    graph: dict,
-) -> dict[int, dict]:
-    """Per-face STOCK/CUT classification metadata for viewer annotation."""
-    from stock_cut_classification import classify_report
-
-    classifier = graph.get("stock_classifier", "new")
-    cascade_ids = cascade_face_ids_for_labeling(graph)
-    records = classify_report(
-        step_path,
-        classifier=classifier,  # type: ignore[arg-type]
-        cascade_face_ids=cascade_ids,
-    )
-    return {r.face_id: r.to_dict() for r in records}
-
-
 # Stock faces this close to a same-plane feature face are pick-only in the viewer.
 COINCIDENT_FACE_TOL_MM = 0.05
 _NORMAL_BUCKET = 0.02
@@ -200,8 +172,6 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
         )
 
     face_to_feature, feature_colors = face_feature_maps(graph, n_faces)
-    stock_face_ids = set(int(i) for i in graph.get("stock_face_ids", []))
-    class_meta = classification_by_face(step_path, graph)
 
     feature_meta = []
     for node in graph.get("nodes", []):
@@ -239,26 +209,14 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
             if feat >= 0
             else FEATURE_COLORS[idx % len(FEATURE_COLORS)]
         )
-        if idx in stock_face_ids:
-            face["excluded_by_stock_gate"] = True
-        elif face_preds and idx in face_preds:
+        if face_preds and idx in face_preds:
             pred = face_preds[idx]
             face["class_id"] = pred.get("class_id")
             face["class_name"] = pred.get("class_name")
             face["confidence"] = pred.get("confidence")
-        if idx in class_meta:
-            meta = class_meta[idx]
-            face["stock_cut_label"] = meta.get("label")
-            face["labeled_by"] = meta.get("labeled_by")
-            face["gate_rule"] = meta.get("gate_rule")
         override = graph.get("face_label_overrides", {}).get(str(idx))
-        if override:
-            if "stock_cut_label" in override:
-                face["stock_cut_label"] = override["stock_cut_label"]
-            if "labeled_by" in override:
-                face["labeled_by"] = override["labeled_by"]
-            if "gate_rule" in override:
-                face["gate_rule"] = override["gate_rule"]
+        if override and "labeled_by" in override:
+            face["labeled_by"] = override["labeled_by"]
 
     feature_face_ids = {i for i, fid in face_to_feature.items() if fid >= 0}
     view = analyze_and_orient(faces, feature_meta, feature_face_ids)
@@ -274,8 +232,6 @@ def build_payload(part_id: str, step_path: Path, graph_path: Path) -> dict:
         "edge_color": EDGE_COLOR,
         "stock_color": STOCK_COLOR,
         "graph_source": graph.get("source"),
-        "stock_face_ids": sorted(stock_face_ids),
-        "stock_classifier": graph.get("stock_classifier"),
     }
 
 
