@@ -352,6 +352,9 @@ class PocketDetectionResult:
     remaining_faces: set[int]
     n_faces: int
     opening_axis: tuple[float, float, float]
+    # False only when geometry could not resolve the axis (no wall seeds and no
+    # planar broad face); opening_axis is then a blind default, not authoritative.
+    opening_axis_determined: bool
     n_clusters: int
     wall_attach_dist: float
     # Diagnostics / handoff.
@@ -464,9 +467,16 @@ def _estimate_opening_axis(
     axis_accum: Sequence[np.ndarray],
     faces: Sequence[Any],
     config: PocketDetectionConfig,
-) -> np.ndarray:
+) -> tuple[np.ndarray, bool]:
     """Auto-detect the opening axis from interior-wall directions, with a
     broad-face fallback when the walls are too scattered to trust their mean.
+
+    Returns ``(axis, determined)``. ``determined`` is ``False`` only when the
+    part has neither interior-wall seeds nor a planar broad face to measure --
+    geometry cannot recover the opening axis, so the returned vector is a blind
+    best-effort default that the caller must not treat as authoritative (see the
+    planner opening-axis guard). Every other path resolves the axis from real
+    geometry and reports ``determined=True``.
 
     See :attr:`PocketDetectionConfig.opening_axis_coherence_min` for the guard.
     """
@@ -478,10 +488,10 @@ def _estimate_opening_axis(
                 "measure -> cannot derive axis from geometry; defaulting to "
                 "[0, 1, 0]. This part's opening axis is UNDETERMINED."
             )
-            return np.array([0.0, 1.0, 0.0])
+            return np.array([0.0, 1.0, 0.0]), False
         # snap (no-op on clean cardinals from _broad_face_axis, future-proofs
         # any derived vector) and keep the positive-dominant sign convention.
-        return _snap_to_cardinal(broad, config.opening_axis_snap_tol_deg)
+        return _snap_to_cardinal(broad, config.opening_axis_snap_tol_deg), True
 
     coherence, mean_axis = _wall_axis_coherence(axis_accum)
     broad_axis = _broad_face_axis(faces)
@@ -505,7 +515,7 @@ def _estimate_opening_axis(
         axis = broad_axis
     else:
         axis = mean_axis
-    return _snap_to_cardinal(axis, config.opening_axis_snap_tol_deg)
+    return _snap_to_cardinal(axis, config.opening_axis_snap_tol_deg), True
 
 
 # ---------------------------------------------------------------------------
@@ -1680,8 +1690,9 @@ def detect_pockets(
         # estimator via _estimate_opening_axis (empty axis_accum -> broad-face).
         if config.opening_axis is not None:
             noseed_axis = _unit(np.asarray(config.opening_axis, dtype=np.float64))
+            noseed_determined = True
         else:
-            noseed_axis = _estimate_opening_axis([], faces, config)
+            noseed_axis, noseed_determined = _estimate_opening_axis([], faces, config)
         logger.info(
             "no bspline/sphere floor seeds in candidate pool -> 0 pockets "
             "(opening axis %s derived from geometry)", noseed_axis.tolist(),
@@ -1689,7 +1700,8 @@ def detect_pockets(
         return PocketDetectionResult(
             features=[], claimed_faces=set(), remaining_faces=set(candidate_faces),
             n_faces=n_faces,
-            opening_axis=tuple(float(x) for x in noseed_axis), n_clusters=0,
+            opening_axis=tuple(float(x) for x in noseed_axis),
+            opening_axis_determined=noseed_determined, n_clusters=0,
             wall_attach_dist=0.0, units=config.units,
         )
 
@@ -1723,8 +1735,11 @@ def detect_pockets(
     #     broad-face fallback when the walls scatter; see _estimate_opening_axis) ---
     if config.opening_axis is not None:
         opening_axis = _unit(np.asarray(config.opening_axis, dtype=np.float64))
+        opening_axis_determined = True
     else:
-        opening_axis = _estimate_opening_axis(axis_accum, faces, config)
+        opening_axis, opening_axis_determined = _estimate_opening_axis(
+            axis_accum, faces, config,
+        )
 
     # project seeds + walls into the plane perpendicular to the opening axis
     seed_uv = np.array([_project_uv(by_index[i].centroid, opening_axis) for i in seed_ids])
@@ -1918,6 +1933,7 @@ def detect_pockets(
         remaining_faces=remaining,
         n_faces=n_faces,
         opening_axis=tuple(round(float(x), 4) for x in opening_axis),
+        opening_axis_determined=opening_axis_determined,
         n_clusters=n_clusters,
         wall_attach_dist=attach_dist,
         excluded_convex_faces=sorted(excluded_convex),
@@ -2107,6 +2123,7 @@ def apply_filleted_lobe_tiers_to_result(
         remaining_faces=remaining,
         n_faces=result.n_faces,
         opening_axis=result.opening_axis,
+        opening_axis_determined=result.opening_axis_determined,
         n_clusters=result.n_clusters,
         wall_attach_dist=result.wall_attach_dist,
         excluded_convex_faces=result.excluded_convex_faces,

@@ -1242,6 +1242,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         graph["approach_frame"] = annotate_approach_vectors(
             graph["nodes"], faces=faces, opening_axis=pk.opening_axis,
         )
+        # Provenance for the opening axis: False only when geometry could not
+        # resolve it (no wall seeds, no planar broad face) and the vector is a
+        # blind default. The planner opening-axis guard rejects undetermined
+        # setups and asks for an explicit axis; a genuine +Z part (determined)
+        # plans normally. Absent field => determined (backward compat with graphs
+        # emitted before this provenance was recorded).
+        graph["approach_frame"]["opening_axis_determined"] = bool(
+            pk.opening_axis_determined
+        )
         graph["schema_version"] = 3
         graph["reachability_summary"] = annotate_reachability(
             graph["nodes"], occ_faces=occ_faces, shape=shape,
