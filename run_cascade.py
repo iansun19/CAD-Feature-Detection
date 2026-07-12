@@ -923,8 +923,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument(
         "--merge-lobe-contours",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help="merge same-lobe cap contour_surface fragments before export (default: on)",
+        default=False,
+        # Default-off: obsoleted by the current segmentation, not broken. The
+        # cascade now emits the lobe cap as ~7 band contour_surface nodes
+        # directly, but each band straddles two adjacent lobes, so the
+        # single-lobe candidate filter (lobe_contour_merge.py:100, requires
+        # len(lobes)==1) matches nothing and the pass is a no-op. The blessed
+        # 17-op 96260B baseline was produced with this merge doing nothing.
+        # Kept behind an opt-in flag in case a part regresses to per-lobe
+        # over-segmentation, where the merge would fire again.
+        help="merge same-lobe cap contour_surface fragments before export (default: off)",
     )
     ap.add_argument(
         "--lateral-axes",
