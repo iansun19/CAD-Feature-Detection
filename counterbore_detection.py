@@ -237,13 +237,30 @@ def _detect_core(
         if not bore_ext or capped:
             continue
 
+        # axis POINT: take a coaxial cylinder's axis line point (bore group
+        # preferred), falling back to the shoulder centroid when OCC axis
+        # points are absent (self-test path). Emitted as a {point, direction}
+        # dict to match every other feature's axis shape (the planner reads
+        # axis.get("point")/axis.get("direction")); direction stays the
+        # shoulder normal (parallel to the bore axis).
+        axis_pt = None
+        for ci in sorted(small_ids) + sorted(big_ids):
+            if ef[ci].axis_pt is not None:
+                axis_pt = ef[ci].axis_pt
+                break
+        if axis_pt is None:
+            axis_pt = p.centroid
+
         results.append({
             "faces": set(feat_ids),
             "shoulder": p.index,
             "r_big": r_big,
             "r_small": r_small,
             "ratio": round(ratio, 4),
-            "axis": [round(float(x), 6) for x in axis],
+            "axis": {
+                "point": [round(float(x), 6) for x in axis_pt],
+                "direction": [round(float(x), 6) for x in axis],
+            },
             "area": float(sum(ef[i].area for i in feat_ids)),
         })
     return results
@@ -260,7 +277,7 @@ class CounterboreFeature:
     shoulder_face_id: int
     counterbore_radius_mm: float   # R_big (enlarged mouth)
     bore_radius_mm: float          # R_small (through bore)
-    axis: list[float]
+    axis: dict[str, list[float]]   # {"point": [...], "direction": [...]}
     kind: str = "counterbore"
     toolpath_class: str = "counterbore"
 
@@ -352,7 +369,7 @@ def detect_counterbores(
             shoulder_face_id=int(r["shoulder"]),
             counterbore_radius_mm=float(r["r_big"]),
             bore_radius_mm=float(r["r_small"]),
-            axis=list(r["axis"]),
+            axis=dict(r["axis"]),
         ))
         claimed |= fids
 
