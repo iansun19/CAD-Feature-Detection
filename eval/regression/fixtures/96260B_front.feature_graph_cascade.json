@@ -1,0 +1,4793 @@
+{
+  "schema_version": 6,
+  "part_id": "96260B_front",
+  "source": "cascade",
+  "n_faces": 299,
+  "n_features": 51,
+  "n_edges": 107,
+  "nodes": [
+    {
+      "feature_id": 0,
+      "class_id": 13,
+      "class_name": "counterbore",
+      "face_ids": [
+        93,
+        94,
+        95,
+        280,
+        285,
+        286,
+        298
+      ],
+      "n_faces": 7,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "counterbore",
+        "toolpath_class": "counterbore",
+        "face_indices": [
+          93,
+          94,
+          95,
+          280,
+          285,
+          286,
+          298
+        ],
+        "n_faces": 7,
+        "area": 10148.16,
+        "shoulder_face_id": 93,
+        "counterbore_radius_mm": 50.876,
+        "bore_radius_mm": 40.64,
+        "enlargement_ratio": 1.2519,
+        "axis": {
+          "point": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "direction": [
+            0.0,
+            1.0,
+            0.0
+          ]
+        }
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "hole_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 27.967815,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.667,
+              "n_targets": 12,
+              "required_depth_mm": 27.967815,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 27.967815,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.6963,
+        "shallow_fraction": 0.3037,
+        "n_faces_measured": 7,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 1,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        80,
+        81,
+        84,
+        86,
+        89,
+        251,
+        252,
+        253,
+        254,
+        265,
+        266
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          80,
+          81,
+          84,
+          86,
+          89,
+          251,
+          252,
+          253,
+          254,
+          265,
+          266
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          -64.7864,
+          -14.2566
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u230011.040in": 2,
+          "\u23002.867in": 1
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.7118,
+        "shallow_fraction": 0.2882,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 2,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        255,
+        256,
+        257,
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        295
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 1,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          255,
+          256,
+          257,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          267,
+          268,
+          269,
+          270,
+          271,
+          272,
+          295
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          -64.7864,
+          -14.2566
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.1697,
+        "shallow_fraction": 0.8303,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 3,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        0,
+        2,
+        6,
+        9,
+        13,
+        101,
+        102,
+        103,
+        104,
+        117,
+        118
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 2,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          0,
+          2,
+          6,
+          9,
+          13,
+          101,
+          102,
+          103,
+          104,
+          117,
+          118
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          -51.5399,
+          41.7632
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u230011.040in": 2,
+          "\u23002.867in": 1,
+          "\u23000.800in": 2
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.5569,
+        "shallow_fraction": 0.4431,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 4,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        289
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 3,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          105,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          289
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          -51.5399,
+          41.7632
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2497,
+        "shallow_fraction": 0.7503,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 5,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        67,
+        69,
+        73,
+        75,
+        78,
+        228,
+        229,
+        230,
+        231,
+        242,
+        243
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 4,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          67,
+          69,
+          73,
+          75,
+          78,
+          228,
+          229,
+          230,
+          231,
+          242,
+          243
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          -29.2474,
+          -59.5409
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23002.867in": 1,
+          "\u230011.040in": 2,
+          "\u23000.800in": 2
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.5569,
+        "shallow_fraction": 0.4431,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 6,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        232,
+        233,
+        234,
+        235,
+        236,
+        237,
+        238,
+        239,
+        240,
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        294
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 5,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          232,
+          233,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          240,
+          244,
+          245,
+          246,
+          247,
+          248,
+          249,
+          294
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          -29.2474,
+          -59.5409
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.3192,
+        "shallow_fraction": 0.6808,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 7,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        15,
+        17,
+        21,
+        23,
+        26,
+        128,
+        129,
+        130,
+        131,
+        142,
+        143
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 6,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          15,
+          17,
+          21,
+          23,
+          26,
+          128,
+          129,
+          130,
+          131,
+          142,
+          143
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          0.5171,
+          66.3345
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23002.867in": 1,
+          "\u23000.800in": 2,
+          "\u230011.040in": 2
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.917,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.5569,
+        "shallow_fraction": 0.4431,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 8,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        290
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 7,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          138,
+          139,
+          140,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          290
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          0.5171,
+          66.3345
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.5,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.1697,
+        "shallow_fraction": 0.8303,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 9,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        54,
+        56,
+        60,
+        62,
+        65,
+        203,
+        204,
+        205,
+        206,
+        217,
+        218
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 8,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          54,
+          56,
+          60,
+          62,
+          65,
+          203,
+          204,
+          205,
+          206,
+          217,
+          218
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          28.3155,
+          -59.9897
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23002.867in": 1,
+          "\u23000.800in": 2,
+          "\u230011.040in": 2
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z",
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.167,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.5569,
+        "shallow_fraction": 0.4431,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 10,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        293
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 9,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          207,
+          208,
+          209,
+          210,
+          211,
+          212,
+          213,
+          214,
+          215,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          293
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          28.3155,
+          -59.9897
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2497,
+        "shallow_fraction": 0.7503,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 11,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        28,
+        30,
+        34,
+        36,
+        39,
+        153,
+        154,
+        155,
+        156,
+        167,
+        168
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 10,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          28,
+          30,
+          34,
+          36,
+          39,
+          153,
+          154,
+          155,
+          156,
+          167,
+          168
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          52.1848,
+          40.9545
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u230011.040in": 2,
+          "\u23000.800in": 2,
+          "\u23002.867in": 1
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z",
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.167,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.5569,
+        "shallow_fraction": 0.4431,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 12,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        291
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 11,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          157,
+          158,
+          159,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          169,
+          170,
+          171,
+          172,
+          173,
+          174,
+          291
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          52.1848,
+          40.9545
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.5,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.3192,
+        "shallow_fraction": 0.6808,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 13,
+      "class_id": 6,
+      "class_name": "filleted_open_pocket",
+      "face_ids": [
+        41,
+        43,
+        47,
+        49,
+        52,
+        178,
+        179,
+        180,
+        181,
+        192,
+        193
+      ],
+      "n_faces": 11,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 12,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          41,
+          43,
+          47,
+          49,
+          52,
+          178,
+          179,
+          180,
+          181,
+          192,
+          193
+        ],
+        "n_faces": 11,
+        "centroid_uv": [
+          64.5562,
+          -15.265
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u230011.040in": 2,
+          "\u23002.867in": 1
+        },
+        "wall_count": 5,
+        "floor_count": 0,
+        "sphere_count": 0,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 18.5504,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "open",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_open_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z",
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 16.313431,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.167,
+              "n_targets": 12,
+              "required_depth_mm": 16.313431,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.7118,
+        "shallow_fraction": 0.2882,
+        "n_faces_measured": 11,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 14,
+      "class_id": 6,
+      "class_name": "filleted_pocket",
+      "face_ids": [
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        194,
+        195,
+        196,
+        197,
+        198,
+        199,
+        292
+      ],
+      "n_faces": 16,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 13,
+        "kind": "pocket",
+        "subtype": "blind_pocket",
+        "face_indices": [
+          182,
+          183,
+          184,
+          185,
+          186,
+          187,
+          188,
+          189,
+          190,
+          194,
+          195,
+          196,
+          197,
+          198,
+          199,
+          292
+        ],
+        "n_faces": 16,
+        "centroid_uv": [
+          64.5562,
+          -15.265
+        ],
+        "opening_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "wall_diameters": {
+          "\u23000.800in": 2,
+          "\u23003.453in": 2,
+          "\u23000.500in": 2
+        },
+        "wall_count": 6,
+        "floor_count": 0,
+        "sphere_count": 3,
+        "step_plane_count": 1,
+        "released_faces": [],
+        "released_by_type": {},
+        "depth_below_top_mm": 23.6304,
+        "fillet_radius_mm": 6.35,
+        "3D_surface": false,
+        "blend_ring": {},
+        "blend_face_indices": [],
+        "template_match": true,
+        "template_deviation": {
+          "lobe_tier": true
+        },
+        "access": "closed",
+        "inboard_wall_index": null,
+        "gateway_face_indices": [],
+        "cap_face_indices": [],
+        "toolpath_class": "filleted_pocket"
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.550975,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.583,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.550975,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.1697,
+        "shallow_fraction": 0.8303,
+        "n_faces_measured": 16,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 15,
+      "class_id": 6,
+      "class_name": "open_pocket",
+      "face_ids": [
+        277,
+        281,
+        282,
+        283
+      ],
+      "n_faces": 4,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "open_pocket",
+        "toolpath_class": "open_pocket",
+        "face_indices": [
+          277,
+          281,
+          282,
+          283
+        ],
+        "n_faces": 4
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "-Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 7.069149,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 7.069149,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.25,
+              "n_targets": 12,
+              "required_depth_mm": 7.069149,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": "+Z"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0656,
+        "shallow_fraction": 0.9344,
+        "n_faces_measured": 4,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 16,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        274,
+        275,
+        276
+      ],
+      "n_faces": 3,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 1,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          274,
+          275,
+          276
+        ],
+        "n_faces": 3
+      },
+      "approach": {
+        "axis": [
+          -0.0,
+          0.752808,
+          0.65824
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "-Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 6.6294,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 6.6294,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.417,
+              "n_targets": 12,
+              "required_depth_mm": 6.6294,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.3749,
+        "shallow_fraction": 0.6251,
+        "n_faces_measured": 3,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 17,
+      "class_id": 11,
+      "class_name": "flat",
+      "face_ids": [
+        273
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "flat",
+        "face_indices": [
+          273
+        ],
+        "n_faces": 1,
+        "normal": [
+          -0.0,
+          1.0,
+          -0.0
+        ],
+        "offset": -55.0,
+        "area": 7875.115
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "source": "flat_normal",
+        "setup_dir": "-Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 0.0,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 0.0,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 0.0,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 18,
+      "class_id": 11,
+      "class_name": "flat",
+      "face_ids": [
+        97
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 1,
+        "kind": "flat",
+        "face_indices": [
+          97
+        ],
+        "n_faces": 1,
+        "normal": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "offset": -26.0,
+        "area": 844.377
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "flat_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 0.0,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 0.0,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 0.0,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 19,
+      "class_id": 10,
+      "class_name": "outer_fillet",
+      "face_ids": [
+        96,
+        287
+      ],
+      "n_faces": 2,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "outer_fillet",
+        "toolpath_class": "outer_fillet",
+        "face_indices": [
+          96,
+          287
+        ],
+        "n_faces": 2,
+        "area": 384.704
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 0.762,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 0.762,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 0.762,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 2,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 20,
+      "class_id": 10,
+      "class_name": "outer_fillet",
+      "face_ids": [
+        278,
+        296
+      ],
+      "n_faces": 2,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 1,
+        "kind": "outer_fillet",
+        "toolpath_class": "outer_fillet",
+        "face_indices": [
+          278,
+          296
+        ],
+        "n_faces": 2,
+        "area": 2982.063
+      },
+      "approach": {
+        "axis": [
+          0.000822,
+          -0.999996,
+          -0.002531
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "-Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 3.81,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 3.81,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.833,
+              "n_targets": 12,
+              "required_depth_mm": 3.81,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.5013,
+        "shallow_fraction": 0.4987,
+        "n_faces_measured": 2,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 21,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        4
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          4
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 22,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        11
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 1,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          11
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 23,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        19
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 2,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          19
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 24,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        24
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 3,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          24
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 25,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        32
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 4,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          32
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 26,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        37
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 5,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          37
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 27,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        45
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 6,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          45
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 28,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        50
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 7,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          50
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 29,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        58
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 8,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          58
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 30,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        63
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 9,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          63
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 31,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        71
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 10,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          71
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 32,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        76
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 11,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          76
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 33,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        82
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 12,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          82
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 34,
+      "class_id": -1,
+      "class_name": "wall",
+      "face_ids": [
+        87
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 13,
+        "kind": "wall",
+        "toolpath_class": "wall",
+        "face_indices": [
+          87
+        ],
+        "n_faces": 1,
+        "nominal_diameter_mm": 514.601,
+        "radial_mm": 77.399
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": false,
+          "exempt": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "reason": "lateral_access_wall"
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 35,
+      "class_id": -1,
+      "class_name": "profile",
+      "face_ids": [
+        279,
+        297
+      ],
+      "n_faces": 2,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "profile",
+        "toolpath_class": "profile",
+        "face_indices": [
+          279,
+          297
+        ],
+        "n_faces": 2,
+        "nominal_diameter_mm": 161.798,
+        "radial_mm": 51.471,
+        "axial_span_mm": 0.0
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "source": "opening_axis",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z",
+            "-Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 22.740406,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 22.740406,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": false,
+              "exposed_fraction": 0.25,
+              "n_targets": 12,
+              "required_depth_mm": 22.740406,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 1.0,
+        "shallow_fraction": 0.0,
+        "n_faces_measured": 2,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 36,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        1,
+        3,
+        5,
+        7,
+        25,
+        27,
+        99,
+        100,
+        141
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 0,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          1,
+          3,
+          5,
+          7,
+          25,
+          27,
+          99,
+          100,
+          141
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "cone": 2,
+          "bspline": 4,
+          "sphere": 2,
+          "torus": 1
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 23.821911,
+        "bbox_size_y": 8.401783,
+        "bbox_size_z": 14.318899,
+        "bbox_depth": 8.401783,
+        "bbox_width": 14.318899,
+        "bbox_length": 23.821911,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 14,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.223886,
+          0.856585,
+          0.464905
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 37,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        8,
+        10,
+        12,
+        14,
+        83,
+        85,
+        115,
+        116,
+        250
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 1,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          8,
+          10,
+          12,
+          14,
+          83,
+          85,
+          115,
+          116,
+          250
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "cone": 2,
+          "bspline": 4,
+          "torus": 1,
+          "sphere": 2
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 11.539698,
+        "bbox_size_y": 8.401783,
+        "bbox_size_z": 25.777372,
+        "bbox_depth": 8.401783,
+        "bbox_width": 11.539698,
+        "bbox_length": 25.777372,
+        "internal_edge_convexity": {
+          "concave": 2,
+          "convex": 12,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.503068,
+          0.856585,
+          0.114822
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.667,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 38,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        68,
+        70,
+        72,
+        74,
+        88,
+        90,
+        226,
+        227,
+        264
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 2,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          68,
+          70,
+          72,
+          74,
+          88,
+          90,
+          226,
+          227,
+          264
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "sphere": 2,
+          "cone": 2,
+          "bspline": 4,
+          "torus": 1
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 16.48518,
+        "bbox_size_y": 8.401755,
+        "bbox_size_z": 20.671911,
+        "bbox_depth": 8.401755,
+        "bbox_width": 16.48518,
+        "bbox_length": 20.671911,
+        "internal_edge_convexity": {
+          "concave": 1,
+          "convex": 13,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.40343,
+          0.856585,
+          -0.321724
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 39,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        16,
+        18,
+        20,
+        22,
+        38,
+        40,
+        126,
+        127,
+        166
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 3,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          16,
+          18,
+          20,
+          22,
+          38,
+          40,
+          126,
+          127,
+          166
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "cone": 2,
+          "bspline": 4,
+          "sphere": 2,
+          "torus": 1
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 23.82186,
+        "bbox_size_y": 8.401783,
+        "bbox_size_z": 14.318954,
+        "bbox_depth": 8.401783,
+        "bbox_width": 14.318954,
+        "bbox_length": 23.82186,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 14,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.223887,
+          0.856585,
+          0.464905
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 40,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        29,
+        31,
+        33,
+        35,
+        51,
+        53,
+        151,
+        152,
+        191
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 4,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          29,
+          31,
+          33,
+          35,
+          51,
+          53,
+          151,
+          152,
+          191
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "torus": 1,
+          "sphere": 2,
+          "cone": 2,
+          "bspline": 4
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 11.539698,
+        "bbox_size_y": 8.401783,
+        "bbox_size_z": 25.777387,
+        "bbox_depth": 8.401783,
+        "bbox_width": 11.539698,
+        "bbox_length": 25.777387,
+        "internal_edge_convexity": {
+          "concave": 2,
+          "convex": 12,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.503068,
+          0.856585,
+          0.114822
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 41,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        42,
+        44,
+        46,
+        48,
+        64,
+        66,
+        176,
+        177,
+        216
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 5,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          42,
+          44,
+          46,
+          48,
+          64,
+          66,
+          176,
+          177,
+          216
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "cone": 2,
+          "bspline": 4,
+          "torus": 1,
+          "sphere": 2
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 16.48521,
+        "bbox_size_y": 8.401783,
+        "bbox_size_z": 20.671895,
+        "bbox_depth": 8.401783,
+        "bbox_width": 16.48521,
+        "bbox_length": 20.671895,
+        "internal_edge_convexity": {
+          "concave": 1,
+          "convex": 13,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.40343,
+          0.856585,
+          -0.321724
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 42,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        55,
+        57,
+        59,
+        61,
+        77,
+        79,
+        201,
+        202,
+        241
+      ],
+      "n_faces": 9,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 6,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          55,
+          57,
+          59,
+          61,
+          77,
+          79,
+          201,
+          202,
+          241
+        ],
+        "n_faces": 9,
+        "surface_type_histogram": {
+          "cone": 2,
+          "bspline": 4,
+          "torus": 1,
+          "sphere": 2
+        },
+        "3D_surface": true,
+        "total_area": 640.284,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 26.440299,
+        "bbox_size_y": 8.401783,
+        "bbox_size_z": 8.352401,
+        "bbox_depth": 8.352401,
+        "bbox_width": 8.401783,
+        "bbox_length": 26.440299,
+        "internal_edge_convexity": {
+          "concave": 2,
+          "convex": 12,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.0,
+          0.856585,
+          -0.516005
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 13.06726,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 0.75,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.083,
+              "n_targets": 12,
+              "required_depth_mm": 13.06726,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.2947,
+        "shallow_fraction": 0.7053,
+        "n_faces_measured": 9,
+        "mixed": true,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 43,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        91,
+        98,
+        284,
+        288
+      ],
+      "n_faces": 4,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 7,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          91,
+          98,
+          284,
+          288
+        ],
+        "n_faces": 4,
+        "surface_type_histogram": {
+          "cone": 2,
+          "torus": 2
+        },
+        "3D_surface": false,
+        "total_area": 2338.497,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 65.057407,
+        "bbox_size_y": 3.29809,
+        "bbox_size_z": 55.97014,
+        "bbox_depth": 3.29809,
+        "bbox_width": 55.97014,
+        "bbox_length": 65.057407,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 6,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          1.0,
+          -0.0
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 6.980321,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 6.980321,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 6.980321,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.8693,
+        "shallow_fraction": 0.1307,
+        "n_faces_measured": 4,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 44,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        150
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 8,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          150
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.24835,
+          0.96701,
+          -0.056684
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 45,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        175
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 9,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          175
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.199161,
+          0.96701,
+          0.158826
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 46,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        200
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 10,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          200
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.0,
+          0.96701,
+          0.254737
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 47,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        92
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 11,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          92
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.110526,
+          0.96701,
+          -0.22951
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 48,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        225
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 12,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          225
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.199161,
+          0.96701,
+          0.158826
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 49,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        114
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 13,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          114
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          -0.24835,
+          0.96701,
+          -0.056684
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    },
+    {
+      "feature_id": 50,
+      "class_id": -1,
+      "class_name": "contour_surface",
+      "face_ids": [
+        125
+      ],
+      "n_faces": 1,
+      "mean_confidence": 1.0,
+      "params": {
+        "feature_id": 14,
+        "kind": "contour_surface",
+        "toolpath_class": "contour_surface",
+        "face_indices": [
+          125
+        ],
+        "n_faces": 1,
+        "surface_type_histogram": {
+          "torus": 1
+        },
+        "3D_surface": false,
+        "total_area": 226.09,
+        "n_distinct_axes": 1,
+        "bbox_size_x": 0.0,
+        "bbox_size_y": 0.0,
+        "bbox_size_z": 0.0,
+        "bbox_depth": 0.0,
+        "bbox_width": 0.0,
+        "bbox_length": 0.0,
+        "internal_edge_convexity": {
+          "concave": 0,
+          "convex": 0,
+          "smooth": 0
+        }
+      },
+      "approach": {
+        "axis": [
+          0.110526,
+          0.96701,
+          -0.22951
+        ],
+        "source": "aggregate_normal",
+        "setup_dir": "+Z",
+        "reachable_3axis": true,
+        "reachability": {
+          "verified": true,
+          "reachable_dirs": [
+            "+Z"
+          ],
+          "occluded": false,
+          "required_depth_mm": 2.461752,
+          "effective_tool_radius_mm": 4.7625,
+          "per_direction": {
+            "+Z": {
+              "occluded": false,
+              "exposed_fraction": 1.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            },
+            "-Z": {
+              "occluded": true,
+              "exposed_fraction": 0.0,
+              "n_targets": 12,
+              "required_depth_mm": 2.461752,
+              "effective_tool_radius_mm": 4.7625
+            }
+          },
+          "corrected_from": null
+        }
+      },
+      "slope_profile": {
+        "steep_fraction": 0.0,
+        "shallow_fraction": 1.0,
+        "n_faces_measured": 1,
+        "mixed": false,
+        "steep_deg": 45.0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": 3,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 3,
+      "target": 4,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 36,
+      "type": "adjacent"
+    },
+    {
+      "source": 36,
+      "target": 47,
+      "type": "adjacent"
+    },
+    {
+      "source": 3,
+      "target": 36,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 36,
+      "type": "adjacent"
+    },
+    {
+      "source": 21,
+      "target": 36,
+      "type": "adjacent"
+    },
+    {
+      "source": 24,
+      "target": 36,
+      "type": "adjacent"
+    },
+    {
+      "source": 21,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 3,
+      "target": 47,
+      "type": "adjacent"
+    },
+    {
+      "source": 3,
+      "target": 37,
+      "type": "adjacent"
+    },
+    {
+      "source": 37,
+      "target": 49,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 37,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 37,
+      "type": "adjacent"
+    },
+    {
+      "source": 33,
+      "target": 37,
+      "type": "adjacent"
+    },
+    {
+      "source": 22,
+      "target": 37,
+      "type": "adjacent"
+    },
+    {
+      "source": 22,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 3,
+      "target": 49,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 8,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 39,
+      "type": "adjacent"
+    },
+    {
+      "source": 39,
+      "target": 50,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 39,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 39,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 39,
+      "type": "adjacent"
+    },
+    {
+      "source": 26,
+      "target": 39,
+      "type": "adjacent"
+    },
+    {
+      "source": 23,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 50,
+      "type": "adjacent"
+    },
+    {
+      "source": 24,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 47,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 12,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 40,
+      "type": "adjacent"
+    },
+    {
+      "source": 40,
+      "target": 44,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 40,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 40,
+      "type": "adjacent"
+    },
+    {
+      "source": 25,
+      "target": 40,
+      "type": "adjacent"
+    },
+    {
+      "source": 28,
+      "target": 40,
+      "type": "adjacent"
+    },
+    {
+      "source": 25,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 44,
+      "type": "adjacent"
+    },
+    {
+      "source": 26,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 50,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 14,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 41,
+      "type": "adjacent"
+    },
+    {
+      "source": 41,
+      "target": 45,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 41,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 41,
+      "type": "adjacent"
+    },
+    {
+      "source": 27,
+      "target": 41,
+      "type": "adjacent"
+    },
+    {
+      "source": 30,
+      "target": 41,
+      "type": "adjacent"
+    },
+    {
+      "source": 27,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 45,
+      "type": "adjacent"
+    },
+    {
+      "source": 28,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 44,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 10,
+      "type": "adjacent"
+    },
+    {
+      "source": 32,
+      "target": 42,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 42,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 42,
+      "type": "adjacent"
+    },
+    {
+      "source": 42,
+      "target": 46,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 42,
+      "type": "adjacent"
+    },
+    {
+      "source": 29,
+      "target": 42,
+      "type": "adjacent"
+    },
+    {
+      "source": 29,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 46,
+      "type": "adjacent"
+    },
+    {
+      "source": 30,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 45,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 6,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 38,
+      "type": "adjacent"
+    },
+    {
+      "source": 38,
+      "target": 48,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 38,
+      "type": "adjacent"
+    },
+    {
+      "source": 35,
+      "target": 38,
+      "type": "adjacent"
+    },
+    {
+      "source": 31,
+      "target": 38,
+      "type": "adjacent"
+    },
+    {
+      "source": 34,
+      "target": 38,
+      "type": "adjacent"
+    },
+    {
+      "source": 31,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 48,
+      "type": "adjacent"
+    },
+    {
+      "source": 32,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 46,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 2,
+      "type": "adjacent"
+    },
+    {
+      "source": 33,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 49,
+      "type": "adjacent"
+    },
+    {
+      "source": 34,
+      "target": 35,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 48,
+      "type": "adjacent"
+    },
+    {
+      "source": 3,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 49,
+      "type": "adjacent"
+    },
+    {
+      "source": 1,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 48,
+      "type": "adjacent"
+    },
+    {
+      "source": 5,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 46,
+      "type": "adjacent"
+    },
+    {
+      "source": 9,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 45,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 47,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 19,
+      "type": "adjacent"
+    },
+    {
+      "source": 18,
+      "target": 19,
+      "type": "adjacent"
+    },
+    {
+      "source": 18,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 50,
+      "type": "adjacent"
+    },
+    {
+      "source": 7,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 43,
+      "target": 44,
+      "type": "adjacent"
+    },
+    {
+      "source": 11,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 13,
+      "target": 43,
+      "type": "adjacent"
+    },
+    {
+      "source": 15,
+      "target": 17,
+      "type": "adjacent"
+    },
+    {
+      "source": 16,
+      "target": 17,
+      "type": "adjacent"
+    },
+    {
+      "source": 0,
+      "target": 17,
+      "type": "adjacent"
+    },
+    {
+      "source": 15,
+      "target": 16,
+      "type": "adjacent"
+    },
+    {
+      "source": 15,
+      "target": 20,
+      "type": "adjacent"
+    },
+    {
+      "source": 20,
+      "target": 35,
+      "type": "adjacent"
+    }
+  ],
+  "approach_frame": {
+    "z": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "part_axis_top": -25.764444,
+    "part_axis_bottom": -54.833425
+  },
+  "reachability_summary": {
+    "n_verified": 37,
+    "ray_length_mm": 472.412
+  },
+  "slope_profile_summary": {
+    "steep_deg": 45.0,
+    "mixed_min_fraction": 0.15,
+    "mixed_features": 24
+  },
+  "chamfer_summary": {
+    "chamfers": 0
+  }
+}
