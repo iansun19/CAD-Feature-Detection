@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from cam_plan_schema import (
+from schema.cam_plan_schema import (
     CamPlan,
     MachiningParameters,
     Operation,
@@ -25,10 +25,10 @@ from cam_plan_schema import (
     ToolRef,
     write_cam_plan,
 )
-from operation_bank import FINISH_PHASE_OPS, ROUGH_PHASE_OPS
-from operation_bank import Operation as BankOp
-from sequence_search import SeqSearchStrategy, search_sequence
-from machining_context import (
+from planning.operation_bank import FINISH_PHASE_OPS, ROUGH_PHASE_OPS
+from planning.operation_bank import Operation as BankOp
+from planning.sequence_search import SeqSearchStrategy, search_sequence
+from planning.machining_context import (
     MachiningContext,
     SetupScopeSpec,
     Tool,
@@ -374,7 +374,7 @@ def _resolve_envelope_stock_faces(
         return frozenset()
 
     try:
-        from stock_cut_classification import envelope_stock_face_ids
+        from cascade.stock_cut_classification import envelope_stock_face_ids
 
         return frozenset(envelope_stock_face_ids(step_path))
     except ImportError:
@@ -441,6 +441,18 @@ def _reachability_dir_for_setup(context: MachiningContext) -> str:
     setup = context.setups[0]
     _resolve_setup_opening_axis_vector(context)
     side = setup.machining_side
+    if side is None:
+        # Absent machining_side is NON-FATAL: a lone single-setup part is reached
+        # from the side its opening axis opens toward (+opening_axis == front), so
+        # STEP->plan runs unattended without a hand-supplied side. Pass
+        # --machining-side (or set it in the descriptor) to override -- notably a
+        # 'back' flip must be declared, it is never inferred from geometry.
+        logger.info(
+            "setup %s: machining_side unset -> defaulting to 'front' "
+            "(approach from +opening_axis); pass --machining-side to override",
+            setup.setup_id,
+        )
+        return "+Z"
     if side not in ("front", "back"):
         raise SetupApproachAxisError(
             f"setup {setup.setup_id!r}: machining_side must be 'front' or 'back' "
@@ -3313,12 +3325,31 @@ if __name__ == "__main__":
     parser.add_argument(
         "--multi-setup",
         action="store_true",
-        help="Plan 96260B rear + front setups into one CamPlan.",
+        help=(
+            "Plan a GENUINE flip-job (one part, one stock, refixtured to reach "
+            "features on multiple faces) declared by an explicit multi-setup "
+            "descriptor (--setup-yaml). NOTE: 96260B is NOT a flip-job -- "
+            "96260B_front and 96260B_rear are two SEPARATE parts; plan them "
+            "independently (default, or --part)."
+        ),
+    )
+    parser.add_argument(
+        "--part",
+        choices=("rear", "front", "both"),
+        default="both",
+        help=(
+            "Which independent 96260B part(s) to plan when NOT --multi-setup "
+            "(default: both). 96260B_rear and 96260B_front are separate parts."
+        ),
     )
     parser.add_argument(
         "--out",
         type=Path,
-        default=REPO_ROOT / "examples" / "cam_plan_96260B.json",
+        default=None,
+        help=(
+            "Output CamPlan JSON. Default: examples/cam_plan_96260B_<part>.json "
+            "per planned part."
+        ),
     )
     parser.add_argument(
         "--material",
@@ -3341,8 +3372,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--setup-yaml",
         type=Path,
-        default=REPO_ROOT / "eval" / "gt" / "96260B_setup.yaml",
-        help="Hand-authored setup descriptor YAML (used when --setups=authored).",
+        default=None,
+        help=(
+            "Hand-authored setup descriptor YAML. Required for --multi-setup "
+            "(must declare >1 setup under one part_id -- that IS the 'these STEPs "
+            "are one part' declaration). Also used when --setups=authored."
+        ),
     )
     parser.add_argument(
         "--generated-setup-yaml",
@@ -3376,7 +3411,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    from machining_context import build_context_v0
+    from planning.machining_context import build_context_v0
 
     ctx_kwargs = {
         "material": args.material,
@@ -3385,96 +3420,130 @@ if __name__ == "__main__":
         "generated_descriptor_path": args.generated_setup_yaml,
     }
 
+    def _scope_diff(graph_path: Path, ctx) -> None:
+        if not args.scope_diff:
+            return
+        graph = load_feature_graph(graph_path)
+        nodes = graph.get("nodes", [])
+        all_features = [cascade_node_to_feature(n) for n in nodes]
+        features, _ = filter_planner_features(all_features)
+        nodes_by_id = {str(n["feature_id"]): n for n in nodes}
+        envelope_faces = _resolve_envelope_stock_faces(graph, ctx)
+        print_scope_assignment_diff(
+            setup_id=ctx.setups[0].setup_id,
+            features=features,
+            context=ctx,
+            nodes_by_id=nodes_by_id,
+            graph=graph,
+            envelope_faces=envelope_faces,
+        )
+
+    # 96260B_front and 96260B_rear are TWO SEPARATE PARTS (separate stock,
+    # separate jobs). They are planned independently -- never merged into one
+    # part. --multi-setup is reserved for a genuine flip-job (one part refixtured)
+    # declared by an explicit multi-setup descriptor.
+    INDEPENDENT_PARTS = {
+        "rear": (
+            "96260B_rear",
+            REPO_ROOT / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json",
+            REPO_ROOT / "fixtures/step/96260B_rear.stp",
+        ),
+        "front": (
+            "96260B_front",
+            REPO_ROOT / "pipeline_out" / "96260B_front" / "feature_graph_cascade.json",
+            REPO_ROOT / "fixtures/step/96260B_front.stp",
+        ),
+    }
+
     if args.multi_setup:
-        rear_graph = REPO_ROOT / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
-        front_graph = REPO_ROOT / "pipeline_out" / "96260B_front" / "feature_graph_cascade.json"
-        rear_step = REPO_ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy"
-        front_step = REPO_ROOT / "96260B_FRONT_XR004_PCD PLATE.stp copy"
-
-        print("\n=== setups used ===")
-        print(f"  source: {args.setups}")
-        if args.setups == "authored":
-            print(f"  path:   {args.setup_yaml}")
-        else:
-            gen_path = args.generated_setup_yaml or (
-                REPO_ROOT / "pipeline_out" / "96260B" / "setup_descriptor.yaml"
+        # Generic flip-job: one part, refixtured, declared explicitly. The
+        # descriptor's >1 setup entries ARE the "these STEPs are one part"
+        # declaration. Nothing here is inferred from filenames.
+        if args.setup_yaml is None:
+            parser.error(
+                "--multi-setup requires --setup-yaml pointing at a multi-setup "
+                "descriptor (a single part_id with >1 setup). 96260B is NOT such a "
+                "part; to plan it use the default per-part path (--part)."
             )
-            print(f"  path:   {gen_path}")
+        from cascade.setup_descriptor import load_setup_descriptor
 
-        rear_ctx = build_context_v0(
-            rear_step,
-            args.setup_yaml,
-            rear_graph,
-            setup_id="rear",
-            **ctx_kwargs,
-        )
-        front_ctx = build_context_v0(
-            front_step,
-            args.setup_yaml,
-            front_graph,
-            setup_id="front",
-            **ctx_kwargs,
-        )
+        descriptor = load_setup_descriptor(args.setup_yaml)
+        if len(descriptor.setups) < 2:
+            parser.error(
+                f"--multi-setup needs a descriptor declaring >1 setup; "
+                f"{args.setup_yaml} declares {len(descriptor.setups)}. A lone STEP "
+                "is its own single-setup part -- plan it without --multi-setup."
+            )
+        if args.out is None:
+            parser.error("--multi-setup requires an explicit --out path.")
 
-        if args.scope_diff:
-            for graph_path, ctx in ((rear_graph, rear_ctx), (front_graph, front_ctx)):
-                graph = load_feature_graph(graph_path)
-                nodes = graph.get("nodes", [])
-                all_features = [cascade_node_to_feature(n) for n in nodes]
-                features, _ = filter_planner_features(all_features)
-                nodes_by_id = {str(n["feature_id"]): n for n in nodes}
-                envelope_faces = _resolve_envelope_stock_faces(graph, ctx)
-                print_scope_assignment_diff(
-                    setup_id=ctx.setups[0].setup_id,
-                    features=features,
-                    context=ctx,
-                    nodes_by_id=nodes_by_id,
-                    graph=graph,
-                    envelope_faces=envelope_faces,
+        setup_inputs = []
+        setup_order = []
+        for setup_id, entry in descriptor.setups.items():
+            # Convention: each orientation's cascade graph lives in
+            # pipeline_out/<part_id>_<setup_id>/feature_graph_cascade.json.
+            graph_path = (
+                REPO_ROOT / "pipeline_out"
+                / f"{descriptor.part_id}_{setup_id}" / "feature_graph_cascade.json"
+            )
+            if not graph_path.is_file():
+                parser.error(
+                    f"multi-setup: no cascade graph for setup {setup_id!r} at "
+                    f"{graph_path}. Run the cascade for each orientation first."
                 )
+            step = REPO_ROOT / str(entry.part_step) if entry.part_step else None
+            ctx = build_context_v0(
+                step if step is not None else {},
+                args.setup_yaml,
+                graph_path,
+                setup_id=setup_id,
+                material=args.material,
+                tool_source=args.tool_source,
+                setups_source="authored",
+            )
+            _scope_diff(graph_path, ctx)
+            setup_inputs.append(SetupPlanInput(graph_path, ctx))
+            setup_order.append(setup_id)
 
         cam_plan = plan_multi_setups(
-            [
-                SetupPlanInput(rear_graph, rear_ctx),
-                SetupPlanInput(front_graph, front_ctx),
-            ],
-            setup_order=("rear", "front"),
-            source_part="96260B",
+            setup_inputs,
+            setup_order=tuple(setup_order),
+            source_part=descriptor.part_id,
             seq_search=args.seq_search,
             seq_beam_width=args.seq_beam_width,
         )
+        write_cam_plan(args.out, cam_plan)
+        print(f"Wrote {args.out}")
+        _print_summary(cam_plan)
     else:
-        feature_graph = args.feature_graph or (
-            REPO_ROOT / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
-        )
-        ctx = build_context_v0(
-            REPO_ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy",
-            args.setup_yaml,
-            feature_graph,
-            setup_id="rear",
-            **ctx_kwargs,
-        )
-        if args.scope_diff:
-            graph = load_feature_graph(feature_graph)
-            nodes = graph.get("nodes", [])
-            all_features = [cascade_node_to_feature(n) for n in nodes]
-            features, _ = filter_planner_features(all_features)
-            nodes_by_id = {str(n["feature_id"]): n for n in nodes}
-            envelope_faces = _resolve_envelope_stock_faces(graph, ctx)
-            print_scope_assignment_diff(
-                setup_id=ctx.setups[0].setup_id,
-                features=features,
-                context=ctx,
-                nodes_by_id=nodes_by_id,
-                graph=graph,
-                envelope_faces=envelope_faces,
+        parts = ["rear", "front"] if args.part == "both" else [args.part]
+        for part_key in parts:
+            part_id, graph_path, step = INDEPENDENT_PARTS[part_key]
+            feature_graph = args.feature_graph or graph_path
+            desc_path = graph_path.parent / "setup_descriptor.yaml"
+            ctx = build_context_v0(
+                step,
+                args.setup_yaml or desc_path,
+                feature_graph,
+                setup_id=part_key,
+                material=args.material,
+                tool_source=args.tool_source,
+                setups_source=args.setups,
+                generated_descriptor_path=args.generated_setup_yaml or desc_path,
             )
-        cam_plan = plan(
-            feature_graph,
-            ctx,
-            seq_search=args.seq_search,
-            seq_beam_width=args.seq_beam_width,
-        )
-    write_cam_plan(args.out, cam_plan)
-    print(f"Wrote {args.out}")
-    _print_summary(cam_plan)
+            _scope_diff(feature_graph, ctx)
+            cam_plan = plan(
+                feature_graph,
+                ctx,
+                seq_search=args.seq_search,
+                seq_beam_width=args.seq_beam_width,
+            )
+            # part_id comes from the STEP filename by default; force the declared
+            # independent-part identity so the two parts never share a source_part.
+            cam_plan = cam_plan.model_copy(update={"part_id": part_id})
+            out = args.out or (
+                REPO_ROOT / "examples" / f"cam_plan_{part_id}.json"
+            )
+            write_cam_plan(out, cam_plan)
+            print(f"Wrote {out}  (part {part_id})")
+            _print_summary(cam_plan)

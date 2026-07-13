@@ -15,7 +15,7 @@ try:
 except ImportError:
     HAS_OCC = False
 
-from feature_params import export_cam_params, HAS_OCC as FP_HAS_OCC  # noqa: E402
+from brep.feature_params import export_cam_params, HAS_OCC as FP_HAS_OCC  # noqa: E402
 
 
 @unittest.skipUnless(HAS_OCC and FP_HAS_OCC, "pythonocc-core not installed")
@@ -25,15 +25,15 @@ class TestBrepExtents(unittest.TestCase):
         cls.step_29000 = os.path.join(
             ROOT, "MFCAD++_dataset", "step", "test", "29000.step",
         )
-        cls.graph_29000 = os.path.join(ROOT, "29000_feature_graph.json")
+        cls.graph_29000 = os.path.join(ROOT, "fixtures/graphs/fixtures/graphs/29000_feature_graph.json")
         if not os.path.isfile(cls.step_29000):
             raise unittest.SkipTest("missing 29000.step")
         if not os.path.isfile(cls.graph_29000):
-            raise unittest.SkipTest("missing 29000_feature_graph.json")
+            raise unittest.SkipTest("missing fixtures/graphs/fixtures/graphs/29000_feature_graph.json")
 
     def test_single_face_aabb_nonzero(self):
         """Regression: old bbox_* was zero on single-face nodes."""
-        from brep_extents import feature_aabb, resolve_occ_faces
+        from brep.brep_extents import feature_aabb, resolve_occ_faces
 
         face_ids = [2]
         _, resolved = resolve_occ_faces(self.step_29000, face_ids, expected_n_faces=26)
@@ -44,8 +44,8 @@ class TestBrepExtents(unittest.TestCase):
         self.assertEqual(aabb.zero_width_axes, [])
 
     def test_valid_pocket_has_depth_and_floor(self):
-        from brep_extents import pocket_machined_extents
-        from feature_params import analyze_step
+        from brep.brep_extents import pocket_machined_extents
+        from brep.feature_params import analyze_step
 
         records = analyze_step(self.step_29000)
         face_ids = [13, 14, 15, 16]
@@ -62,8 +62,8 @@ class TestBrepExtents(unittest.TestCase):
         self.assertEqual(out["anchor"]["type"], "floor_plane_point")
 
     def test_single_plane_pocket_no_floor(self):
-        from brep_extents import pocket_machined_extents
-        from feature_params import analyze_step
+        from brep.brep_extents import pocket_machined_extents
+        from brep.feature_params import analyze_step
 
         records = analyze_step(self.step_29000)
         out, errors, blend = pocket_machined_extents(
@@ -73,8 +73,8 @@ class TestBrepExtents(unittest.TestCase):
         self.assertTrue(any("floor" in e or "wall" in e for e in errors))
 
     def test_multi_cone_chamfer_legs_and_angles(self):
-        from brep_extents import chamfer_machined_extents
-        from feature_params import analyze_step
+        from brep.brep_extents import chamfer_machined_extents
+        from brep.feature_params import analyze_step
 
         records = analyze_step(self.step_29000)
         face_ids = [17, 18, 19, 20, 21, 22, 23, 24]
@@ -91,7 +91,7 @@ class TestBrepExtents(unittest.TestCase):
             self.assertIn("leg_radial", leg)
 
     def test_index_mismatch_raises(self):
-        from brep_extents import FaceIndexError, resolve_occ_faces
+        from brep.brep_extents import FaceIndexError, resolve_occ_faces
 
         with self.assertRaises(FaceIndexError):
             resolve_occ_faces(self.step_29000, [0], expected_n_faces=99)
@@ -154,8 +154,8 @@ class TestHoleExtentsSynthetic(unittest.TestCase):
             raise unittest.SkipTest("could not write synthetic STEP")
 
     def test_through_hole_depth(self):
-        from brep_extents import hole_machined_extents
-        from feature_params import analyze_step
+        from brep.brep_extents import hole_machined_extents
+        from brep.feature_params import analyze_step
 
         records = analyze_step(self.through_step)
         cyl_idx = next(i for i, r in enumerate(records) if r.surface_type == "cylinder")
@@ -174,8 +174,8 @@ class TestHoleExtentsSynthetic(unittest.TestCase):
         self.assertIn("anchor", out)
 
     def test_blind_hole_classified(self):
-        from brep_extents import hole_machined_extents
-        from feature_params import analyze_step
+        from brep.brep_extents import hole_machined_extents
+        from brep.feature_params import analyze_step
 
         records = analyze_step(self.blind_step)
         cyl_idx = next(i for i, r in enumerate(records) if r.surface_type == "cylinder")
@@ -191,8 +191,8 @@ class TestHoleExtentsSynthetic(unittest.TestCase):
 
 class TestBsplineChamferNoWidth(unittest.TestCase):
     def test_bspline_flags_blend_without_width(self):
-        from feature_params import analyze_step
-        from brep_extents import chamfer_machined_extents
+        from brep.feature_params import analyze_step
+        from brep.brep_extents import chamfer_machined_extents
 
         if not HAS_OCC:
             self.skipTest("pythonocc not installed")

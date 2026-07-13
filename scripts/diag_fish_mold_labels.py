@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-STEP = ROOT / "fish mold.stp"
+STEP = ROOT / "fixtures/step/fish_mold.stp"
 CASCADE_GRAPH = ROOT / "pipeline_out/fish_mold_cascade/feature_graph_cascade.json"
 
 
@@ -35,7 +35,7 @@ def _is_cavity_face(record) -> bool:
 
 
 def main() -> int:
-    from stock_cut_classification import classify_report
+    from cascade.stock_cut_classification import classify_report
 
     if not STEP.is_file():
         print(f"STEP missing: {STEP}", file=sys.stderr)

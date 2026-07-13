@@ -27,7 +27,7 @@ Run (omit --graph-npz to ingest the face graph from the STEP, which is always
 correct for whatever part is passed; only pass --graph-npz for THIS part's own
 cached graph):
   /Users/iansun19/miniconda3/envs/mlcad/bin/python run_cascade.py \
-      "96260B_REAR_XR004_PCD PLATE.stp copy" -v
+      "fixtures/step/96260B_rear.stp" -v
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ def relabel_through_holes_as_contour(graph: dict, part_id: str) -> int:
 
     Returns the number of nodes relabeled. Mutates graph["nodes"] in place.
     """
-    from stock_cut_classification import _normalize_stem
+    from cascade.stock_cut_classification import _normalize_stem
 
     if _normalize_stem(part_id) not in {
         _normalize_stem(s) for s in RELABEL_THROUGH_HOLE_TO_CONTOUR_STEMS
@@ -123,7 +123,7 @@ def relabel_plain_pockets_as_contour(
     ``(n_pockets_reclassified, n_deck_faces_moved_to_flat)``; ``(0, 0)`` (no-op)
     when the part has no plain-pocket node.
     """
-    from eval_cascade import CASCADE_TP_CLASS_ID
+    from cascade.eval_cascade import CASCADE_TP_CLASS_ID
 
     approach = np.asarray(opening_axis, dtype=np.float64)
     na = float(np.linalg.norm(approach))
@@ -181,7 +181,7 @@ def relabel_plain_pockets_as_contour(
     return n_pockets, deck_faces_moved
 
 
-from coaxial_stack_detection import (
+from cascade.coaxial_stack_detection import (
     REFERENCE_CONTOUR_FACES_FRONT,
     REFERENCE_CONTOUR_FACES_REAR,
     REFERENCE_HUB_FLAT_FACES_FRONT,
@@ -193,20 +193,20 @@ from coaxial_stack_detection import (
     render_table as render_coaxial_table,
     validate_coaxial_stack,
 )
-from flats_detection import (
+from cascade.flats_detection import (
     FlatDetectionConfig,
     detect_flats,
     render_table as render_flat_table,
     validate_flats,
 )
-from hole_detection import (
+from cascade.hole_detection import (
     ExpectedHole,
     HoleDetectionConfig,
     detect_holes,
     render_table as render_hole_table,
     validate_against_expected,
 )
-from pocket_detection import (
+from cascade.pocket_detection import (
     PocketDetectionConfig,
     PocketSetupConfig,
     apply_filleted_lobe_tiers_to_result,
@@ -217,7 +217,7 @@ from pocket_detection import (
     validate_pockets,
     _part_axis_top,
 )
-from outer_fillet_detection import (
+from cascade.outer_fillet_detection import (
     REFERENCE_HUB_OUTER_FILLET_FACES_FRONT,
     REFERENCE_HUB_OUTER_FILLET_FACES_REAR,
     REFERENCE_OUTER_FILLET_FACES_FRONT,
@@ -226,25 +226,25 @@ from outer_fillet_detection import (
     render_table as render_outer_fillet_table,
     validate_outer_fillets,
 )
-from wall_detection import (
+from cascade.wall_detection import (
     REFERENCE_WALL_FACES_FRONT,
     WallDetectionConfig,
     detect_walls,
     render_table as render_wall_table,
     validate_walls,
 )
-from prismatic_profile_detection import (
+from cascade.prismatic_profile_detection import (
     PrismaticProfileConfig,
     detect_prismatic_profiles,
 )
-from profile_detection import (
+from cascade.profile_detection import (
     REFERENCE_PROFILE_FACES_FRONT,
     ProfileDetectionConfig,
     detect_profiles,
     render_table as render_profile_table,
     validate_profiles,
 )
-from residual_detection import (
+from cascade.residual_detection import (
     REFERENCE_RESIDUAL_POOL_FRONT,
     REFERENCE_RESIDUAL_POOL_REAR,
     REFERENCE_SANITY_FACES_FRONT,
@@ -257,7 +257,7 @@ from residual_detection import (
 
 logger = logging.getLogger("run_cascade")
 
-DEFAULT_STEP = "96260B_REAR_XR004_PCD PLATE.stp copy"
+DEFAULT_STEP = "fixtures/step/96260B_rear.stp"
 # No default graph.npz: a per-part input must NOT default to one specific part's
 # cached graph (that silently fed the rear/plate graph to the front part). When
 # --graph-npz is omitted, _load_edges ingests the face graph from the STEP, which
@@ -274,7 +274,7 @@ def _load_edges(graph_npz: Path | None, step_path: Path) -> tuple[np.ndarray, np
     if graph_npz is not None and graph_npz.is_file():
         d = np.load(graph_npz)
         return d["edge_index"], d["edge_attr"]
-    from step_ingest import ingest_step_to_pyg
+    from brep.step_ingest import ingest_step_to_pyg
 
     _x, edge_index, edge_attr, _stats = ingest_step_to_pyg(str(step_path))
     return edge_index, edge_attr
@@ -302,7 +302,7 @@ def _resolve_pocket_setup_for_cascade(
             descriptor_path = default
 
     if descriptor_path is not None and descriptor_path.is_file():
-        from setup_descriptor import (
+        from cascade.setup_descriptor import (
             SetupDescriptorError,
             find_setup_for_step,
             load_setup_descriptor,
@@ -341,7 +341,7 @@ def run_cascade(
     instrument_dir: Path | None = None,
 ):
     """Run full cascade; return (faces, pk, hl, cx, fl, of, wl, pr, rs, if_)."""
-    from feature_params import analyze_step, load_step_faces, require_occ
+    from brep.feature_params import analyze_step, load_step_faces, require_occ
 
     require_occ()
     faces = analyze_step(step_path)
@@ -371,7 +371,7 @@ def run_cascade(
 
     claim_recorder = None
     if instrument:
-        from cascade_instrumentation import PassClaimRecorder
+        from cascade.cascade_instrumentation import PassClaimRecorder
 
         claim_recorder = PassClaimRecorder()
 
@@ -379,7 +379,7 @@ def run_cascade(
     # core tangent blend is claimed as its own feature rather than absorbed into
     # a pocket. Claims nothing on parts without such blends (e.g. 96260B), so it
     # leaves the downstream pool - and hence the partition - unchanged there.
-    from inner_fillet_detection import detect_inner_fillets
+    from cascade.inner_fillet_detection import detect_inner_fillets
 
     inner_fillet_result = detect_inner_fillets(
         step_path, faces, edge_index, edge_attr,
@@ -403,7 +403,7 @@ def run_cascade(
         pocket_config or PocketDetectionConfig(),
     )
     if claim_recorder is not None:
-        from cascade_instrumentation import PassLabelContext
+        from cascade.cascade_instrumentation import PassLabelContext
 
         claim_recorder.record_pass(
             "pockets", 1, "pocket_detection", n_faces, pocket_result,
@@ -427,7 +427,7 @@ def run_cascade(
     # builder emits them as a distinct class, while downstream passes see their
     # faces as claimed. Geometry-only -- claims nothing on parts without such a
     # cavity (96260B, fish_mold, part1), leaving the partition byte-identical.
-    from through_pocket_detection import detect_through_pockets
+    from cascade.through_pocket_detection import detect_through_pockets
 
     through_pocket_result = detect_through_pockets(
         faces, edge_index, edge_attr,
@@ -522,11 +522,11 @@ def run_cascade(
     # on parts without such a reachable loop (e.g. 96260B), leaving the downstream
     # pool -- and hence the partition -- byte-identical there. The OCC shape used
     # by the reachability gate is loaded lazily, only if loop candidates exist.
-    from chamfer_detection import detect_chamfers
+    from cascade.chamfer_detection import detect_chamfers
 
     def _chamfer_reach_probe(axis):
-        from step_ingest import load_step_shape
-        from reachability import make_axis_reachability_probe
+        from brep.step_ingest import load_step_shape
+        from cascade.reachability import make_axis_reachability_probe
 
         shape, _ = load_step_shape(str(step_path))
         return make_axis_reachability_probe(shape, occ_faces, axis)
@@ -650,7 +650,7 @@ def run_cascade(
     # backward-compatible. No-op on parts without the structure (fish_mold,
     # part1) — the geometric predicate finds nothing there.
     # ------------------------------------------------------------------
-    from counterbore_detection import (
+    from cascade.counterbore_detection import (
         detect_counterbores,
         reconcile_counterbores_with_holes,
     )
@@ -682,7 +682,7 @@ def run_cascade(
     # excluded so a face can never land in both. No face moves; no-op on parts
     # without a widening conical through-bore. See countersink_detection.py.
     # ------------------------------------------------------------------
-    from countersink_detection import detect_countersinks
+    from cascade.countersink_detection import detect_countersinks
 
     countersink_candidates = set(range(n_faces)) - counterbore_result.claimed_faces
     countersink_result = detect_countersinks(
@@ -977,10 +977,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     instrument_dir = None
     part_id = args.part_id or step_path.stem.replace(" ", "_").split(".")[0]
-    if "96260B" in part_id.upper() and "FRONT" in step_path.name.upper():
-        part_id = "96260B_front"
+    # Per-STEP identity label. 96260B_FRONT and 96260B_REAR are two SEPARATE
+    # parts; give each its own id (never a shared "96260B" family id). This labels
+    # one STEP as one part -- it does NOT infer that two STEPs are one part.
+    if not args.part_id and "96260B" in part_id.upper():
+        part_id = "96260B_front" if "FRONT" in step_path.name.upper() else "96260B_rear"
     if args.instrument:
-        from cascade_instrumentation import resolve_instrument_dir
+        from cascade.cascade_instrumentation import resolve_instrument_dir
 
         instrument_dir = resolve_instrument_dir(
             step_path, export_dir=args.export_dir, part_id=args.part_id,
@@ -995,8 +998,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     n_faces = len(faces)
 
     if args.instrument:
-        from cascade_instrumentation import run_instrumentation
-        from feature_params import load_step_faces
+        from cascade.cascade_instrumentation import run_instrumentation
+        from brep.feature_params import load_step_faces
 
         run_instrumentation(
             instrument_dir,
@@ -1026,8 +1029,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"-> flats -> outer_fillets -> wall -> profile -> residual"
     )
 
-    from counterbore_detection import render_table as render_counterbore_table
-    from countersink_detection import render_table as render_countersink_table
+    from cascade.counterbore_detection import render_table as render_counterbore_table
+    from cascade.countersink_detection import render_table as render_countersink_table
 
     print("\n" + "=" * 78)
     print("PASS 0.5 — COUNTERBORES")
@@ -1046,12 +1049,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     print("=" * 78)
     print(if_.summary())
 
+    # The per-pass validate_* self-tests below compare detected faces against
+    # 96260B reference face IDs (REFERENCE_HOLES, (97, 273), zero-cones, ...).
+    # They are meaningful ONLY for that part, so they run only when the part IS
+    # 96260B and act purely as on-screen diagnostics -- they NO LONGER gate the
+    # exit code. The authoritative 96260B golden check lives in the frozen-fixture
+    # regression test (tests/test_cascade_regression.py). The universal gate is
+    # the structural invariant "every face claimed" (total_claimed == n_faces),
+    # computed below and applied to any part. See [[cascade-selftests-stale]].
+    is_96260b = "96260B" in part_id.upper()
+    golden_reports: list = []
+
     print("\n" + "=" * 78)
     print("PASS 1 — POCKETS")
     print("=" * 78)
     print(render_pocket_table(pk))
-    pk_report = validate_pockets(pk)
-    print(pk_report.render())
+    if is_96260b:
+        pk_report = validate_pockets(pk)
+        print(pk_report.render())
+        golden_reports.append(pk_report)
 
     print("\n" + "=" * 78)
     print("PASS 2 — HOLES")
@@ -1062,130 +1078,144 @@ def main(argv: Sequence[str] | None = None) -> int:
     # bore) are precisely the counterbore's two coaxial cylinders. Once the
     # counterbore pass claims them, the hole pass legitimately finds neither, so
     # the expectation collapses to empty when a counterbore was detected.
-    expected_holes = [] if cb.features else REFERENCE_HOLES
-    hl_report = validate_against_expected(hl.features, expected_holes, exact=True)
-    print(hl_report.render())
+    if is_96260b:
+        expected_holes = [] if cb.features else REFERENCE_HOLES
+        hl_report = validate_against_expected(hl.features, expected_holes, exact=True)
+        print(hl_report.render())
+        golden_reports.append(hl_report)
 
     print("\n" + "=" * 78)
     print("PASS 3 — COAXIAL STACK (central hub)")
     print("=" * 78)
     print(f"input pool: {len(hl.remaining_faces)} faces")
     print(render_coaxial_table(cx))
-    if is_front:
-        cx_report = validate_coaxial_stack(
-            cx,
-            expected_hub_flat_faces=REFERENCE_HUB_FLAT_FACES_FRONT,
-            expected_open_pocket_faces=REFERENCE_OPEN_POCKET_FACES_FRONT,
-            expected_contour_faces=REFERENCE_CONTOUR_FACES_FRONT,
-            forbidden_faces=(97, 280, 298),
-        )
-    else:
-        cx_report = validate_coaxial_stack(
-            cx,
-            expected_hub_flat_faces=REFERENCE_HUB_FLAT_FACES_REAR,
-            expected_open_pocket_faces=REFERENCE_OPEN_POCKET_FACES_REAR,
-            expected_contour_faces=REFERENCE_CONTOUR_FACES_REAR,
-            forbidden_faces=(280, 298),
-        )
-    print(cx_report.render())
+    if is_96260b:
+        if is_front:
+            cx_report = validate_coaxial_stack(
+                cx,
+                expected_hub_flat_faces=REFERENCE_HUB_FLAT_FACES_FRONT,
+                expected_open_pocket_faces=REFERENCE_OPEN_POCKET_FACES_FRONT,
+                expected_contour_faces=REFERENCE_CONTOUR_FACES_FRONT,
+                forbidden_faces=(97, 280, 298),
+            )
+        else:
+            cx_report = validate_coaxial_stack(
+                cx,
+                expected_hub_flat_faces=REFERENCE_HUB_FLAT_FACES_REAR,
+                expected_open_pocket_faces=REFERENCE_OPEN_POCKET_FACES_REAR,
+                expected_contour_faces=REFERENCE_CONTOUR_FACES_REAR,
+                forbidden_faces=(280, 298),
+            )
+        print(cx_report.render())
+        golden_reports.append(cx_report)
 
     print("\n" + "=" * 78)
     print("PASS 4 — FLATS")
     print("=" * 78)
     print(f"input pool: {len(cx.remaining_faces)} faces")
     print(render_flat_table(fl))
-    if is_front:
-        fl_report = validate_flats(
-            fl,
-            expected_flats=2,
-            expected_faces=(97, 273),
-            deferred_faces=(),
-        )
-    else:
-        fl_report = validate_flats(
-            fl,
-            expected_flats=2,
-            expected_faces=(322, 112),
-            deferred_faces=(),
-        )
-    print(fl_report.render())
+    if is_96260b:
+        if is_front:
+            fl_report = validate_flats(
+                fl,
+                expected_flats=2,
+                expected_faces=(97, 273),
+                deferred_faces=(),
+            )
+        else:
+            fl_report = validate_flats(
+                fl,
+                expected_flats=2,
+                expected_faces=(322, 112),
+                deferred_faces=(),
+            )
+        print(fl_report.render())
+        golden_reports.append(fl_report)
 
     print("\n" + "=" * 78)
     print("PASS 5 — OUTER FILLETS (perimeter)")
     print("=" * 78)
     print(f"input pool: {len(fl.remaining_faces)} faces")
     print(render_outer_fillet_table(of))
-    if is_front:
-        of_report = validate_outer_fillets(
-            of,
-            expected_instances=2,
-            expected_faces=sorted(
-                set(REFERENCE_OUTER_FILLET_FACES_FRONT)
-                | set(REFERENCE_HUB_OUTER_FILLET_FACES_FRONT)
-            ),
-        )
-    else:
-        of_report = validate_outer_fillets(
-            of,
-            expected_instances=2,
-            expected_faces=sorted(
-                set(REFERENCE_OUTER_FILLET_FACES_REAR)
-                | set(REFERENCE_HUB_OUTER_FILLET_FACES_REAR)
-            ),
-        )
-    print(of_report.render())
+    if is_96260b:
+        if is_front:
+            of_report = validate_outer_fillets(
+                of,
+                expected_instances=2,
+                expected_faces=sorted(
+                    set(REFERENCE_OUTER_FILLET_FACES_FRONT)
+                    | set(REFERENCE_HUB_OUTER_FILLET_FACES_FRONT)
+                ),
+            )
+        else:
+            of_report = validate_outer_fillets(
+                of,
+                expected_instances=2,
+                expected_faces=sorted(
+                    set(REFERENCE_OUTER_FILLET_FACES_REAR)
+                    | set(REFERENCE_HUB_OUTER_FILLET_FACES_REAR)
+                ),
+            )
+        print(of_report.render())
+        golden_reports.append(of_report)
 
     print("\n" + "=" * 78)
     print("PASS 6 — WALL (exterior OD notch segments)")
     print("=" * 78)
     print(f"input pool: {len(of.remaining_faces)} faces")
     print(render_wall_table(wl))
-    if is_front:
-        wl_report = validate_walls(
-            wl,
-            expected_instances=14,
-            expected_faces=sorted(REFERENCE_WALL_FACES_FRONT),
-            forbidden_faces=(97, 273, 277, 280, 298),
-        )
-    else:
-        wl_report = validate_walls(
-            wl,
-            expected_instances=len(wl.features),
-            expected_faces=sorted(wl.claimed_faces) if wl.claimed_faces else [],
-        )
-    print(wl_report.render())
+    if is_96260b:
+        if is_front:
+            wl_report = validate_walls(
+                wl,
+                expected_instances=14,
+                expected_faces=sorted(REFERENCE_WALL_FACES_FRONT),
+                forbidden_faces=(97, 273, 277, 280, 298),
+            )
+        else:
+            wl_report = validate_walls(
+                wl,
+                expected_instances=len(wl.features),
+                expected_faces=sorted(wl.claimed_faces) if wl.claimed_faces else [],
+            )
+        print(wl_report.render())
+        golden_reports.append(wl_report)
 
     print("\n" + "=" * 78)
     print("PASS 7 — PROFILE (opposing hub step cylinders)")
     print("=" * 78)
     print(f"input pool: {len(wl.remaining_faces)} faces")
     print(render_profile_table(pr))
-    if is_front:
-        pr_report = validate_profiles(
-            pr,
-            expected_instances=1,
-            expected_faces=sorted(REFERENCE_PROFILE_FACES_FRONT),
-            forbidden_faces=(97, 273, 277, 280, 298),
-        )
-    else:
-        pr_report = validate_profiles(
-            pr,
-            expected_instances=1,
-            expected_faces=sorted(pr.claimed_faces) if pr.claimed_faces else [],
-        )
-    print(pr_report.render())
+    if is_96260b:
+        if is_front:
+            pr_report = validate_profiles(
+                pr,
+                expected_instances=1,
+                expected_faces=sorted(REFERENCE_PROFILE_FACES_FRONT),
+                forbidden_faces=(97, 273, 277, 280, 298),
+            )
+        else:
+            pr_report = validate_profiles(
+                pr,
+                expected_instances=1,
+                expected_faces=sorted(pr.claimed_faces) if pr.claimed_faces else [],
+            )
+        print(pr_report.render())
+        golden_reports.append(pr_report)
 
     print("\n" + "=" * 78)
     print("PASS 8 — RESIDUAL CANDIDATES")
     print("=" * 78)
     print(f"input pool: {len(pr.remaining_faces)} faces")
     print(render_residual_table(rs))
-    expected_residual = REFERENCE_RESIDUAL_POOL_FRONT if is_front else REFERENCE_RESIDUAL_POOL_REAR
-    sanity = REFERENCE_SANITY_FACES_FRONT if is_front else REFERENCE_SANITY_FACES_REAR
-    rs_report = validate_residual(
-        rs, expected_pool_size=expected_residual, sanity_faces=sanity,
-    )
-    print(rs_report.render())
+    if is_96260b:
+        expected_residual = REFERENCE_RESIDUAL_POOL_FRONT if is_front else REFERENCE_RESIDUAL_POOL_REAR
+        sanity = REFERENCE_SANITY_FACES_FRONT if is_front else REFERENCE_SANITY_FACES_REAR
+        rs_report = validate_residual(
+            rs, expected_pool_size=expected_residual, sanity_faces=sanity,
+        )
+        print(rs_report.render())
+        golden_reports.append(rs_report)
 
     total_claimed = (
         len(pk.claimed_faces) + len(hl.claimed_faces) + len(cx.claimed_faces)
@@ -1213,16 +1243,27 @@ def main(argv: Sequence[str] | None = None) -> int:
           f"claimed {len(rs.claimed_faces):>3} faces")
     print(f"  total faces claimed:        {total_claimed:>3} / {n_faces}")
 
-    ok = (
-        pk_report.ok and hl_report.ok and cx_report.ok
-        and fl_report.ok and of_report.ok and wl_report.ok
-        and pr_report.ok and rs_report.ok
+    # Universal gate: the cascade must be terminal -- every input face claimed by
+    # exactly one pass. This holds for ANY part (see the terminal-pass invariant,
+    # [[stock-gate-removed]]) and is what governs the exit code so the STEP->plan
+    # stream runs for arbitrary parts, not just 96260B.
+    ok = total_claimed == n_faces
+    print(
+        f"\ncascade validation: {'PASS' if ok else 'FAIL'} "
+        f"(structural: {total_claimed}/{n_faces} faces claimed)"
     )
-    print(f"\ncascade validation: {'PASS' if ok else 'FAIL'}")
+    # 96260B golden self-tests are diagnostics only and do not affect the exit
+    # code; report their aggregate for visibility when they ran.
+    if golden_reports:
+        golden_ok = all(r.ok for r in golden_reports)
+        print(
+            f"96260B golden self-tests (diagnostic, non-gating): "
+            f"{'PASS' if golden_ok else 'FAIL'}"
+        )
 
     if args.export_dir is not None:
-        from feature_graph import write_feature_graph
-        from eval_cascade import build_cascade_feature_graph
+        from brep.feature_graph import write_feature_graph
+        from cascade.eval_cascade import build_cascade_feature_graph
 
         export_dir = args.export_dir
         export_dir.mkdir(parents=True, exist_ok=True)
@@ -1231,11 +1272,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             inner_fillet_result=if_, chamfer_result=ch, counterbore_result=cb,
             countersink_result=cs,
         )
-        from feature_params import load_step_faces
-        from step_ingest import load_step_shape
-        from approach_vectors import annotate_approach_vectors
-        from lobe_contour_merge import merge_lobe_contour_fragments
-        from reachability import annotate_reachability
+        from brep.feature_params import load_step_faces
+        from brep.step_ingest import load_step_shape
+        from cascade.approach_vectors import annotate_approach_vectors
+        from cascade.lobe_contour_merge import merge_lobe_contour_fragments
+        from cascade.reachability import annotate_reachability
 
         occ_faces = load_step_faces(step_path)
         shape, _ = load_step_shape(str(step_path))
@@ -1260,7 +1301,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.lateral_axes:
             # PROVISIONAL lateral ±X/±Y/±Z path — additive, never overwrites the
             # calibrated Z-only approach/reachability fields. See lateral_axes.py.
-            from lateral_axes import (
+            from cascade.lateral_axes import (
                 annotate_lateral_candidates,
                 annotate_lateral_reachability,
             )
@@ -1315,7 +1356,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         # Per-feature slope profile (steep vs shallow), computed on the final merged
         # node set so merged contour surfaces get an area-weighted profile over all
         # their faces. Consumed by the planner for slope-aware surface finishing.
-        from slope_profile import annotate_slope_profiles
+        from cascade.slope_profile import annotate_slope_profiles
 
         graph["slope_profile_summary"] = annotate_slope_profiles(
             graph["nodes"], faces=faces, opening_axis=pk.opening_axis,
@@ -1334,47 +1375,37 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_feature_graph(str(graph_path), graph)
         print(f"\nWrote {graph_path.resolve()}")
 
-        from setup_descriptor import dump_setup_descriptor
-        from setup_generation import generate_setup_entry_for_export, merge_setup_entries
+        from cascade.setup_descriptor import dump_setup_descriptor
+        from cascade.setup_generation import generate_setup_entry_for_export, merge_setup_entries
 
+        # setup_id labels this STEP's own single fixturing. It is NOT a claim that
+        # this STEP is one of several setups of a larger part.
         setup_id = "front" if is_front else "rear"
         entry = generate_setup_entry_for_export(
             graph,
             setup_id=setup_id,
             part_step=step_path,
         )
-        if "96260B" in step_path.name.upper():
-            family_id = "96260B"
-        else:
-            family_id = part_id.rsplit("_", 1)[0] if "_" in part_id else part_id
-        single_desc = merge_setup_entries(family_id, [entry])
+        # Each STEP exports ONLY its own single-setup descriptor, keyed by its own
+        # part_id. A cascade run sees exactly one STEP and cannot know whether that
+        # STEP is a standalone part or one orientation of a multi-setup flip-job --
+        # so it never guesses. The former "family descriptor" step globbed every
+        # STEP sharing a "96260B" name prefix into one merged 2-setup part; that was
+        # the bug that made 96260B_front and 96260B_rear (two SEPARATE parts) look
+        # like one. To declare a genuine flip-job, hand-author a multi-setup
+        # descriptor listing the orientations under one part_id -- that explicit
+        # file is the declaration, never a shared filename prefix.
+        single_desc = merge_setup_entries(part_id, [entry])
         setup_desc_path = export_dir / "setup_descriptor.yaml"
         dump_setup_descriptor(
             single_desc,
             setup_desc_path,
-            header="Generated by run_cascade export (step 3).",
+            header=(
+                "Generated by run_cascade export (step 3) -- single-part, "
+                "single-setup. Separate STEPs are separate parts."
+            ),
         )
         print(f"Wrote {setup_desc_path.resolve()}")
-
-        family_dir = export_dir.parent / family_id
-        family_dir.mkdir(parents=True, exist_ok=True)
-        family_path = family_dir / "setup_descriptor.yaml"
-        if family_path.is_file():
-            from setup_descriptor import load_setup_descriptor
-
-            existing = load_setup_descriptor(family_path)
-            merged_entries = list(existing.setups.values())
-            by_id = {e.setup_id: e for e in merged_entries}
-            by_id[entry.setup_id] = entry
-            family_desc = merge_setup_entries(family_id, list(by_id.values()))
-        else:
-            family_desc = single_desc
-        dump_setup_descriptor(
-            family_desc,
-            family_path,
-            header="Generated by run_cascade export (step 3) — merged family descriptor.",
-        )
-        print(f"Wrote {family_path.resolve()}")
 
         from feature_graph_viewer.build import DEFAULT_TEMPLATE, build_viewer
 

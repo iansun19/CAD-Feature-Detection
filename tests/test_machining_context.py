@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from machining_context import (  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     build_context_v0,
     build_setup_context,
     build_stock,
@@ -22,7 +22,7 @@ from machining_context import (  # noqa: E402
     vector_to_opening_axis_label,
     write_machining_context,
 )
-from setup_descriptor import (  # noqa: E402
+from cascade.setup_descriptor import (  # noqa: E402
     OpeningAxisSpec,
     ResolvedSetup,
     SetupScope,
@@ -32,7 +32,7 @@ from setup_descriptor import (  # noqa: E402
 EXAMPLE_PATH = Path(ROOT) / "examples" / "machining_context_96260B.json"
 SETUP_YAML = Path(ROOT) / "eval" / "gt" / "96260B_setup.yaml"
 CASCADE_PATH = Path(ROOT) / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
-REAR_STEP = Path(ROOT) / "96260B_REAR_XR004_PCD PLATE.stp copy"
+REAR_STEP = Path(ROOT) / "fixtures/step/96260B_rear.stp"
 
 MOCK_ENVELOPE = {
     "min": [0.0, -100.0, -50.0],
@@ -56,7 +56,7 @@ class TestStockOffset(unittest.TestCase):
 
 class TestResolvePocketAccess(unittest.TestCase):
     def test_descriptor_wins_over_cascade(self) -> None:
-        with self.assertLogs("machining_context", level="WARNING") as captured:
+        with self.assertLogs("planning.machining_context", level="WARNING") as captured:
             result = resolve_pocket_access("0", "closed", "open")
         self.assertEqual(result, "closed")
         self.assertTrue(
@@ -88,7 +88,7 @@ class TestSetupAssembly(unittest.TestCase):
             return json.load(fh)
 
     def test_single_setup_from_descriptor_and_cascade(self) -> None:
-        from setup_descriptor import load_setup_descriptor
+        from cascade.setup_descriptor import load_setup_descriptor
 
         descriptor = load_setup_descriptor(SETUP_YAML)
         resolved = resolve_setup_entry(descriptor, setup_id="rear")
@@ -99,7 +99,7 @@ class TestSetupAssembly(unittest.TestCase):
         self.assertIsNone(setup.fixture)
         self.assertEqual(
             setup.source_step_file,
-            "96260B_REAR_XR004_PCD PLATE.stp copy",
+            "fixtures/step/96260B_rear.stp",
         )
         self.assertIn("1", setup.pocket_access)
         self.assertEqual(setup.pocket_access["1"], "closed")

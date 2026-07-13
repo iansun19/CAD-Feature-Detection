@@ -3,21 +3,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from coaxial_stack_detection import (
+from cascade.coaxial_stack_detection import (
     REFERENCE_CONTOUR_FACES_FRONT,
     REFERENCE_HUB_FLAT_FACES_FRONT,
     REFERENCE_OPEN_POCKET_FACES_FRONT,
     validate_coaxial_stack,
 )
-from outer_fillet_detection import (
+from cascade.outer_fillet_detection import (
     REFERENCE_HUB_OUTER_FILLET_FACES_FRONT,
     REFERENCE_OUTER_FILLET_FACES_FRONT,
     validate_outer_fillets,
 )
-from pocket_detection import PocketDetectionConfig, pocket_config_from_setup_dict
+from cascade.pocket_detection import PocketDetectionConfig, pocket_config_from_setup_dict
 from run_cascade import _load_edges, run_cascade
 
-STEP = "96260B_FRONT_XR004_PCD PLATE.stp copy"
+STEP = "fixtures/step/96260B_front.stp"
 NPZ = "pipeline_out/96260B_front/graph.npz"
 
 

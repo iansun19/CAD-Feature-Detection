@@ -10,13 +10,13 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from pocket_detection import (  # noqa: E402
+from cascade.pocket_detection import (  # noqa: E402
     PocketFeature,
     PocketSetupConfig,
     apply_explicit_setup_access_to_pocket,
     classify_pocket_open_closed,
 )
-from setup_descriptor import (  # noqa: E402
+from cascade.setup_descriptor import (  # noqa: E402
     OpeningAxisLowConfidenceError,
     OpeningAxisSpec,
     SetupDescriptorError,
@@ -92,10 +92,10 @@ class TestParseDescriptor(unittest.TestCase):
         desc = load_setup_descriptor(path)
         self.assertEqual(desc.part_id, "96260B")
         front = resolve_setup_entry(
-            desc, step_path="96260B_FRONT_XR004_PCD PLATE.stp copy"
+            desc, step_path="fixtures/step/96260B_front.stp"
         )
         rear = resolve_setup_entry(
-            desc, step_path="96260B_REAR_XR004_PCD PLATE.stp copy"
+            desc, step_path="fixtures/step/96260B_rear.stp"
         )
         self.assertEqual(front.setup_id, "front")
         self.assertEqual(front.pocket_access, "open")
@@ -174,10 +174,10 @@ class TestArbitrarySetupAccess(unittest.TestCase):
         path = os.path.join(ROOT, "eval/gt/96260B_setup.yaml")
         desc = load_setup_descriptor(path)
         front = resolve_setup_entry(
-            desc, step_path="96260B_FRONT_XR004_PCD PLATE.stp copy"
+            desc, step_path="fixtures/step/96260B_front.stp"
         )
         rear = resolve_setup_entry(
-            desc, step_path="96260B_REAR_XR004_PCD PLATE.stp copy"
+            desc, step_path="fixtures/step/96260B_rear.stp"
         )
         self.assertEqual(front.pocket_access, "open")
         self.assertEqual(rear.pocket_access, "closed")

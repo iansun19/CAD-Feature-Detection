@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1.0",
+  "part_id": "96260B_rear",
+  "description": "Per-setup strategy coverage expectations for the 96260B_rear part. 96260B_rear and 96260B_front are two SEPARATE parts with separate stock and separate jobs; this manifest covers the REAR part only. The expected strategies are exactly the strategy_types_used transcribed from the rear part's shop program (eval/gt/96260B_rear_shop_program.yaml). There is NO cross-part over-machining expectation here: the front part is not this part's second setup, so nothing is expected-absent 'because another setup owns it'. The front part has no transcribed shop program and therefore no coverage manifest (its coverage verdict is UNKNOWN, honestly).",
+  "setups": {
+    "rear": {
+      "expected_present": {
+        "strategies": [
+          "roughing",
+          "finishing_floor",
+          "finishing_wall",
+          "finishing",
+          "finishing_fillet",
+          "facing"
+        ]
+      },
+      "expected_absent": {
+        "strategies": []
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # Exact copy of eval/gt/96260B_front.yaml � duplicate STEP for reproducibility check.
 
 part_id: "96260B_front_copy"
-part_step: "96260B_FRONT_copy.stp"
+part_step: "fixtures/step/96260B_front.stp"
 graph_npz: "pipeline_out/96260B_front_copy/graph.npz"
 
 setup:

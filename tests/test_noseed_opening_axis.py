@@ -19,31 +19,31 @@ from pathlib import Path
 
 import numpy as np
 
-from feature_params import analyze_step
-from pocket_detection import PocketDetectionConfig, detect_pockets
+from brep.feature_params import analyze_step
+from cascade.pocket_detection import PocketDetectionConfig, detect_pockets
 from run_cascade import _load_edges
 
 # Seeded parts run the full pocket pass and need graph edges; the no-seed parts
 # short-circuit at the early-return before edges are used, so edges are optional.
 SEEDED = {
-    "96260B_front": (Path("96260B_FRONT_XR004_PCD PLATE.stp copy"),
+    "96260B_front": (Path("fixtures/step/96260B_front.stp"),
                      Path("pipeline_out/96260B_front/graph.npz"),
                      (0.0, 1.0, 0.0)),
-    "96260B_rear": (Path("96260B_REAR_XR004_PCD PLATE.stp copy"),
+    "96260B_rear": (Path("fixtures/step/96260B_rear.stp"),
                     Path("pipeline_out/96260B_plate/graph.npz"),
                     (0.0, 1.0, 0.0)),
-    "fish_mold": (Path("fish mold.stp"),
+    "fish_mold": (Path("fixtures/step/fish_mold.stp"),
                   Path("eval/regression/graphs/fish_mold.graph.npz"),
                   (0.0, 0.0, 1.0)),
 }
 
 # No-seed parts: expected axis AFTER the fix (approved Phase 1 table).
 NO_SEED = {
-    "part1": (Path("part1.step"), (0.0, 0.0, 1.0)),
-    "part2": (Path("part2.step"), (1.0, 0.0, 0.0)),
-    "part3": (Path("part3.step"), (0.0, 1.0, 0.0)),
-    "part4": (Path("part4.step"), (0.0, 0.0, 1.0)),
-    "nist_ctc_01": (Path("nist_ctc_01.step"), (0.0, 0.0, 1.0)),
+    "part1": (Path("fixtures/step/fixtures/step/part1.step"), (0.0, 0.0, 1.0)),
+    "part2": (Path("fixtures/step/fixtures/step/part2.step"), (1.0, 0.0, 0.0)),
+    "part3": (Path("fixtures/step/fixtures/step/part3.step"), (0.0, 1.0, 0.0)),
+    "part4": (Path("fixtures/step/fixtures/step/part4.step"), (0.0, 0.0, 1.0)),
+    "nist_ctc_01": (Path("fixtures/step/fixtures/step/nist_ctc_01.step"), (0.0, 0.0, 1.0)),
 }
 
 

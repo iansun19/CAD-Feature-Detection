@@ -45,7 +45,7 @@ python scripts/eval_cascade_regression.py --fixture 96260B_rear
 Or from Python:
 
 ```python
-from cascade_regression import load_regression_fixture, bless_regression_fixture
+from cascade.cascade_regression import load_regression_fixture, bless_regression_fixture
 
 fixture = load_regression_fixture("eval/regression/fixtures/96260B_rear.yaml")
 bless_regression_fixture(

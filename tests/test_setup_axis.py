@@ -4,7 +4,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from machining_context import (
+from planning.machining_context import (
     MachiningContext,
     OpeningAxisResolutionError,
     SetupContext,
@@ -20,7 +20,7 @@ from planner import (
     cascade_node_to_feature,
     filter_features_for_setup_by_reachability,
 )
-from setup_descriptor import (
+from cascade.setup_descriptor import (
     OpeningAxisSpec,
     PartSetupDescriptor,
     ResolvedSetup,
@@ -162,10 +162,12 @@ class TestSetupAxisResolution(unittest.TestCase):
         with self.assertRaises(SetupApproachAxisError):
             _resolve_setup_opening_axis_vector(ctx)
 
-    def test_missing_machining_side_raises(self) -> None:
+    def test_missing_machining_side_defaults_to_front(self) -> None:
+        # Absent machining_side is non-fatal: a lone single-setup part is reached
+        # from the side its opening axis opens toward (+opening_axis == front), so
+        # the reachability direction defaults to +Z and STEP->plan runs unattended.
         ctx = _context(machining_side=None)
-        with self.assertRaises(SetupApproachAxisError):
-            _reachability_dir_for_setup(ctx)
+        self.assertEqual(_reachability_dir_for_setup(ctx), "+Z")
 
     def test_build_setup_context_from_generated_descriptor(self) -> None:
         if not REAR_GRAPH.is_file():

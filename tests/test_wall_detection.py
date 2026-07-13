@@ -3,15 +3,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pocket_detection import PocketDetectionConfig, pocket_config_from_setup_dict
+from cascade.pocket_detection import PocketDetectionConfig, pocket_config_from_setup_dict
 from run_cascade import _load_edges, run_cascade
-from wall_detection import (
+from cascade.wall_detection import (
     REFERENCE_WALL_FACES_FRONT,
     REFERENCE_WALL_INSTANCES_FRONT,
     validate_walls,
 )
 
-STEP = "96260B_FRONT_XR004_PCD PLATE.stp copy"
+STEP = "fixtures/step/96260B_front.stp"
 NPZ = "pipeline_out/96260B_front/graph.npz"
 
 

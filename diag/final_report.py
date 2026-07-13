@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from taxonomy import NUM_CLASSES
+from brep.taxonomy import NUM_CLASSES
 
 DIR = "MFCAD++_dataset/hierarchical_graphs_regen"
 SPLITS = [("train", "training_MFCAD++.h5"), ("val", "val_MFCAD++.h5"),

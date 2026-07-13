@@ -4,7 +4,7 @@
 Usage:
     python scripts/enrich_wall_geometry.py \\
         pipeline_out/96260B_rear/feature_graph_cascade.json \\
-        "96260B_REAR_XR004_PCD PLATE.stp copy" \\
+        "fixtures/step/96260B_rear.stp" \\
         --out pipeline_out/96260B_rear/feature_graph_cascade_enriched.json
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import env_bootstrap  # noqa: F401,E402
 
-from wall_geometry import (  # noqa: E402
+from cascade.wall_geometry import (  # noqa: E402
     enrich_graph_wall_geometry,
     print_verification_report,
     verify_wall_geometry,

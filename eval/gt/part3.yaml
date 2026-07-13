@@ -35,7 +35,7 @@
 # Instance counts in eval_cascade Toolpath vocabulary (NOT face counts).
 
 part_id: "part3"
-part_step: "part3.step"
+part_step: "fixtures/step/fixtures/step/part3.step"
 graph_npz: "eval/regression/graphs/part3.graph.npz"
 
 setup:

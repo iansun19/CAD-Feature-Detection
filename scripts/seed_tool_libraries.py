@@ -11,8 +11,8 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import env_bootstrap  # noqa: F401, E402 � loads .env
 
-from machining_context import DEFAULT_TOOL_LIBRARIES_DIR  # noqa: E402
-from tool_library_store import seed_tool_libraries  # noqa: E402
+from planning.machining_context import DEFAULT_TOOL_LIBRARIES_DIR  # noqa: E402
+from tools.tool_library_store import seed_tool_libraries  # noqa: E402
 
 
 def main() -> int:

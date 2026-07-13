@@ -20,8 +20,8 @@ import yaml
 from torch_geometric.loader import DataLoader
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dataset import get_dataset
-from model import BRepGNN
+from legacy.dataset import get_dataset
+from legacy.model import BRepGNN
 
 EXPECTED_DIM = 11          # 6 surface-type one-hot + 1 area + 3 centroid + 1 plane-d
 

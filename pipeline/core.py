@@ -8,10 +8,10 @@ from typing import Any
 
 import numpy as np
 
-from feature_graph import build_feature_graph, summarize_graph, write_feature_graph
-from feature_params import strip_heuristic_params
-from feature_instances import union_find_instances
-from taxonomy import NEW_NAMES
+from brep.feature_graph import build_feature_graph, summarize_graph, write_feature_graph
+from brep.feature_params import strip_heuristic_params
+from brep.feature_instances import union_find_instances
+from brep.taxonomy import NEW_NAMES
 
 
 def face_to_feature_map(graph: dict[str, Any]) -> dict[int, int]:

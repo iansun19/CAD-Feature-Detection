@@ -12,8 +12,8 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from hole_detection import FaceGraph, induced_subgraph_components  # noqa: E402
-from pocket_detection import (  # noqa: E402
+from cascade.hole_detection import FaceGraph, induced_subgraph_components  # noqa: E402
+from cascade.pocket_detection import (  # noqa: E402
     POCKET_CONNECTIVITY_CLASSES,
     PocketConnectivityError,
     PocketFeature,

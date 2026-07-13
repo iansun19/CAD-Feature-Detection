@@ -9,8 +9,8 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from cam_plan_schema import CamPlan, MachiningParameters, PocketAccess, Setup, load_cam_plan  # noqa: E402
-from machining_context import (  # noqa: E402
+from schema.cam_plan_schema import CamPlan, MachiningParameters, PocketAccess, Setup, load_cam_plan  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     MachiningContext,
     SetupContext,
     SetupScopeSpec,
@@ -54,7 +54,9 @@ DRILL_LIBRARY = Path(ROOT) / "tool_libraries" / "Kennametal_Standard_Drills__Inc
 
 CASCADE_PATH = Path(ROOT) / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
 CONTEXT_PATH = Path(ROOT) / "examples" / "machining_context_96260B.json"
-PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B.json"
+# 96260B_rear and 96260B_front are two SEPARATE parts, each with its own
+# single-setup plan. There is no merged "cam_plan_96260B.json".
+PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B_rear.json"
 
 FISH_MOLD_GRAPH = Path(ROOT) / "pipeline_out" / "fish_mold_cascade" / "feature_graph_cascade.json"
 FISH_MOLD_DESCRIPTOR = Path(ROOT) / "pipeline_out" / "fish_mold_cascade" / "setup_descriptor.yaml"
@@ -342,7 +344,7 @@ class TestWidenedFeatureMapping(unittest.TestCase):
         self.assertEqual(ops[0].lateral_extent_mm, 0.5)
 
     def test_engrave_spec_parses_from_descriptor(self) -> None:
-        from setup_descriptor import parse_setup_descriptor
+        from cascade.setup_descriptor import parse_setup_descriptor
         desc = parse_setup_descriptor({
             "part_id": "p",
             "setups": {"front": {"engrave": [
@@ -355,7 +357,7 @@ class TestWidenedFeatureMapping(unittest.TestCase):
         self.assertEqual(specs[0].target_feature_id, "21")
         self.assertEqual(specs[0].depth_mm, 0.2)
         # malformed target (both / neither) is rejected, not silently dropped
-        from setup_descriptor import SetupDescriptorError
+        from cascade.setup_descriptor import SetupDescriptorError
         with self.assertRaises(SetupDescriptorError):
             parse_setup_descriptor({"setups": {"s": {"engrave": [{"text": "x"}]}}})
 
@@ -1546,16 +1548,30 @@ class TestSetupScopeFilter(unittest.TestCase):
 
 
 class TestMultiSetupPlanning(unittest.TestCase):
-    def test_two_graphs_emit_two_setups_and_setup_tagged_ops(self) -> None:
+    """Guards the --multi-setup CAPABILITY (Fix 2: multi-setup stays).
+
+    plan_multi_setups merges N per-setup slices into one CamPlan with cross-setup
+    fixture-boundary precedence -- the machinery a GENUINE flip-job (one part, one
+    stock, refixtured) needs. This is a MECHANISM test: it feeds the two 96260B
+    cascade graphs purely as convenient graph fixtures to exercise the merge, and
+    labels the merged plan with a synthetic flip-job part id. It is NOT a claim
+    that 96260B is one part -- 96260B_front and 96260B_rear are two SEPARATE parts,
+    planned independently (see TestPlanIntegration.test_generated_example_file_*).
+    """
+
+    def test_multi_setup_merges_two_slices_into_one_two_setup_plan(self) -> None:
         self.assertTrue(CASCADE_PATH.is_file(), f"missing {CASCADE_PATH}")
         front_graph = Path(ROOT) / "pipeline_out" / "96260B_front" / "feature_graph_cascade.json"
         self.assertTrue(front_graph.is_file(), f"missing {front_graph}")
 
-        from machining_context import build_context_v0
+        from planning.machining_context import build_context_v0
 
+        # A multi-setup descriptor is the explicit "these orientations are one
+        # part" declaration; here it is used only as a schema fixture to drive the
+        # merge mechanism. See its header disclaimer.
         setup_yaml = Path(ROOT) / "eval" / "gt" / "96260B_setup.yaml"
         rear_ctx = build_context_v0(
-            Path(ROOT) / "96260B_REAR_XR004_PCD PLATE.stp copy",
+            Path(ROOT) / "fixtures/step/96260B_rear.stp",
             setup_yaml,
             CASCADE_PATH,
             setup_id="rear",
@@ -1564,7 +1580,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
             setups_source="authored",
         )
         front_ctx = build_context_v0(
-            Path(ROOT) / "96260B_FRONT_XR004_PCD PLATE.stp copy",
+            Path(ROOT) / "fixtures/step/96260B_front.stp",
             setup_yaml,
             front_graph,
             setup_id="front",
@@ -1578,7 +1594,7 @@ class TestMultiSetupPlanning(unittest.TestCase):
                 SetupPlanInput(front_graph, front_ctx),
             ],
             setup_order=("rear", "front"),
-            source_part="96260B",
+            source_part="SYNTHETIC_FLIP_JOB",
         )
         setup_ids = {setup.setup_id for setup in cam_plan.setups}
         self.assertEqual(setup_ids, {"rear", "front"})
@@ -1751,7 +1767,7 @@ class TestPlanIntegration(unittest.TestCase):
 
         import yaml
 
-        from machining_context import build_context_v0
+        from planning.machining_context import build_context_v0
 
         descriptor = yaml.safe_load(FISH_MOLD_DESCRIPTOR.read_text())
         # fish_mold rear is a back-side setup (guard_planning_inputs); reachability
@@ -1801,19 +1817,27 @@ class TestPlanIntegration(unittest.TestCase):
         self.assertTrue(FISH_MOLD_INNER_FILLET_IDS <= scope_dropped_ids)
 
     def test_generated_example_file_validates(self) -> None:
+        # The 96260B example plans are two INDEPENDENT single-setup parts, not one
+        # merged two-setup plan. The rear part is the default example target.
         self.assertTrue(PLAN_PATH.is_file(), f"missing {PLAN_PATH}; run planner.py first")
         plan_doc = load_cam_plan(PLAN_PATH)
-        if len(plan_doc.setups) > 1:
-            self.assertEqual(plan_doc.source_part, "96260B")
-            refs = plan_doc.metadata.get("feature_graph_refs", {})
-            self.assertIn("rear", refs)
-            self.assertIn("front", refs)
-        else:
-            self.assertEqual(
-                plan_doc.feature_graph_ref,
-                "pipeline_out/96260B_rear/feature_graph_cascade.json",
-            )
-            self.assertEqual(plan_doc.source_part, load_machining_context(CONTEXT_PATH).part_id)
+        self.assertEqual(len(plan_doc.setups), 1)
+        self.assertEqual(plan_doc.source_part, "96260B_rear")
+        self.assertEqual(
+            plan_doc.feature_graph_ref,
+            "pipeline_out/96260B_rear/feature_graph_cascade.json",
+        )
+
+    def test_front_example_file_is_independent_part(self) -> None:
+        front_path = Path(ROOT) / "examples" / "cam_plan_96260B_front.json"
+        self.assertTrue(front_path.is_file(), f"missing {front_path}; run planner.py first")
+        front = load_cam_plan(front_path)
+        self.assertEqual(len(front.setups), 1)
+        self.assertEqual(front.source_part, "96260B_front")
+        self.assertEqual(
+            front.feature_graph_ref,
+            "pipeline_out/96260B_front/feature_graph_cascade.json",
+        )
 
 
 def _reach_node(fid, cls, dirs, *, verified=True, exempt=False, has_reach=True):

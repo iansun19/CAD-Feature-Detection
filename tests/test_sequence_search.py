@@ -9,15 +9,15 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from cam_plan_schema import MachiningParameters  # noqa: E402
-from machining_context import load_feature_graph  # noqa: E402
+from schema.cam_plan_schema import MachiningParameters  # noqa: E402
+from planning.machining_context import load_feature_graph  # noqa: E402
 from planner import (  # noqa: E402
     OpSpec,
     build_precedence,
     sequence,
 )
-from score_sequence import score_sequence  # noqa: E402
-from sequence_search import (  # noqa: E402
+from planning.score_sequence import score_sequence  # noqa: E402
+from planning.sequence_search import (  # noqa: E402
     search_sequence,
     validate_sequence_precedence,
 )
@@ -199,11 +199,11 @@ class TestSequenceSearch96260B(unittest.TestCase):
             raise unittest.SkipTest("96260B cascade artifacts missing")
 
     def test_multi_setup_scores_improve_with_search(self) -> None:
-        from machining_context import build_context_v0  # noqa: PLC0415
+        from planning.machining_context import build_context_v0  # noqa: PLC0415
         from planner import SetupPlanInput, plan_multi_setups  # noqa: PLC0415
 
-        rear_step = Path(ROOT) / "96260B_REAR_XR004_PCD PLATE.stp copy"
-        front_step = Path(ROOT) / "96260B_FRONT_XR004_PCD PLATE.stp copy"
+        rear_step = Path(ROOT) / "fixtures/step/96260B_rear.stp"
+        front_step = Path(ROOT) / "fixtures/step/96260B_front.stp"
         ctx_kwargs = {
             "material": "aluminum",
             "tool_source": "hardcoded",

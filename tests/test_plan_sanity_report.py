@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from cam_plan_schema import CamPlan, load_cam_plan  # noqa: E402
-from machining_context import Tool, ToolPreset  # noqa: E402
+from schema.cam_plan_schema import CamPlan, load_cam_plan  # noqa: E402
+from planning.machining_context import Tool, ToolPreset  # noqa: E402
 from scripts.plan_sanity_report import (  # noqa: E402
     FlagSeverity,
     build_sanity_report,
@@ -24,7 +24,9 @@ from scripts.plan_sanity_report import (  # noqa: E402
 )
 from scripts.eval_cam_plan import GtOperation  # noqa: E402
 
-PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B.json"
+# 96260B_rear and 96260B_front are two SEPARATE parts. The rear is the one with a
+# transcribed shop program, so it is the sanity target here.
+PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B_rear.json"
 SHOP_GT_PATH = Path(ROOT) / "eval" / "gt" / "96260B_rear_shop_program.yaml"
 GRAPH_PATH = Path(ROOT) / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
 
@@ -266,7 +268,7 @@ class Test96260BCleanPlan(unittest.TestCase):
         self.assertEqual(wall_feed_flags, [])
 
     def test_front_setup_micro_tool_trips_gate(self) -> None:
-        from cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
+        from schema.cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
 
         plan = CamPlan(
             source_part="96260B",
@@ -323,7 +325,7 @@ class Test96260BCleanPlan(unittest.TestCase):
 
 class TestHomologOverlapGate(unittest.TestCase):
     def _over_machined_plan(self) -> CamPlan:
-        from cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
+        from schema.cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
 
         op_types = [
             "pocket",
@@ -386,7 +388,7 @@ class TestHomologOverlapGate(unittest.TestCase):
         self.assertTrue(all(f.severity == FlagSeverity.HARD for f in hard))
 
     def test_homolog_overlap_passes_on_scoped_front_facing_only(self) -> None:
-        from cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
+        from schema.cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
 
         plan = CamPlan(
             source_part="96260B",
@@ -436,14 +438,44 @@ class TestHomologOverlapGate(unittest.TestCase):
         flags = check_homolog_overlap(plan)
         self.assertEqual(flags, [])
 
+    def test_homolog_overlap_inapplicable_for_distinct_graphs(self) -> None:
+        # Distinct feature graphs = distinct id spaces (and, for 96260B, distinct
+        # parts). No shared geometry -> no homologs -> the gate must NOT run: not a
+        # HARD flag, and not even a WARN. A category error is not a finding.
+        plan = self._over_machined_plan().model_copy(
+            update={
+                "metadata": {
+                    "feature_graph_refs": {
+                        "rear": "pipeline_out/96260B_rear/feature_graph_cascade.json",
+                        "front": "pipeline_out/96260B_front/feature_graph_cascade.json",
+                    }
+                }
+            }
+        )
+        self.assertEqual(check_homolog_overlap(plan), [])
+
 
 class TestCoverageExpectations(unittest.TestCase):
-    def test_manifest_loads_for_96260b(self) -> None:
-        manifest = load_coverage_expectations("96260B")
+    def test_manifest_loads_for_96260b_rear(self) -> None:
+        # 96260B_rear and 96260B_front are separate parts. The rear has a shop
+        # program, so it has a coverage manifest keyed to its own part_id and
+        # scoped to its single setup. There is NO combined "96260B" manifest and
+        # no "front" setup here -- the front is a different part.
+        manifest = load_coverage_expectations("96260B_rear")
         self.assertIsNotNone(manifest)
         assert manifest is not None
         self.assertIn("rear", manifest["setups"])
-        self.assertIn("front", manifest["setups"])
+        self.assertNotIn("front", manifest["setups"])
+
+    def test_no_combined_96260b_manifest(self) -> None:
+        # The phantom combined "96260B" manifest (that treated front+rear as one
+        # part's two setups) is retracted.
+        self.assertIsNone(load_coverage_expectations("96260B"))
+
+    def test_front_part_has_no_manifest(self) -> None:
+        # The front part has no transcribed shop program, so no coverage manifest.
+        # Its coverage verdict is honestly UNKNOWN, not a fabricated expectation.
+        self.assertIsNone(load_coverage_expectations("96260B_front"))
 
     def _build_96260b_report(self, plan: CamPlan) -> object:
         shop_yaml = _load_shop_yaml()
@@ -461,116 +493,100 @@ class TestCoverageExpectations(unittest.TestCase):
         PLAN_PATH.is_file() and SHOP_GT_PATH.is_file() and GRAPH_PATH.is_file(),
         "96260B fixtures missing",
     )
-    def test_current_plan_coverage_verdict_matches_both_setups(self) -> None:
-        # RED BY DESIGN (known-red true positive): the front over-machines.
-        # Setup scope is geometry-derived (a setup machines what it can reach),
-        # and nothing yet arbitrates which setup owns geometry both can reach, so
-        # the front is granted its full reachable milling program where the shop
-        # runs it as a single facing flip. This asserts the aspirational clean
-        # state; it goes green when setup-ownership-arbitration lands. Do NOT
-        # relax it by moving front milling into expected_present -- fix ownership.
-        # See eval/open_capability_setup_ownership_arbitration.md.
+    def test_rear_plan_coverage_verdict_matches(self) -> None:
+        # 96260B_rear is an independent part. Its plan should cover every strategy
+        # its own shop program used (roughing, finishing_*, facing), so coverage
+        # PASSES cleanly. There is no "front over-machining" story here: the front
+        # is a DIFFERENT part, not this part's second setup, so nothing about the
+        # front is compared against the rear's shop program.
         plan = load_cam_plan(PLAN_PATH)
         report = self._build_96260b_report(plan)
         self.assertEqual(report.coverage.get("verdict"), "PASS")
         verdicts = report.coverage.get("setup_verdicts") or []
         by_setup = {v["setup_id"]: v for v in verdicts}
+        self.assertIn("rear", by_setup)
+        self.assertNotIn("front", by_setup)
         self.assertTrue(by_setup["rear"]["matches"])
-        self.assertTrue(by_setup["front"]["matches"])
-        # Facing is envelope-driven: the rear reaches the envelope-coincident
-        # stock flat (feat 17 / face 322) and owns facing; the front reaches no
-        # envelope stock flat and faces nothing.
+        # The rear reaches the envelope-coincident stock flat (feat 17 / face 322)
+        # and faces it as part of its own program.
         self.assertIn("facing", by_setup["rear"]["emitted_strategies"])
-        self.assertNotIn("facing", by_setup["front"]["emitted_strategies"])
 
-    @unittest.skipUnless(
-        PLAN_PATH.is_file() and SHOP_GT_PATH.is_file() and GRAPH_PATH.is_file(),
-        "96260B fixtures missing",
-    )
-    def test_front_over_machining_fails_coverage_verdict(self) -> None:
-        from cam_plan_schema import MachiningParameters, Operation
-
-        plan = load_cam_plan(PLAN_PATH)
-        extra_ops = [
-            Operation(
-                op_id="OP200",
-                sequence_index=100,
-                feature_refs=["1"],
-                feature_type="filleted_open_pocket",
-                setup_id="front",
-                operation="pocket",
-                tool_id="T07",
-                parameters=MachiningParameters(param_source="handbook_default"),
-            ),
-            Operation(
-                op_id="OP210",
-                sequence_index=101,
-                feature_refs=["2"],
-                feature_type="filleted_open_pocket",
-                setup_id="front",
-                operation="raster",
-                tool_id="T07",
-                parameters=MachiningParameters(param_source="handbook_default"),
-            ),
-            Operation(
-                op_id="OP220",
-                sequence_index=102,
-                feature_refs=["3"],
-                feature_type="wall",
-                setup_id="front",
-                operation="contour_2d",
-                tool_id="T07",
-                parameters=MachiningParameters(param_source="handbook_default"),
-            ),
-            Operation(
-                op_id="OP230",
-                sequence_index=103,
-                feature_refs=["4"],
-                feature_type="contour_surface",
-                setup_id="front",
-                operation="constant_scallop",
-                tool_id="T07",
-                parameters=MachiningParameters(param_source="handbook_default"),
-            ),
-            Operation(
-                op_id="OP240",
-                sequence_index=104,
-                feature_refs=["5"],
-                feature_type="outer_fillet",
-                setup_id="front",
-                operation="pencil",
-                tool_id="T07",
-                parameters=MachiningParameters(param_source="handbook_default"),
-            ),
-        ]
-        plan = plan.model_copy(update={"operations": list(plan.operations) + extra_ops})
-        report = self._build_96260b_report(plan)
-        self.assertEqual(report.coverage.get("verdict"), "FAIL")
-        front = next(
-            v for v in (report.coverage.get("setup_verdicts") or [])
-            if v["setup_id"] == "front"
-        )
-        self.assertFalse(front["matches"])
-        self.assertEqual(len(front["unexpected"]), 5)
-        self.assertEqual(exit_code_for_report(report), 1)
-
-    def test_missing_expected_present_is_hard(self) -> None:
-        from cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
+    def test_unexpected_strategy_fails_coverage_verdict(self) -> None:
+        # Coverage-FAIL mechanism, part-agnostic: a setup that emits a strategy the
+        # manifest marks expected-absent is "unexpected" and fails the verdict.
+        # (This replaces the retracted "front over-machining" test, whose premise --
+        # that the front is the rear part's over-machining second setup -- was a
+        # category error: they are two separate parts.)
+        from schema.cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
 
         plan = CamPlan(
-            source_part="96260B",
+            source_part="96260B_rear",
+            feature_graph_ref="pipeline_out/96260B_rear/feature_graph_cascade.json",
+            setups=[Setup(setup_id="rear", opening_axis="+Y")],
+            operations=[
+                Operation(
+                    op_id="OP010",
+                    sequence_index=0,
+                    feature_refs=["17"],
+                    feature_type="flat",
+                    setup_id="rear",
+                    operation="facing",
+                    tool_id="FM1",
+                    parameters=MachiningParameters(param_source="handbook_default"),
+                ),
+                Operation(
+                    op_id="OP020",
+                    sequence_index=1,
+                    feature_refs=["1"],
+                    feature_type="filleted_open_pocket",
+                    setup_id="rear",
+                    operation="pocket",
+                    tool_id="T1",
+                    parameters=MachiningParameters(param_source="handbook_default"),
+                ),
+            ],
+            tools=[
+                ToolRef(tool_id="FM1", tool_type="face_mill", diameter_mm=38.1, source="test"),
+                ToolRef(tool_id="T1", tool_type="endmill", diameter_mm=12.7, source="test"),
+            ],
+        )
+        # Manifest declares facing expected-absent for this setup; the plan faces,
+        # so coverage must FAIL on the unexpected 'facing'.
+        manifest = {
+            "setups": {
+                "rear": {
+                    "expected_present": {"strategies": ["roughing"]},
+                    "expected_absent": {
+                        "strategies": [
+                            {"name": "facing", "reason": "declared absent for this test"}
+                        ]
+                    },
+                }
+            }
+        }
+        verdicts, _ = check_coverage_expectations(plan, manifest, part_id="96260B_rear")
+        rear = next(v for v in verdicts if v.setup_id == "rear")
+        self.assertFalse(rear.matches)
+        self.assertIn("facing", rear.unexpected)
+
+    def test_missing_expected_present_is_hard(self) -> None:
+        from schema.cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
+
+        # The rear part's manifest expects roughing (among others). A rear plan
+        # that only faces is missing roughing -> HARD.
+        plan = CamPlan(
+            source_part="96260B_rear",
             feature_graph_ref="pipeline_out/96260B_rear/feature_graph_cascade.json",
             setups=[
                 Setup(setup_id="rear", opening_axis="+Y"),
-                Setup(setup_id="front", opening_axis="+Y"),
             ],
             operations=[
                 Operation(
                     op_id="OP010",
                     sequence_index=0,
-                    feature_refs=["18"],
+                    feature_refs=["17"],
                     feature_type="flat",
-                    setup_id="front",
+                    setup_id="rear",
                     operation="facing",
                     tool_id="T1",
                     parameters=MachiningParameters(param_source="handbook_default"),
@@ -580,8 +596,8 @@ class TestCoverageExpectations(unittest.TestCase):
                 ToolRef(tool_id="T1", tool_type="face_mill", diameter_mm=38.1, source="test"),
             ],
         )
-        manifest = load_coverage_expectations("96260B")
-        _, flags = check_coverage_expectations(plan, manifest, part_id="96260B")
+        manifest = load_coverage_expectations("96260B_rear")
+        _, flags = check_coverage_expectations(plan, manifest, part_id="96260B_rear")
         hard = [
             f for f in flags
             if f.gate == "coverage_expectations" and f.severity == FlagSeverity.HARD
@@ -590,7 +606,7 @@ class TestCoverageExpectations(unittest.TestCase):
         self.assertTrue(any("roughing" in f.message for f in hard))
 
     def test_no_manifest_falls_back_with_warn(self) -> None:
-        from cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
+        from schema.cam_plan_schema import MachiningParameters, Operation, Setup, ToolRef
 
         plan = CamPlan(
             source_part="UNKNOWN_PART_XYZ",

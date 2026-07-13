@@ -37,15 +37,15 @@ from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
 from OCC.Core.gp import gp_Ax2, gp_Dir, gp_Pnt
 from OCC.Extend.TopologyUtils import TopologyExplorer
 
-from cam_plan_schema import CamPlan, MachiningParameters, Operation, Setup, ToolRef
-from lateral_axes import (
+from schema.cam_plan_schema import CamPlan, MachiningParameters, Operation, Setup, ToolRef
+from cascade.lateral_axes import (
     annotate_lateral_candidates,
     annotate_lateral_reachability,
     approach_vector_for_setup,
 )
-from score_sequence import score_sequence
-from sequence_search import search_sequence
-from setup_descriptor import (
+from planning.score_sequence import score_sequence
+from planning.sequence_search import search_sequence
+from cascade.setup_descriptor import (
     OpeningAxisSpec,
     PartSetupDescriptor,
     SetupDefaults,
@@ -77,7 +77,7 @@ def classify_faces(shape):
     top_ids: list[int] = []
     from OCC.Core.BRepGProp import brepgprop
     from OCC.Core.GProp import GProp_GProps
-    from brep_extents import plane_normal_occ
+    from brep.brep_extents import plane_normal_occ
 
     for i, f in enumerate(faces):
         s = BRepAdaptor_Surface(f, True)
@@ -221,7 +221,7 @@ def main() -> int:
         metadata={"note": "PROVISIONAL lateral-axis smoke test; unvalidated path"},
     )
     plan_path = out / "cam_plan.json"
-    from cam_plan_schema import write_cam_plan
+    from schema.cam_plan_schema import write_cam_plan
     write_cam_plan(plan_path, plan)
     side_setup = next(s for s in plan.setups if s.setup_id == "side")
     assert side_setup.orientation == "+X" and side_setup.orientation_provisional

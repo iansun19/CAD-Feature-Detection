@@ -1,5 +1,5 @@
 fixture_id: "part2"
-step: "part2.step"
+step: "fixtures/step/fixtures/step/part2.step"
 graph_npz: "eval/regression/graphs/part2.graph.npz"
 face_index_scheme: "analyze_step_v1"
 
@@ -21,7 +21,7 @@ notes: |
   under front/back, so the setup choice does not move the partition. Opening axis
   is geometry-derived +X [1,0,0] (no pocket seeds → broad-face estimator; matches
   the approved Phase 1 broad-face table in test_noseed_opening_axis). STEP
-  ("part2.step") is at repo root; graph.npz pinned from part2's own ingest
+  ("fixtures/step/fixtures/step/part2.step") is at repo root; graph.npz pinned from part2's own ingest
   (27 faces). pocket_access=unknown: no filleted pockets, so access is N/A.
   stock_classifier=off: every face enters the cascade and exits with one feature
   label (no stock_face_ids bucket), matching the other fixtures.

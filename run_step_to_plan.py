@@ -18,9 +18,11 @@ Requires the conda ``mlcad`` env (pythonocc / OCC); the repo .venv lacks OCC.
 
     ~/miniconda3/envs/mlcad/bin/python run_step_to_plan.py <part.step>
 
-Single-setup only: a lone cascade run generates exactly one setup, which is what
-the v0 planner consumes. For the 96260B rear+front two-setup plan use
-``planner.py --multi-setup``.
+Single-setup only: a lone STEP is its own single-setup part (separate STEPs are
+separate parts -- 96260B_FRONT and 96260B_REAR are two independent parts, each
+planned on its own). To plan a GENUINE flip-job (one part, one stock, refixtured
+across setups) declared by an explicit multi-setup descriptor, use
+``planner.py --multi-setup --setup-yaml <descriptor>``.
 """
 
 from __future__ import annotations
@@ -160,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # --- Stage 2: machining context (stock from STEP extents + generated setup) ---
-    from machining_context import build_context_v0
+    from planning.machining_context import build_context_v0
 
     # Patch shop inputs into the generated descriptor before planning. Reachability
     # scoping needs two facts the cascade cannot derive from geometry alone:
@@ -168,11 +170,12 @@ def main(argv: list[str] | None = None) -> int:
     #                    resolved (escape hatch for undetermined parts, or an
     #                    override when the shop disagrees with auto-detect).
     #   --machining-side front|back -> which side faces the spindle; sets the
-    #                    reachability direction. Split-panel STEP names (FRONT/
-    #                    REAR) are inferred by the cascade; other parts need it.
+    #                    reachability direction. This is NEVER inferred from the
+    #                    STEP filename (a "FRONT"/"REAR" side-word is not a
+    #                    machining side); pass it explicitly when the part needs it.
     generated_descriptor = None
     if args.opening_axis is not None or args.machining_side is not None:
-        from setup_descriptor import OpeningAxisSpec, load_setup_descriptor
+        from cascade.setup_descriptor import OpeningAxisSpec, load_setup_descriptor
 
         generated_descriptor = load_setup_descriptor(setup_yaml)
         vec = _parse_opening_axis(args.opening_axis) if args.opening_axis else None
@@ -198,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # --- Stage 3: planning (features -> operations -> CamPlan JSON) ---
-    from cam_plan_schema import write_cam_plan
+    from schema.cam_plan_schema import write_cam_plan
     from planner import _print_summary, plan
 
     cam_plan = plan(

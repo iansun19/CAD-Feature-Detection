@@ -37,4 +37,4 @@ PY
 
 echo ""
 echo "Done. Activate with:  conda activate $ENV_NAME"
-echo "Then run:             python run_pipeline.py --step path/to/part.step"
+echo "Then run:             python -m legacy.run_pipeline --step path/to/part.step"

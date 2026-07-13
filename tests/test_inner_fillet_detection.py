@@ -9,7 +9,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 
-from inner_fillet_detection import (
+from cascade.inner_fillet_detection import (
     REFERENCE_FACE_ID_FISH_MOLD,
     InnerFilletDetectionConfig,
     apply_inner_fillet_manual_override,
@@ -18,7 +18,7 @@ from inner_fillet_detection import (
     matching_face_ids,
 )
 
-FISH_STEP = ROOT / "fish mold.stp"
+FISH_STEP = ROOT / "fixtures/step/fish_mold.stp"
 FISH_NPZ = ROOT / "pipeline_out/fish_mold/graph.npz"
 FISH_GRAPH = ROOT / "pipeline_out/fish_mold_cascade/feature_graph_cascade.json"
 REAR_GRAPH = ROOT / "pipeline_out/96260B_rear/feature_graph_cascade.json"
@@ -68,9 +68,9 @@ class InnerFilletFishMoldTests(unittest.TestCase):
         # Discriminative on geometry alone: zero matches on either panel even
         # with an empty stock set (i.e. not relying on STOCK gating).
         for panel, step, npz_path in (
-            ("rear", ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy",
+            ("rear", ROOT / "fixtures/step/96260B_rear.stp",
              ROOT / "pipeline_out/96260B_plate/graph.npz"),
-            ("front", ROOT / "96260B_FRONT_XR004_PCD PLATE.stp copy",
+            ("front", ROOT / "fixtures/step/96260B_front.stp",
              ROOT / "pipeline_out/96260B_front/graph.npz"),
         ):
             npz = np.load(npz_path)

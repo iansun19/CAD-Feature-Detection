@@ -41,7 +41,7 @@ Requires `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_KEY`) and `SUPABASE_URL`.
 ## Runtime: point the planner at Supabase
 
 ```python
-from machining_context import build_context_v0, load_tools_from_supabase
+from planning.machining_context import build_context_v0, load_tools_from_supabase
 
 # Full context assembly
 ctx = build_context_v0(

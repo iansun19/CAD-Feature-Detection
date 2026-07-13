@@ -59,8 +59,26 @@ train_11dim.log
 
 # Generated feature-graph viewers (regenerable via feature_graph_viewer/build.py)
 *_graph_viewer.html
-# ...except the active WIP viewer, which is tracked
-!96260B_rear_graph_viewer.html
 
 # Generated CAM plan output (regenerable via seed_and_plan.py / generate_operation_plan.py)
 /plan.json
+
+# Diagnostic run artifacts (regenerable via diag/ scripts)
+diag/out_*.txt
+diag/*.npz
+diag/step_candidates.json
+diag/dup_edge_cases.json
+
+# Heuristic baseline run logs
+heuristic_baselines/*.log
+
+# Old 25-class dataset explorer cache (regenerable)
+dataset_explorer/cache_old25/
+
+# GNN training run artifacts (Path 1 / legacy track; regenerable via training)
+runs_cloud/
+runs_cloud_latest/
+runs_cloud_25class_backup/
+
+# STEP watcher inbox (runtime drop folder; parts + results are transient)
+/pipeline_in/

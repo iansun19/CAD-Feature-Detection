@@ -31,7 +31,7 @@ import numpy as np
 import h5py
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from step_ingest import StepIngestError, build_V1, extract_brep_from_step
+from brep.step_ingest import StepIngestError, build_V1, extract_brep_from_step
 
 OUT_DIR = "MFCAD++_dataset/hierarchical_graphs_regen"
 OUT_DIR_12 = "MFCAD++_dataset/hierarchical_graphs_regen_12"

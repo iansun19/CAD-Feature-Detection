@@ -23,7 +23,7 @@ try:
 except ImportError:
     HAS_OCC = False
 
-from step_ingest import (  # noqa: E402
+from brep.step_ingest import (  # noqa: E402
     StepIngestError,
     extract_brep_from_step,
     ingest_step_to_pyg,

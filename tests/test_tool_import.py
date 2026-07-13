@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from machining_context import (  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     Tool,
     build_context_v0,
     load_enabled_libraries,
@@ -20,7 +20,7 @@ from machining_context import (  # noqa: E402
     load_tool_library_payload,
     normalize_tool_type,
 )
-from tool_store import row_to_tool, tool_to_row  # noqa: E402
+from tools.tool_store import row_to_tool, tool_to_row  # noqa: E402
 
 SAMPLE_LIBRARY = Path(ROOT) / "tests" / "fixtures" / "Aluminum_Sample_Library__Inch_.json"
 EXAMPLE_OUTPUT = Path(ROOT) / "examples" / "tools_aluminum_sample.json"
@@ -51,7 +51,7 @@ class TestNormalizeToolType(unittest.TestCase):
                 self.assertEqual(normalize_tool_type(raw), expected)
 
     def test_unknown_type_fallback(self) -> None:
-        with self.assertLogs("machining_context", level="WARNING") as captured:
+        with self.assertLogs("planning.machining_context", level="WARNING") as captured:
             result = normalize_tool_type("weird custom cutter")
         self.assertEqual(result, "unknown")
         self.assertTrue(any("unknown Fusion tool type" in msg for msg in captured.output))
@@ -74,7 +74,7 @@ class TestHolderExclusion(unittest.TestCase):
                 },
             ],
         }
-        with self.assertLogs("machining_context", level="INFO") as captured:
+        with self.assertLogs("planning.machining_context", level="INFO") as captured:
             tools = load_tool_library_payload(
                 payload,
                 library_name="test_holders",

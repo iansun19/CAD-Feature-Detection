@@ -14,22 +14,22 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from setup_descriptor import (  # noqa: E402
+from cascade.setup_descriptor import (  # noqa: E402
     load_setup_descriptor,
     parse_setup_descriptor,
     resolve_setup_entry,
     setup_descriptor_to_dict,
     to_pocket_setup_config,
 )
-from setup_generation import (  # noqa: E402
+from cascade.setup_generation import (  # noqa: E402
     features_by_approach_dir,
     generate_part_setup_descriptor,
     generate_setup_entry,
 )
 
 GOLDEN = Path(ROOT) / "eval" / "gt" / "96260B_setup.yaml"
-FRONT_STEP = "96260B_FRONT_XR004_PCD PLATE.stp copy"
-REAR_STEP = "96260B_REAR_XR004_PCD PLATE.stp copy"
+FRONT_STEP = "fixtures/step/96260B_front.stp"
+REAR_STEP = "fixtures/step/96260B_rear.stp"
 
 
 def _build_generated():
@@ -117,9 +117,9 @@ class SetupGenerationFromCascadeTests(unittest.TestCase):
     """End-to-end: cascade run -> step-2 graph -> generated setup entry."""
 
     def _run(self, step: str, side: str, npz: str):
-        from eval_cascade import build_cascade_feature_graph
-        from feature_params import analyze_step
-        from pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
+        from cascade.eval_cascade import build_cascade_feature_graph
+        from brep.feature_params import analyze_step
+        from cascade.pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
         from run_cascade import _load_edges, run_cascade
 
         step_p = Path(step)
@@ -139,11 +139,11 @@ class SetupGenerationFromCascadeTests(unittest.TestCase):
 
     def test_generate_from_front_cascade(self):
         try:
-            import feature_params  # noqa: F401
+            import brep.feature_params  # noqa: F401
         except Exception as exc:  # pragma: no cover
             self.skipTest(f"OCC stack unavailable: {exc}")
 
-        from setup_generation import generate_setup_entry_from_graph
+        from cascade.setup_generation import generate_setup_entry_from_graph
 
         graph = self._run(FRONT_STEP, "front", "pipeline_out/96260B_front/graph.npz")
 

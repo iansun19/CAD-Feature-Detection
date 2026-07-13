@@ -1,5 +1,5 @@
 fixture_id: "96260B_front"
-step: "96260B_FRONT_XR004_PCD PLATE.stp copy"
+step: "fixtures/step/96260B_front.stp"
 graph_npz: "eval/regression/graphs/96260B_front.graph.npz"
 face_index_scheme: "analyze_step_v1"
 

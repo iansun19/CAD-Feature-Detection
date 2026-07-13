@@ -27,8 +27,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
-import ground_truth_store as gts
-import feature_operation_map as fmap
+import planning.ground_truth_store as gts
+import planning.feature_operation_map as fmap
 
 
 def _write_temp_json(data: Mapping[str, Any], suffix: str) -> Path:
@@ -86,8 +86,9 @@ def generate_planner_plan(
     """Full plan via the existing planner. Returns the CamPlan as a JSON dict."""
     # Deferred imports: these pull in the heavy planning stack (pydantic models,
     # geometry). Keeping them here lets --mode lightweight run without them.
-    from machining_context import build_context_v0
+    from planning.machining_context import build_context_v0
     from planner import plan as run_planner
+    from schema.cam_plan_schema import to_bracket_dict
 
     graph, stored_descriptor, stored_extents = gts.mold_planning_inputs(
         mold_id, client=client
@@ -128,7 +129,9 @@ def generate_planner_plan(
             setup_id=setup_id,
         )
         cam_plan = run_planner(graph_path, context, seq_search=seq_search)  # type: ignore[arg-type]
-        result = cam_plan.model_dump(mode="json")
+        # Native external artifact = the bracket format (nested setups[].operations[],
+        # inline tool blob, bracket param names, internal fields hidden).
+        result = to_bracket_dict(cam_plan)
     finally:
         for p in temp_paths:
             try:

@@ -25,7 +25,7 @@ import numpy as np
 import h5py
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from taxonomy import NEW_NAMES
+from brep.taxonomy import NEW_NAMES
 
 sys.path.insert(0, "diag")
 from regen_dihedral_check import read_part, convexity_sign  # faithful regen helpers

@@ -9,7 +9,7 @@ This script remains a preset-sparsity / matcher_miss drill-down.
 
 Run:
   python scripts/diagnose_preset_coverage.py
-  python scripts/diagnose_preset_coverage.py examples/cam_plan_96260B.json \\
+  python scripts/diagnose_preset_coverage.py examples/cam_plan_96260B_rear.json \\
       --shop eval/gt/96260B_rear_shop_program.yaml --material aluminum
 """
 from __future__ import annotations
@@ -27,8 +27,8 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import env_bootstrap  # noqa: F401, E402 - loads .env
 
-from cam_plan_schema import CamPlan, Operation, load_cam_plan  # noqa: E402
-from machining_context import (  # noqa: E402
+from schema.cam_plan_schema import CamPlan, Operation, load_cam_plan  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     Tool,
     _library_name_from_path,
     load_tool_library,
@@ -42,9 +42,9 @@ from planner import (  # noqa: E402
     assign_parameters,
     resolve_preset,
 )
-from tool_store import create_supabase_client, row_to_tool  # noqa: E402
+from tools.tool_store import create_supabase_client, row_to_tool  # noqa: E402
 
-DEFAULT_PLAN = REPO_ROOT / "examples" / "cam_plan_96260B.json"
+DEFAULT_PLAN = REPO_ROOT / "examples" / "cam_plan_96260B_rear.json"
 DEFAULT_SHOP = REPO_ROOT / "eval" / "gt" / "96260B_rear_shop_program.yaml"
 LOCAL_LIBS_DIR = REPO_ROOT / "local_tool_libraries"
 INCH_TO_MM = 25.4
@@ -650,7 +650,7 @@ def diagnose_plan(
     tools: Mapping[str, Tool],
     shop_yaml: Mapping[str, Any] | None,
 ) -> list[OpDiagnosis]:
-    from machining_context import MachiningContext, SetupContext, Stock
+    from planning.machining_context import MachiningContext, SetupContext, Stock
 
     ctx = MachiningContext(
         part_id=plan.source_part or "plan",

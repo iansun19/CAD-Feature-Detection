@@ -11,20 +11,20 @@ from unittest.mock import patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from machining_context import (  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     DEFAULT_TOOL_LIBRARIES_DIR,
     build_context_v0,
     load_enabled_library_payloads,
     load_tool_library,
     load_tool_library_payload,
 )
-from tool_library_store import (  # noqa: E402
+from tools.tool_library_store import (  # noqa: E402
     fetch_enabled_library_rows,
     library_slug_from_stem,
     load_libraries_from_supabase,
     seed_tool_libraries,
 )
-from tool_store import tool_to_row  # noqa: E402
+from tools.tool_store import tool_to_row  # noqa: E402
 
 ALUMINUM_LIBRARY = DEFAULT_TOOL_LIBRARIES_DIR / "Aluminum_Sample_Library__Inch_.json"
 DRILL_LIBRARY = DEFAULT_TOOL_LIBRARIES_DIR / "Kennametal_Standard_Drills__Inch_.json"
@@ -143,7 +143,7 @@ class TestBuildContextSupabase(unittest.TestCase):
         ]
 
         with patch(
-            "tool_store.fetch_tool_rows",
+            "tools.tool_store.fetch_tool_rows",
             return_value=rows,
         ):
             ctx = build_context_v0(

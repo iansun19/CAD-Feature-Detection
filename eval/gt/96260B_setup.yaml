@@ -1,3 +1,18 @@
+# ============================================================================
+# RETAINED AS A SCHEMA / FORMAT FIXTURE ONLY -- NOT A FACTUAL CLAIM.
+#
+# 96260B_FRONT and 96260B_REAR are TWO SEPARATE PARTS (separate stock, separate
+# jobs). They are NOT two setups of one part. This file predates that correction
+# and declares a phantom combined "96260B" part with front+rear setups. It is kept
+# ONLY as a syntactic example of the multi-setup (flip-job) descriptor schema and
+# as a parse fixture for tests. Do NOT treat its part_id / setup grouping as a
+# statement that 96260B is one part. To plan 96260B, plan each part independently
+# (planner.py default / --part). A genuine flip-job would hand-author a file in
+# THIS format for a real single, refixtured part. See:
+#   eval/open_capability_setup_ownership_arbitration.md  (retracted)
+#   eval/open_capability_homolog_map_split_panel.md
+# ============================================================================
+#
 # Setup descriptor - 96260B XR004 PCD PLATE (both split-panel setups)
 # Matches run_cascade behavior: +Y opening axis (auto, confidence 1.0),
 # front->filleted_open_pocket, rear->filleted_pocket for spatial pockets.
@@ -18,7 +33,7 @@ defaults:
 setups:
   front:
     setup_id: front
-    part_step: "96260B_FRONT_XR004_PCD PLATE.stp copy"
+    part_step: "fixtures/step/96260B_front.stp"
     machining_side: front
     opening_axis:
       mode: auto
@@ -27,7 +42,7 @@ setups:
 
   rear:
     setup_id: rear
-    part_step: "96260B_REAR_XR004_PCD PLATE.stp copy"
+    part_step: "fixtures/step/96260B_rear.stp"
     machining_side: back
     opening_axis:
       mode: auto

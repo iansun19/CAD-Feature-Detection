@@ -12,15 +12,15 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from eval_cascade import build_cascade_feature_graph
-from feature_params import analyze_step, load_step_faces
-from pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
-from reachability import annotate_reachability
+from cascade.eval_cascade import build_cascade_feature_graph
+from brep.feature_params import analyze_step, load_step_faces
+from cascade.pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
+from cascade.reachability import annotate_reachability
 from run_cascade import _load_edges, run_cascade
-from step_ingest import load_step_shape
+from brep.step_ingest import load_step_shape
 
-FRONT = ("96260B_FRONT_XR004_PCD PLATE.stp copy", "front", "pipeline_out/96260B_front/graph.npz")
-REAR = ("96260B_REAR_XR004_PCD PLATE.stp copy", "back", "pipeline_out/96260B_plate/graph.npz")
+FRONT = ("fixtures/step/96260B_front.stp", "front", "pipeline_out/96260B_front/graph.npz")
+REAR = ("fixtures/step/96260B_rear.stp", "back", "pipeline_out/96260B_plate/graph.npz")
 
 
 def _graph(step: str, side: str, npz: str):

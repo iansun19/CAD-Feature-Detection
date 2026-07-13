@@ -14,7 +14,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import env_bootstrap  # noqa: F401, E402 - loads .env
 
-from tool_store import TOOLS_TABLE, create_supabase_client  # noqa: E402
+from tools.tool_store import TOOLS_TABLE, create_supabase_client  # noqa: E402
 
 EXPECTED_UNIQUE_TOOLS = 14_931
 ROW_COUNT_TOLERANCE = 50
@@ -205,7 +205,7 @@ def check_type_distribution(all_rows: list[dict[str, Any]]) -> CheckResult:
 
 def _scan_local_guid_collisions(library_dir: Path) -> dict[str, list[dict[str, str]]]:
     """Find guids exported in more than one local Fusion library file."""
-    from tool_store import prepare_tool_rows_from_library
+    from tools.tool_store import prepare_tool_rows_from_library
 
     by_guid: dict[str, list[dict[str, str]]] = defaultdict(list)
     if not library_dir.is_dir():

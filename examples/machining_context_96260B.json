@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "part_id": "96260B_REAR_XR004_PCD PLATE.stp copy",
+  "part_id": "fixtures/step/96260B_rear.stp",
   "feature_graph_ref": "pipeline_out/96260B_rear/feature_graph_cascade.json",
   "stock": {
     "stock_type": "bbox",
@@ -40,7 +40,7 @@
         "16": "unknown"
       },
       "fixture": null,
-      "source_step_file": "96260B_REAR_XR004_PCD PLATE.stp copy"
+      "source_step_file": "fixtures/step/96260B_rear.stp"
     }
   ],
   "tools": [

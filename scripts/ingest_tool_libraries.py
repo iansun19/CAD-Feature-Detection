@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import env_bootstrap  # noqa: F401, E402 - loads .env
 
-from tool_store import (  # noqa: E402
+from tools.tool_store import (  # noqa: E402
     IngestFileResult,
     prepare_tool_rows_from_library,
     upsert_tool_rows,

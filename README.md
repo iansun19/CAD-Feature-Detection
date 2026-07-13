@@ -37,8 +37,8 @@ orientation each):
 
 ```bash
 conda activate mlcad
-python run_cascade.py "96260B_REAR_XR004_PCD PLATE.stp copy" --export-dir pipeline_out/96260B_rear
-python run_cascade.py "96260B_FRONT_..." --export-dir pipeline_out/96260B_front
+python run_cascade.py "fixtures/step/96260B_rear.stp" --export-dir pipeline_out/96260B_rear
+python run_cascade.py "fixtures/step/96260B_front.stp" --export-dir pipeline_out/96260B_front
 python planner.py --multi-setup --setups generated --scope-diff
 ```
 
@@ -80,7 +80,7 @@ The export path writes `feature_graph_cascade.json` and, layered on top:
   `schema_version` to 4 and adds `reachability_summary`. Walls are exempt (lateral
   tool access, not axial plunge).
 
-**GNN classifier** ([model.py], [train.py]) — the trained alternative; see below.
+**GNN classifier** ([legacy/model.py], [legacy/train.py]) — the trained alternative; see below.
 
 ### Stage 2 — Machining context
 
@@ -165,13 +165,13 @@ The safety net for all cascade changes is the byte-identical golden regression o
 A single face-adjacency graph GNN (UV-Net-style, simplified; GINEConv stack with
 edge features + residuals).
 
-- [dataset.py] — loads MFCAD++ into PyG `Data` graphs. **Two loaders:** one for
+- [legacy/dataset.py] — loads MFCAD++ into PyG `Data` graphs. **Two loaders:** one for
   prebuilt H5 graphs, one that parses STEP via pythonocc. Read the comments and
   confirm which matches your files — field-name mismatch is the #1 cause of silent
   label misalignment.
-- [model.py] — the GNN.
-- [train.py] — training loop with early stopping, checkpointing, logging.
-- [overfit_check.py] — fast sanity run on ~20 samples. **Run this first.**
+- [legacy/model.py] — the GNN.
+- [legacy/train.py] — training loop with early stopping, checkpointing, logging.
+- [legacy/overfit_check.py] — fast sanity run on ~20 samples. **Run this first.**
 - [config.yaml] — all hyperparameters.
 
 **Order of operations (do not skip):**
@@ -180,10 +180,10 @@ edge features + residuals).
 2. Download MFCAD++ (~1.5 GB) from
    [Queen's University Belfast](https://pure.qub.ac.uk/en/datasets/mfcad-dataset-dataset-for-paper-hierarchical-cadnet-learning-from/)
    and unzip into `MFCAD++_dataset/` at the repo root.
-3. `python setup_data.py` — confirms `train.txt` / `val.txt` / `test.txt` and the H5 are present.
-4. `python overfit_check.py` — must reach ~100% train acc on 20 parts in a couple
+3. `python -m legacy.setup_data` — confirms `train.txt` / `val.txt` / `test.txt` and the H5 are present.
+4. `python -m legacy.overfit_check` — must reach ~100% train acc on 20 parts in a couple
    minutes. If it can't memorize 20 parts, the data loader is wrong. Fix before step 5.
-5. `python train.py` overnight.
+5. `python -m legacy.train` overnight.
 6. Read `runs/<timestamp>/log.txt` and `best_model.pt`.
 
 **Mac / Apple Silicon:** use the minimal Mac install in `requirements.txt`

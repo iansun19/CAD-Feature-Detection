@@ -9,7 +9,7 @@ This script remains useful for per-feature GT matching and aggregate scorecard d
 
 Run:
   python scripts/eval_cam_plan.py
-  python scripts/eval_cam_plan.py examples/cam_plan_96260B.json eval/gt/96260B_rear_shop_program.yaml
+  python scripts/eval_cam_plan.py examples/cam_plan_96260B_rear.json eval/gt/96260B_rear_shop_program.yaml
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from typing import Any, Mapping, Sequence
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from cam_plan_schema import CamPlan, load_cam_plan  # noqa: E402
+from schema.cam_plan_schema import CamPlan, load_cam_plan  # noqa: E402
 
 INCH_TO_MM = 25.4
 DIAMETER_TOL_MM = 0.75
@@ -1426,7 +1426,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "plan",
         nargs="?",
         type=Path,
-        default=REPO_ROOT / "examples" / "cam_plan_96260B.json",
+        default=REPO_ROOT / "examples" / "cam_plan_96260B_rear.json",
     )
     parser.add_argument(
         "gt",

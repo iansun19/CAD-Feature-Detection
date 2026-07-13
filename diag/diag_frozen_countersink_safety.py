@@ -19,13 +19,13 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 FIXTURES = {
-    "96260B_front": ("96260B_FRONT_XR004_PCD PLATE.stp copy",
+    "96260B_front": ("fixtures/step/96260B_front.stp",
                      "eval/regression/graphs/96260B_front.graph.npz"),
-    "96260B_rear": ("96260B_REAR_XR004_PCD PLATE.stp copy",
+    "96260B_rear": ("fixtures/step/96260B_rear.stp",
                     "eval/regression/graphs/96260B_rear.graph.npz"),
-    "fish_mold": ("fish mold.stp", "eval/regression/graphs/fish_mold.graph.npz"),
-    "part1": ("part1.step", "eval/regression/graphs/part1.graph.npz"),
-    "part2": ("part2.step", "eval/regression/graphs/part2.graph.npz"),
+    "fish_mold": ("fixtures/step/fish_mold.stp", "eval/regression/graphs/fish_mold.graph.npz"),
+    "part1": ("fixtures/step/fixtures/step/part1.step", "eval/regression/graphs/part1.graph.npz"),
+    "part2": ("fixtures/step/fixtures/step/part2.step", "eval/regression/graphs/part2.graph.npz"),
 }
 
 
@@ -44,8 +44,8 @@ def countersink_qualifies(feat) -> bool:
 
 
 def main() -> int:
-    from feature_params import analyze_step, load_step_faces
-    from hole_detection import detect_holes
+    from brep.feature_params import analyze_step, load_step_faces
+    from cascade.hole_detection import detect_holes
 
     for name, (step, npz) in FIXTURES.items():
         if not Path(step).is_file():

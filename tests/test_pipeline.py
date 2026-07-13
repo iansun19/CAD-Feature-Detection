@@ -14,7 +14,7 @@ sys.path.insert(0, ROOT)
 
 from pipeline.core import face_to_feature_map, write_face_predictions  # noqa: E402
 from pipeline.ingest import require_occ  # noqa: E402
-from feature_params import HAS_OCC  # noqa: E402
+from brep.feature_params import HAS_OCC  # noqa: E402
 
 
 class TestPipelineCore(unittest.TestCase):
