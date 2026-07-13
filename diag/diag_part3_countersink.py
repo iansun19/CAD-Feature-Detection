@@ -13,7 +13,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-STEP = "part3.step"
+STEP = "fixtures/step/fixtures/step/part3.step"
 GROUPS = [
     [0, 1, 44, 45], [10, 11, 34, 35],
     [2, 3, 42, 43], [12, 13, 32, 33],
@@ -35,7 +35,7 @@ def cone_half_angle_deg(occ_face):
 
 
 def occ_axis_radius(occ_face):
-    from hole_detection import _axis_from_occ_face
+    from cascade.hole_detection import _axis_from_occ_face
 
     r = _axis_from_occ_face(occ_face)
     if r is None:
@@ -45,8 +45,8 @@ def occ_axis_radius(occ_face):
 
 
 def main() -> int:
-    from feature_params import analyze_step, load_step_faces
-    from step_ingest import ingest_step_to_pyg
+    from brep.feature_params import analyze_step, load_step_faces
+    from brep.step_ingest import ingest_step_to_pyg
 
     faces = analyze_step(STEP)
     occ = load_step_faces(STEP)
@@ -115,7 +115,7 @@ def main() -> int:
 
     # ---- run the hole pass on the same pool to show ownership & params ----
     print("\n--- hole pass (full-face candidate pool) ---")
-    from hole_detection import detect_holes
+    from cascade.hole_detection import detect_holes
 
     res = detect_holes(faces, edge_index, edge_attr, occ_faces=occ,
                        candidate_faces=set(range(len(faces))))

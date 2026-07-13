@@ -16,11 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dataset import _cache_path
-from feature_graph import write_feature_graph
+from legacy.dataset import _cache_path
+from brep.feature_graph import write_feature_graph
 from pipeline.core import infer_graph, write_face_predictions
 from pipeline.ingest import ingest_step_to_npz
-from taxonomy import NUM_CLASSES, NEW_NAMES
+from brep.taxonomy import NUM_CLASSES, NEW_NAMES
 
 try:
     import lightgbm as lgb

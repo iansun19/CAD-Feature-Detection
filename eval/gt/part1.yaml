@@ -24,7 +24,7 @@
 # intentionally not counted here, same as 96260B / fish_mold. Attributes are in inches.
 
 part_id: "part1"
-part_step: "part1.step"
+part_step: "fixtures/step/fixtures/step/part1.step"
 graph_npz: "pipeline_out/part1/graph.npz"
 
 setup:

@@ -10,8 +10,8 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from feature_graph import build_feature_graph, feature_adjacency  # noqa: E402
-from feature_instances import FeatureInstance, instances_from_labels  # noqa: E402
+from brep.feature_graph import build_feature_graph, feature_adjacency  # noqa: E402
+from brep.feature_instances import FeatureInstance, instances_from_labels  # noqa: E402
 
 
 class TestFeatureGraph(unittest.TestCase):

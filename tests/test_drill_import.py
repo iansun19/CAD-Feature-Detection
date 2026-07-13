@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from machining_context import (  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     load_tool_library,
     normalize_tool_type,
 )

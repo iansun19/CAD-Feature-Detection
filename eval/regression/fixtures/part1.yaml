@@ -1,5 +1,5 @@
 fixture_id: "part1"
-step: "part1.step"
+step: "fixtures/step/fixtures/step/part1.step"
 graph_npz: "eval/regression/graphs/part1.graph.npz"
 face_index_scheme: "analyze_step_v1"
 
@@ -19,7 +19,7 @@ notes: |
   countersunk blind holes (±X), one open pocket, two flats, two lateral pocket
   walls. Single primary-Z setup (no separate secondary-X setup captured; the X
   blind holes are recognized as features within the single-Z run via per-feature
-  axis metadata). STEP ("part1.step") is at repo root; graph.npz pinned from
+  axis metadata). STEP ("fixtures/step/fixtures/step/part1.step") is at repo root; graph.npz pinned from
   part1's own ingest (18 faces) — NOT 96260B's edge set (the prior mis-invocation).
   Opening axis is geometry-derived Z [0,0,1] (no pocket seeds → broad-face area
   Z 4435.7 mm^2 >> Y 1814.5), which run_cascade auto-resolves natively from

@@ -20,7 +20,7 @@ try:
 except ImportError:
     HAS_OCC = False
 
-from wall_geometry import (  # noqa: E402
+from cascade.wall_geometry import (  # noqa: E402
     WALL_CLEARANCE_MAX_MM,
     WALL_CLEARANCE_MIN_MM,
     WALL_DEPTH_MAX_MM,
@@ -32,7 +32,7 @@ from wall_geometry import (  # noqa: E402
 )
 
 REAR_GRAPH = Path(ROOT) / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
-REAR_STEP = Path(ROOT) / "96260B_REAR_XR004_PCD PLATE.stp copy"
+REAR_STEP = Path(ROOT) / "fixtures/step/96260B_rear.stp"
 REAR_NPZ = Path(ROOT) / "pipeline_out" / "96260B_plate" / "graph.npz"
 
 
@@ -159,7 +159,7 @@ class TestWallGeometry96260B(unittest.TestCase):
         walls = [n for n in graph["nodes"] if n.get("class_name") == "wall"]
         walls[0]["face_ids"] = [99999]
 
-        with self.assertLogs("wall_geometry", level="WARNING") as logs:
+        with self.assertLogs("cascade.wall_geometry", level="WARNING") as logs:
             enriched = enrich_graph_wall_geometry(
                 graph,
                 REAR_STEP,

@@ -1,5 +1,5 @@
 fixture_id: "part3"
-step: "part3.step"
+step: "fixtures/step/fixtures/step/part3.step"
 graph_npz: "eval/regression/graphs/part3.graph.npz"
 face_index_scheme: "analyze_step_v1"
 
@@ -31,7 +31,7 @@ notes: |
   Single primary setup (machining_side=back); the decomposition is byte-identical
   under front/back. Opening axis is geometry-derived. stock_classifier=off: every
   face enters the cascade and exits with one feature label (no stock bucket).
-  graph.npz pinned from part3's own ingest (46 faces). STEP ("part3.step") is at
+  graph.npz pinned from part3's own ingest (46 faces). STEP ("fixtures/step/fixtures/step/part3.step") is at
   repo root.
 
   Blessed from HAND-VERIFIED ground truth (not from cascade output): the 10 stated

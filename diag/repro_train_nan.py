@@ -13,9 +13,9 @@ import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from torch_geometric.loader import DataLoader
-from dataset import get_dataset
-from device import resolve_device, set_seed
-from model import BRepGNN
+from legacy.dataset import get_dataset
+from legacy.device import resolve_device, set_seed
+from legacy.model import BRepGNN
 
 MAX_STEPS = int(sys.argv[1]) if len(sys.argv) > 1 else 1500
 NW = int(sys.argv[2]) if len(sys.argv) > 2 else 0

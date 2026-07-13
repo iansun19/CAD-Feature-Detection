@@ -1,61 +1,95 @@
 {
-  "schema_version": "0.1.0",
-  "source_part": "demo_bracket.step",
+  "schema_version": "1.0",
+  "part_id": "demo_bracket.step",
   "feature_graph_ref": "pipeline_out/demo_bracket/feature_graph_cascade.json",
+  "stock": null,
+  "provenance": {
+    "planner": "cam_plan_schema.example",
+    "model": null
+  },
   "setups": [
     {
       "setup_id": "primary",
       "opening_axis": "+Z",
+      "orientation": null,
+      "orientation_provisional": false,
       "fixture": null,
-      "notes": "Single 3-axis setup; v0 slice."
-    }
-  ],
-  "operations": [
-    {
-      "op_id": "OP010",
-      "sequence_index": 0,
-      "feature_refs": [
-        "0"
-      ],
-      "feature_type": "through_hole",
-      "setup_id": "primary",
-      "operation": "drill",
-      "tool_id": "T01",
-      "parameters": {
-        "spindle_rpm": 3000.0,
-        "feed_mm_per_min": 180.0,
-        "plunge_mm_per_min": 90.0,
-        "stepdown_mm": null,
-        "stepover_mm": null,
-        "coolant": null,
-        "param_source": "handbook_default"
-      },
-      "depends_on": [],
-      "access": null
-    },
-    {
-      "op_id": "OP020",
-      "sequence_index": 1,
-      "feature_refs": [
-        "1"
-      ],
-      "feature_type": "filleted_pocket",
-      "setup_id": "primary",
-      "operation": "pocket",
-      "tool_id": "T02",
-      "parameters": {
-        "spindle_rpm": 8000.0,
-        "feed_mm_per_min": 1200.0,
-        "plunge_mm_per_min": 300.0,
-        "stepdown_mm": 2.0,
-        "stepover_mm": 3.0,
-        "coolant": null,
-        "param_source": "conservative_heuristic"
-      },
-      "depends_on": [
-        "OP010"
-      ],
-      "access": "closed"
+      "wcs": null,
+      "notes": "Single 3-axis setup; example.",
+      "operations": [
+        {
+          "op_id": "OP010",
+          "sequence_index": 0,
+          "feature_refs": [
+            "0"
+          ],
+          "feature_type": "through_hole",
+          "setup_id": "primary",
+          "operation": "drill",
+          "tool_id": "T01",
+          "tool": {
+            "id": "T01",
+            "type": "drill",
+            "dia": 3.2,
+            "flutes": null
+          },
+          "parameters": {
+            "spindle_rpm": 3000.0,
+            "feed_mm_per_min": 180.0,
+            "plunge_mm_per_min": 90.0,
+            "stepdown_mm": null,
+            "stepover_mm": null,
+            "woc": null,
+            "retract": null,
+            "cycle": null,
+            "depth": null,
+            "coolant": null,
+            "param_source": "handbook_default"
+          },
+          "depends_on": [],
+          "access": null,
+          "rationale": null,
+          "geometry_ref": null,
+          "attributes": {}
+        },
+        {
+          "op_id": "OP020",
+          "sequence_index": 1,
+          "feature_refs": [
+            "1"
+          ],
+          "feature_type": "filleted_pocket",
+          "setup_id": "primary",
+          "operation": "pocket",
+          "tool_id": "T02",
+          "tool": {
+            "id": "T02",
+            "type": "endmill",
+            "dia": 6.0,
+            "flutes": null
+          },
+          "parameters": {
+            "spindle_rpm": 8000.0,
+            "feed_mm_per_min": 1200.0,
+            "plunge_mm_per_min": 300.0,
+            "stepdown_mm": 2.0,
+            "stepover_mm": 3.0,
+            "woc": null,
+            "retract": null,
+            "cycle": null,
+            "depth": null,
+            "coolant": null,
+            "param_source": "conservative_heuristic"
+          },
+          "depends_on": [
+            "OP010"
+          ],
+          "access": "closed",
+          "rationale": null,
+          "geometry_ref": null,
+          "attributes": {}
+        }
+      ]
     }
   ],
   "tools": [
@@ -81,7 +115,7 @@
   "remaining_material": null,
   "metadata": {
     "generator": "cam_plan_schema.example",
-    "generated_at": "2026-07-09T03:15:36.729251+00:00",
-    "notes": "Hand-written v0 contract example; not produced by a planner."
+    "generated_at": "2026-07-13T01:31:46.597541+00:00",
+    "notes": "Hand-written contract example; not produced by a planner."
   }
 }

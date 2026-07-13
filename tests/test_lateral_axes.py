@@ -16,8 +16,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from axis_frames import rotation_to_plus_z, transform_points, transform_vector
-from lateral_axes import (
+from cascade.axis_frames import rotation_to_plus_z, transform_points, transform_vector
+from cascade.lateral_axes import (
     annotate_lateral_candidates,
     lateral_candidates_for_node,
 )
@@ -106,7 +106,7 @@ class OrientationSequencingTests(unittest.TestCase):
     and consecutive ops in differently-oriented setups cost an approach change."""
 
     def test_approach_vector_follows_setup_orientation(self):
-        from lateral_axes import approach_vector_for_setup
+        from cascade.lateral_axes import approach_vector_for_setup
 
         np.testing.assert_allclose(
             approach_vector_for_setup(_Setup("s", "+Z", orientation="+X")),
@@ -118,7 +118,7 @@ class OrientationSequencingTests(unittest.TestCase):
         )
 
     def test_orientation_change_incurs_approach_cost(self):
-        from score_sequence import score_sequence
+        from planning.score_sequence import score_sequence
 
         ops = [
             _Op("o1", "top", "t1", "drill"),
@@ -163,7 +163,7 @@ class ReachabilityOCCTests(unittest.TestCase):
         self.assertTrue(self.hole_face_ids, "expected a cylindrical hole face")
 
     def test_side_hole_reachable_laterally_not_axially(self):
-        from lateral_axes import annotate_lateral_reachability
+        from cascade.lateral_axes import annotate_lateral_reachability
 
         node = {"feature_id": "hole", "class_name": "through_hole",
                 "face_ids": self.hole_face_ids, "params": {}}
@@ -192,7 +192,7 @@ class ReachabilityOCCTests(unittest.TestCase):
         from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
         from OCC.Core.gp import gp_Trsf, gp_Mat
 
-        from reachability import _Corridor, _direction_result, _feature_boundary_points
+        from cascade.reachability import _Corridor, _direction_result, _feature_boundary_points
 
         occ_by_index = {i: f for i, f in enumerate(self.occ_faces)}
         pts = _feature_boundary_points(occ_by_index, self.hole_face_ids)
@@ -203,7 +203,7 @@ class ReachabilityOCCTests(unittest.TestCase):
         corridor = _Corridor(self.shape)
         for label in ("+X", "-X", "+Y", "+Z"):
             direct = _direction_result(
-                corridor, pts, np.asarray(__import__("axis_frames").CARDINAL_VECTORS[label]),
+                corridor, pts, np.asarray(__import__("importlib").import_module("cascade.axis_frames").CARDINAL_VECTORS[label]),
                 ray_len, node,
             )["occluded"]
 

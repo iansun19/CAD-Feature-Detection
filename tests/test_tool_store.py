@@ -16,13 +16,13 @@ from unittest.mock import patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from machining_context import (  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     build_context_v0,
     load_tool_library,
     load_tools_from_supabase,
     normalize_tool_type,
 )
-from tool_store import (  # noqa: E402
+from tools.tool_store import (  # noqa: E402
     FETCH_PAGE_SIZE,
     UPSERT_BATCH_SIZE,
     IngestFileResult,
@@ -174,7 +174,7 @@ class TestFetchToolRowsPagination(unittest.TestCase):
     def test_multiple_pages_assembled_without_duplicates(self) -> None:
         rows = [_mock_tool_row(i) for i in range(2500)]
         client = PaginatedSupabaseClient(rows)
-        with self.assertLogs("tool_store", level="WARNING") as captured:
+        with self.assertLogs("tools.tool_store", level="WARNING") as captured:
             fetched = fetch_tool_rows(client)
         self.assertEqual(len(fetched), 2500)
         self.assertEqual(client.fetch_calls, 3)
@@ -278,7 +278,7 @@ class TestIngestHelpers(unittest.TestCase):
             path.write_text(json.dumps(payload), encoding="utf-8")
 
             log_stream = io.StringIO()
-            with self.assertLogs("machining_context", level="WARNING"):
+            with self.assertLogs("planning.machining_context", level="WARNING"):
                 with redirect_stderr(log_stream):
                     file_results, global_unknown, _, _ = ingest_directory(
                         path.parent,
@@ -321,7 +321,7 @@ class TestBatchedUpsert(unittest.TestCase):
         client.tools.fail_at_call = 2
         client.tools.fail_message = "chunk write failed"
 
-        with self.assertLogs("tool_store", level="ERROR") as captured:
+        with self.assertLogs("tools.tool_store", level="ERROR") as captured:
             result = upsert_tool_rows(
                 rows,
                 client=client,
@@ -384,7 +384,7 @@ class TestBuildContextSupabase(unittest.TestCase):
         ]
 
         with patch(
-            "tool_store.fetch_tool_rows",
+            "tools.tool_store.fetch_tool_rows",
             return_value=rows,
         ) as fetch_mock:
             ctx = build_context_v0(

@@ -4,7 +4,7 @@
 # This yaml matches the FRONT STEP only — do not merge back-side counts here.
 
 part_id: "96260B_front"
-part_step: "96260B_FRONT_XR004_PCD PLATE.stp copy"
+part_step: "fixtures/step/96260B_front.stp"
 graph_npz: "pipeline_out/96260B_front/graph.npz"
 
 # Setup-scoped pocket access (see eval/pocket_openclosed_findings.md).

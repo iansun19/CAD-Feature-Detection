@@ -31,7 +31,7 @@ def _triangulate_face(face, lin_defl=0.5) -> list[list[float]]:
 
 
 def _face_normal_list(face) -> list[float]:
-    from step_ingest import face_mid_normal
+    from brep.step_ingest import face_mid_normal
 
     n = face_mid_normal(face)
     return [float(n[0]), float(n[1]), float(n[2])]
@@ -41,7 +41,7 @@ def triangulate_step_part(step_path: Path) -> list[dict]:
     """Return one dict per B-rep face in TopologyExplorer order."""
     from OCC.Extend.TopologyUtils import TopologyExplorer
 
-    from step_ingest import load_step_shape
+    from brep.step_ingest import load_step_shape
 
     shape, _ = load_step_shape(str(step_path))
     faces = list(TopologyExplorer(shape).faces())

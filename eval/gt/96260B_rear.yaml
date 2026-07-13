@@ -4,7 +4,7 @@
 # Contour count not yet transcribed from Toolpath panel (cascade residual ? Toolpath instances).
 
 part_id: "96260B_rear"
-part_step: "96260B_REAR_XR004_PCD PLATE.stp copy"
+part_step: "fixtures/step/96260B_rear.stp"
 graph_npz: "pipeline_out/96260B_plate/graph.npz"
 
 setup:

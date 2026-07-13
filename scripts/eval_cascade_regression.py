@@ -18,7 +18,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from cascade_regression import (  # noqa: E402
+from cascade.cascade_regression import (  # noqa: E402
     bless_regression_fixture,
     format_partition_diff_report,
     list_regression_fixture_ids,

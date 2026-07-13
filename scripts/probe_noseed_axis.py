@@ -9,21 +9,21 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from feature_params import analyze_step
-from pocket_detection import (
+from brep.feature_params import analyze_step
+from cascade.pocket_detection import (
     FLOOR_TYPES, SPHERE_TYPES, _broad_face_axis, _snap_to_cardinal,
     PocketDetectionConfig,
 )
 
 CORPUS = {
-    "96260B_front": "96260B_FRONT_XR004_PCD PLATE.stp copy",
-    "96260B_rear": "96260B_REAR_XR004_PCD PLATE.stp copy",
-    "fish_mold": "fish mold.stp",
-    "part1": "part1.step",
-    "part2": "part2.step",
-    "part3": "part3.step",
-    "part4": "part4.step",
-    "nist_ctc_01": "nist_ctc_01.step",
+    "96260B_front": "fixtures/step/96260B_front.stp",
+    "96260B_rear": "fixtures/step/96260B_rear.stp",
+    "fish_mold": "fixtures/step/fish_mold.stp",
+    "part1": "fixtures/step/fixtures/step/part1.step",
+    "part2": "fixtures/step/fixtures/step/part2.step",
+    "part3": "fixtures/step/fixtures/step/part3.step",
+    "part4": "fixtures/step/fixtures/step/part4.step",
+    "nist_ctc_01": "fixtures/step/fixtures/step/nist_ctc_01.step",
 }
 
 cfg = PocketDetectionConfig()

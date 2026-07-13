@@ -17,8 +17,8 @@ import yaml
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dataset import get_dataset, MFCADPPRegenGraphDataset, build_node_features_regen
-from model import BRepGNN
+from legacy.dataset import get_dataset, MFCADPPRegenGraphDataset, build_node_features_regen
+from legacy.model import BRepGNN
 
 SPLITS = {"train.txt": "training_MFCAD++.h5", "val.txt": "val_MFCAD++.h5",
           "test.txt": "test_MFCAD++.h5"}

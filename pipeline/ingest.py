@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from feature_params import HAS_OCC
+from brep.feature_params import HAS_OCC
 
 
 def require_occ(action: str = "STEP parsing") -> None:
@@ -23,7 +23,7 @@ def ingest_step_to_npz(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Parse STEP in-process and write graph.npz. Returns (x, edge_index, edge_attr)."""
     require_occ()
-    from step_ingest import ingest_step_to_pyg
+    from brep.step_ingest import ingest_step_to_pyg
 
     x, edge_index, edge_attr, stats = ingest_step_to_pyg(
         str(step_path),

@@ -6,12 +6,12 @@ golden-safety probe skeleton. No code edits to detectors.
 import sys
 import numpy as np
 
-from feature_params import analyze_step
-from step_ingest import ingest_step_to_pyg
+from brep.feature_params import analyze_step
+from brep.step_ingest import ingest_step_to_pyg
 
 PARTS = {
-    "part1": "part1.step",
-    "part2": "part2.step",
+    "part1": "fixtures/step/fixtures/step/part1.step",
+    "part2": "fixtures/step/fixtures/step/part2.step",
 }
 TARGETS = {
     "part1": [5, 6, 7, 8, 9, 10, 16, 17],

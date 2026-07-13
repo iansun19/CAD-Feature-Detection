@@ -29,7 +29,7 @@
 # are in inches.
 
 part_id: "part2"
-part_step: "part2.step"
+part_step: "fixtures/step/fixtures/step/part2.step"
 graph_npz: "eval/regression/graphs/part2.graph.npz"
 
 setup:

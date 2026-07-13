@@ -15,28 +15,28 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 FIXTURES = {
-    "96260B_front": ("96260B_FRONT_XR004_PCD PLATE.stp copy",
+    "96260B_front": ("fixtures/step/96260B_front.stp",
                      "eval/regression/graphs/96260B_front.graph.npz", "front"),
-    "96260B_rear": ("96260B_REAR_XR004_PCD PLATE.stp copy",
+    "96260B_rear": ("fixtures/step/96260B_rear.stp",
                     "eval/regression/graphs/96260B_rear.graph.npz", "back"),
-    "fish_mold": ("fish mold.stp", "eval/regression/graphs/fish_mold.graph.npz", "back"),
-    "part1": ("part1.step", "eval/regression/graphs/part1.graph.npz", None),
-    "part2": ("part2.step", "eval/regression/graphs/part2.graph.npz", None),
-    "part3": ("part3.step", None, None),
+    "fish_mold": ("fixtures/step/fish_mold.stp", "eval/regression/graphs/fish_mold.graph.npz", "back"),
+    "part1": ("fixtures/step/fixtures/step/part1.step", "eval/regression/graphs/part1.graph.npz", None),
+    "part2": ("fixtures/step/fixtures/step/part2.step", "eval/regression/graphs/part2.graph.npz", None),
+    "part3": ("fixtures/step/fixtures/step/part3.step", None, None),
 }
 
 
 def cone_refradius(occ_face):
-    from hole_detection import _axis_from_occ_face
+    from cascade.hole_detection import _axis_from_occ_face
     r = _axis_from_occ_face(occ_face)
     return r[1] if r else None
 
 
 def main() -> int:
     from run_cascade import run_cascade, _resolve_pocket_setup_for_cascade
-    from pocket_detection import PocketDetectionConfig
-    from hole_detection import HoleDetectionConfig
-    from feature_params import load_step_faces
+    from cascade.pocket_detection import PocketDetectionConfig
+    from cascade.hole_detection import HoleDetectionConfig
+    from brep.feature_params import load_step_faces
 
     for name, (step, npz, side) in FIXTURES.items():
         if not Path(step).is_file():
@@ -44,7 +44,7 @@ def main() -> int:
         if npz and Path(npz).is_file():
             d = np.load(npz); ei, ea = d["edge_index"], d["edge_attr"]
         else:
-            from step_ingest import ingest_step_to_pyg
+            from brep.step_ingest import ingest_step_to_pyg
             _x, ei, ea, _ = ingest_step_to_pyg(step)
         setup = _resolve_pocket_setup_for_cascade(Path(step), machining_side=side)
         pk_cfg = PocketDetectionConfig(setup=setup)

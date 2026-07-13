@@ -16,7 +16,7 @@ try:
 except ImportError:
     HAS_OCC = False
 
-from stock_cut_classification import (  # noqa: E402
+from cascade.stock_cut_classification import (  # noqa: E402
     CLASSIFICATION_FIXTURES,
     classify_report,
     format_flip_report,

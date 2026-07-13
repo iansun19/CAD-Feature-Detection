@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from cascade_regression import (  # noqa: E402
+from cascade.cascade_regression import (  # noqa: E402
     FaceFingerprint,
     FaceFingerprintMismatchError,
     PartitionValidationError,

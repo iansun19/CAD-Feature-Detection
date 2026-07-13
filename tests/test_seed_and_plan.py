@@ -18,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 import seed_and_plan as sp  # noqa: E402
-import ground_truth_store as gts  # noqa: E402
+import planning.ground_truth_store as gts  # noqa: E402
 
 GT_PATH = Path(ROOT) / "pipeline_out" / "fish_mold_cascade" / "feature_graph_cascade.json"
 
@@ -129,7 +129,7 @@ class PersistTests(unittest.TestCase):
             self.graph,
             name="fish_mold",
             detection_version="cascade-v6",
-            step_file_ref="fish mold.stp",
+            step_file_ref="fixtures/step/fish_mold.stp",
             descriptor=None,
             extents={"min": [0, 0, 0], "max": [1, 1, 1]},
             force=force,

@@ -1,5 +1,5 @@
 fixture_id: "part4"
-step: "part4.step"
+step: "fixtures/step/fixtures/step/part4.step"
 graph_npz: "eval/regression/graphs/part4.graph.npz"
 face_index_scheme: "analyze_step_v1"
 
@@ -37,7 +37,7 @@ notes: |
   Single primary setup (machining_side=back); opening axis is geometry-derived Z.
   stock_classifier=off: every face enters the cascade and exits with one feature
   label (no stock bucket). graph.npz pinned from part4's own ingest (154 faces).
-  STEP ("part4.step") is at repo root.
+  STEP ("fixtures/step/fixtures/step/part4.step") is at repo root.
 
   Blessed from HAND-VERIFIED ground truth (not merely from cascade output): the
   30-face outer boundary was confirmed by per-face geometry inventory (all

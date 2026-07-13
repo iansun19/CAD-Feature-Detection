@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from machining_context import (  # noqa: E402
+from planning.machining_context import (  # noqa: E402
     DEFAULT_TOOL_LIBRARIES_DIR,
     build_context_v0,
     load_default_libraries,
@@ -54,7 +54,7 @@ class TestLoadLibraryDirectory(unittest.TestCase):
             json_lib = tmp_path / "sample.json"
             json_lib.write_text(SAMPLE_LIBRARY.read_text(encoding="utf-8"), encoding="utf-8")
 
-            with self.assertLogs("machining_context", level="WARNING") as captured:
+            with self.assertLogs("planning.machining_context", level="WARNING") as captured:
                 tools = load_library_directory(tmp_path)
             self.assertEqual(len(tools), 12)
             self.assertTrue(

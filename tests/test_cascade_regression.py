@@ -16,7 +16,7 @@ try:
 except ImportError:
     HAS_OCC = False
 
-from cascade_regression import (  # noqa: E402
+from cascade.cascade_regression import (  # noqa: E402
     format_partition_diff_report,
     list_regression_fixture_ids,
     load_regression_fixture_by_id,

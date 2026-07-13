@@ -10,14 +10,14 @@ from pathlib import Path
 
 import numpy as np
 
-from eval_cascade import build_cascade_feature_graph
-from feature_params import analyze_step, load_step_faces
-from pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
+from cascade.eval_cascade import build_cascade_feature_graph
+from brep.feature_params import analyze_step, load_step_faces
+from cascade.pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
 from run_cascade import _load_edges, run_cascade
 
-FRONT_STEP = Path("96260B_FRONT_XR004_PCD PLATE.stp copy")
+FRONT_STEP = Path("fixtures/step/96260B_front.stp")
 FRONT_NPZ = Path("pipeline_out/96260B_front/graph.npz")
-REAR_STEP = Path("96260B_REAR_XR004_PCD PLATE.stp copy")
+REAR_STEP = Path("fixtures/step/96260B_rear.stp")
 REAR_NPZ = Path("pipeline_out/96260B_plate/graph.npz")
 
 

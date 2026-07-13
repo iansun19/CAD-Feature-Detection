@@ -12,7 +12,7 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from feature_params import (  # noqa: E402
+from brep.feature_params import (  # noqa: E402
     FaceGeom,
     REMOVED_HEURISTIC_KEYS,
     analytic_surfaces,
@@ -208,21 +208,21 @@ class Test29000IndexExport(unittest.TestCase):
     def setUpClass(cls):
         try:
             from OCC.Core.STEPControl import STEPControl_Reader  # noqa: F401
-            from feature_params import HAS_OCC
+            from brep.feature_params import HAS_OCC
         except ImportError:
             raise unittest.SkipTest("pythonocc-core not installed")
         if not HAS_OCC:
             raise unittest.SkipTest("pythonocc-core not installed")
 
         cls.step = os.path.join(ROOT, "MFCAD++_dataset", "step", "test", "29000.step")
-        cls.graph_path = os.path.join(ROOT, "29000_feature_graph.json")
+        cls.graph_path = os.path.join(ROOT, "fixtures/graphs/fixtures/graphs/29000_feature_graph.json")
         if not os.path.isfile(cls.graph_path):
-            raise unittest.SkipTest("missing 29000_feature_graph.json")
+            raise unittest.SkipTest("missing fixtures/graphs/fixtures/graphs/29000_feature_graph.json")
 
         with open(cls.graph_path) as f:
             cls.base_graph = json.load(f)
 
-        from feature_params import analyze_step, enrich_graph_with_params, extract_feature_params
+        from brep.feature_params import analyze_step, enrich_graph_with_params, extract_feature_params
 
         cls.analyze_step = analyze_step
         cls.enrich_graph_with_params = enrich_graph_with_params
@@ -272,7 +272,7 @@ class Test29000IndexExport(unittest.TestCase):
             self.assertEqual(actual, expected, f"feature_id={fid} analytic_surfaces changed")
 
     def test_face_index_error_on_bad_indices(self):
-        from brep_extents import FaceIndexError, resolve_occ_faces
+        from brep.brep_extents import FaceIndexError, resolve_occ_faces
 
         with self.assertRaises(FaceIndexError):
             resolve_occ_faces(self.step, [0, 0], expected_n_faces=26)

@@ -1,4 +1,4 @@
-# All knobs in one place. train.py and overfit_check.py read this.
+# All knobs in one place. legacy/train.py and legacy/overfit_check.py read this.
 
 # --- Data ---
 data_root: "MFCAD++_dataset"         # unzipped MFCAD++ folder (relative to repo root)

@@ -7,7 +7,7 @@ Combines preset replay (diagnose_preset_coverage), shop-GT feed comparison
 
 Run after every planner change:
   python scripts/plan_sanity_report.py
-  python scripts/plan_sanity_report.py examples/cam_plan_96260B.json \\
+  python scripts/plan_sanity_report.py examples/cam_plan_96260B_rear.json \\
       --shop eval/gt/96260B_rear_shop_program.yaml --material aluminum
 
 Older scripts remain as thin wrappers / detail views:
@@ -32,8 +32,8 @@ sys.path.insert(0, str(REPO_ROOT))
 
 import env_bootstrap  # noqa: F401, E402
 
-from cam_plan_schema import CamPlan, Operation, load_cam_plan  # noqa: E402
-from machining_context import Tool  # noqa: E402
+from schema.cam_plan_schema import CamPlan, Operation, load_cam_plan  # noqa: E402
+from planning.machining_context import Tool  # noqa: E402
 from planner import (  # noqa: E402
     _material_match_rank,
     _tool_has_strategy_preset,
@@ -59,7 +59,9 @@ from scripts.eval_cam_plan import (  # noqa: E402
     _resolve_path,
 )
 
-DEFAULT_PLAN = REPO_ROOT / "examples" / "cam_plan_96260B.json"
+# 96260B_rear and 96260B_front are two SEPARATE parts. The rear is the one with a
+# transcribed shop program, so it is the default sanity target.
+DEFAULT_PLAN = REPO_ROOT / "examples" / "cam_plan_96260B_rear.json"
 DEFAULT_SHOP = REPO_ROOT / "eval" / "gt" / "96260B_rear_shop_program.yaml"
 COVERAGE_EXPECTATIONS_DIR = REPO_ROOT / "examples" / "coverage_expectations"
 
@@ -458,19 +460,28 @@ def _setup_op_pairs(plan: CamPlan) -> dict[str, list[tuple[str, str, str]]]:
 
 
 def check_homolog_overlap(plan: CamPlan) -> list[SanityFlag]:
-    """Hard gate: homolog feature_ids machined with duplicate op types across setups.
+    """Hard gate: homolog feature_ids machined with duplicate op types across the
+    setups of ONE part.
 
     The ``(feature_id, operation_type)`` key assumes a SHARED feature-id space
-    across setups. That holds only when every setup is scoped from ONE feature
-    graph. Split-panel parts export a separate graph per orientation (front/rear
-    STEP), each with its OWN local ids -- front id 17 is not rear id 17 -- so
-    cross-setup id equality is coincidental, not a physical homolog. Flagging it
-    is the documented false-positive (front id N == rear id N inflated the ratio
-    to 78% on 96260B; see eval/orphaned_feature_triage.md). So when the setups
-    are backed by distinct feature graphs, skip the cross-setup comparison and
-    emit a single WARN: a sound cross-panel over-machining check needs a
-    geometry-based homolog map (world-space face matching), which does not exist
-    yet. Same-graph multi-setups still get the hard gate.
+    across setups. That holds only for a genuine multi-setup part -- one piece of
+    stock, refixtured, scoped from ONE feature graph -- where feature 17 means the
+    same physical face in every setup.
+
+    It does NOT hold across DISTINCT feature graphs. Two graphs mean two STEPs
+    with independent local id spaces (front id 17 is not rear id 17), and -- for
+    96260B specifically -- two separate parts with separate stock. Comparing
+    op-type overlap between two unrelated parts is a category error: no shared
+    geometry means no homologs, so there is nothing for this gate to measure. The
+    earlier "front id N == rear id N" 78% overlap on 96260B was pure id-collision
+    noise from exactly that mistake (see eval/orphaned_feature_triage.md).
+
+    So this gate ONLY runs on same-graph multi-setups. Distinct graphs -> it does
+    not run at all (returns no flags; not even a WARN -- a category error is not a
+    finding). Sound cross-STEP over-machining detection for a real flip-job whose
+    orientations export separate graphs would need a geometry-based homolog map
+    (world-space face matching), which does not exist yet; see
+    eval/open_capability_homolog_map_split_panel.md.
     """
     by_setup = _setup_op_pairs(plan)
     if len(by_setup) < 2:
@@ -479,21 +490,9 @@ def check_homolog_overlap(plan: CamPlan) -> list[SanityFlag]:
     graph_refs = (plan.metadata or {}).get("feature_graph_refs") or {}
     distinct_graphs = {graph_refs[sid] for sid in by_setup if sid in graph_refs}
     if len(distinct_graphs) > 1:
-        return [
-            SanityFlag(
-                gate="homolog_overlap",
-                severity=FlagSeverity.WARN,
-                op_id="+".join(sorted(by_setup)),
-                message=(
-                    "cross-setup homolog overlap NOT evaluated: setups are backed by "
-                    f"{len(distinct_graphs)} distinct feature graphs with independent "
-                    "local feature-id spaces (front id N != rear id N), so id equality "
-                    "across setups is not a physical homolog. A sound cross-panel "
-                    "over-machining check needs a geometry-based homolog map "
-                    "(world-space face matching); see eval/orphaned_feature_triage.md."
-                ),
-            )
-        ]
+        # Distinct graphs = distinct id spaces (and, for 96260B, distinct parts).
+        # No shared geometry -> no homologs -> the gate is inapplicable. Do not run.
+        return []
 
     pair_setups: dict[tuple[str, str], set[str]] = {}
     for setup_id, entries in by_setup.items():
@@ -530,40 +529,64 @@ def check_per_setup_op_counts(
     plan: CamPlan,
     shop_yaml: Mapping[str, Any] | None,
 ) -> list[SanityFlag]:
-    """Warn when per-setup emitted op counts diverge from shop setup totals."""
+    """Warn when the plan's emitted op count diverges from the shop program.
+
+    A shop program describes ONE physical part, machined in one or more
+    fixturings of ITS OWN stock (``setup1``, ``setup2``, ...). Those shop
+    fixturings all belong to the part the program is for -- they are NOT other
+    parts that merely share a name prefix. The old mapping paired plan setup
+    ``front`` to the shop's ``setup2_operation_count`` and HARD-failed when
+    ``front`` emitted more ops. That was a category error: this shop program is
+    the REAR part's program, so its ``setup2`` (a 1-op facing flip) is the rear
+    part's own second fixturing, not the separate FRONT part. Comparing the front
+    part's op count to the rear part's facing flip is meaningless.
+
+    Now: the plan's setups are compared positionally to the shop program's
+    fixturings, and any divergence is a WARN only -- never HARD. Divergence is
+    expected by design (the planner emits per-feature rough+finish pairs; the shop
+    batches by (tool, strategy) across many features per op; see the shop-program
+    header). A count mismatch is a soft signal, not a correctness failure. When no
+    shop program is supplied (e.g. the FRONT part, which has none), the gate does
+    not run.
+    """
     if shop_yaml is None:
         return []
 
     summary = shop_yaml.get("summary") or {}
-    shop_counts: dict[str, int | None] = {
-        "rear": summary.get("setup1_operation_count"),
-        "front": summary.get("setup2_operation_count"),
-    }
-    emitted_counts = {
-        setup.setup_id: sum(1 for op in plan.operations if op.setup_id == setup.setup_id)
+    # Shop fixturings in order: setup1, setup2, ... (all belong to the shop part).
+    shop_fixturings: list[int] = []
+    idx = 1
+    while True:
+        count = summary.get(f"setup{idx}_operation_count")
+        if count is None:
+            break
+        shop_fixturings.append(int(count))
+        idx += 1
+    if not shop_fixturings:
+        return []
+
+    emitted_by_setup = [
+        (setup.setup_id, sum(1 for op in plan.operations if op.setup_id == setup.setup_id))
         for setup in plan.setups
-    }
+    ]
 
     flags: list[SanityFlag] = []
-    for setup_id, emitted in emitted_counts.items():
-        shop_total = shop_counts.get(setup_id)
-        if shop_total is None:
+    for pos, (setup_id, emitted) in enumerate(emitted_by_setup):
+        if pos >= len(shop_fixturings):
+            # More modeled setups than shop fixturings: nothing to compare against.
             continue
+        shop_total = shop_fixturings[pos]
         if emitted == shop_total:
             continue
-        severity = (
-            FlagSeverity.HARD
-            if setup_id == "front" and emitted > shop_total
-            else FlagSeverity.WARN
-        )
         flags.append(
             SanityFlag(
                 gate="per_setup_op_count",
-                severity=severity,
+                severity=FlagSeverity.WARN,
                 op_id=setup_id,
                 message=(
-                    f"setup {setup_id}: emitted {emitted} ops vs shop setup "
-                    f"{shop_total} ops"
+                    f"setup {setup_id}: emitted {emitted} ops vs shop fixturing "
+                    f"#{pos + 1} = {shop_total} ops (planner emits per-feature; shop "
+                    f"batches by tool+strategy -- divergence expected)"
                 ),
             )
         )

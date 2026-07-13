@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from feature_graph import write_feature_graph
-from inner_fillet_detection import (
+from brep.feature_graph import write_feature_graph
+from cascade.inner_fillet_detection import (
     REFERENCE_FACE_ID_FISH_MOLD,
     InnerFilletDetectionConfig,
     apply_inner_fillets,
@@ -33,15 +33,15 @@ FROZEN_GRAPHS = [
     ROOT / "pipeline_out/96260B_rear/feature_graph_cascade.json",
 ]
 TARGET_GRAPH = ROOT / "pipeline_out/fish_mold_cascade/feature_graph_cascade.json"
-FISH_STEP = ROOT / "fish mold.stp"
+FISH_STEP = ROOT / "fixtures/step/fish_mold.stp"
 FISH_NPZ = ROOT / "pipeline_out/fish_mold/graph.npz"
 PANEL_NPZ = {
     "rear": ROOT / "pipeline_out/96260B_plate/graph.npz",
     "front": ROOT / "pipeline_out/96260B_front/graph.npz",
 }
 PANEL_STEPS = {
-    "rear": ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy",
-    "front": ROOT / "96260B_FRONT_XR004_PCD PLATE.stp copy",
+    "rear": ROOT / "fixtures/step/96260B_rear.stp",
+    "front": ROOT / "fixtures/step/96260B_front.stp",
 }
 
 

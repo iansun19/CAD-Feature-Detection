@@ -27,10 +27,10 @@
 # cascade decomposition and were NOT altered by this fix (proven: 0 non-boundary
 # face labels changed). Instance counts are in eval_cascade Toolpath vocabulary
 # (NOT face counts). stock_classifier=off; graph.npz pinned from part4's own
-# ingest (154 faces). STEP ("part4.step") at repo root.
+# ingest (154 faces). STEP ("fixtures/step/fixtures/step/part4.step") at repo root.
 
 part_id: "part4"
-part_step: "part4.step"
+part_step: "fixtures/step/fixtures/step/part4.step"
 graph_npz: "eval/regression/graphs/part4.graph.npz"
 
 setup:

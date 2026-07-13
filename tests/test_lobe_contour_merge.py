@@ -4,17 +4,17 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from eval_cascade import build_cascade_feature_graph
-from feature_params import analyze_step, load_step_faces
-from approach_vectors import annotate_approach_vectors
-from reachability import annotate_reachability
-from lobe_contour_merge import merge_lobe_contour_fragments
+from cascade.eval_cascade import build_cascade_feature_graph
+from brep.feature_params import analyze_step, load_step_faces
+from cascade.approach_vectors import annotate_approach_vectors
+from cascade.reachability import annotate_reachability
+from cascade.lobe_contour_merge import merge_lobe_contour_fragments
 from run_cascade import _load_edges, run_cascade
-from pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
-from step_ingest import load_step_shape
+from cascade.pocket_detection import PocketDetectionConfig, resolve_pocket_setup_for_run
+from brep.step_ingest import load_step_shape
 
 ROOT = Path(__file__).resolve().parent.parent
-REAR_STEP = ROOT / "96260B_REAR_XR004_PCD PLATE.stp copy"
+REAR_STEP = ROOT / "fixtures/step/96260B_rear.stp"
 # Committed, git-tracked reference graph pinned by the rear regression fixture
 # (eval/regression/fixtures/96260B_rear.yaml). The former target
 # pipeline_out/96260B_rear/graph.npz was a never-tracked pipeline artifact that

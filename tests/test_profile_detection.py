@@ -3,19 +3,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outer_fillet_detection import (
+from cascade.outer_fillet_detection import (
     REFERENCE_HUB_OUTER_FILLET_FACES_FRONT,
     REFERENCE_OUTER_FILLET_FACES_FRONT,
 )
-from pocket_detection import PocketDetectionConfig, pocket_config_from_setup_dict
-from profile_detection import (
+from cascade.pocket_detection import PocketDetectionConfig, pocket_config_from_setup_dict
+from cascade.profile_detection import (
     REFERENCE_PROFILE_FACES_FRONT,
     REFERENCE_PROFILE_INSTANCES_FRONT,
     validate_profiles,
 )
 from run_cascade import _load_edges, run_cascade
 
-STEP = "96260B_FRONT_XR004_PCD PLATE.stp copy"
+STEP = "fixtures/step/96260B_front.stp"
 NPZ = "pipeline_out/96260B_front/graph.npz"
 
 

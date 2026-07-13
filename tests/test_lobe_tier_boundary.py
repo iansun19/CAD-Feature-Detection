@@ -6,11 +6,11 @@ import json
 import unittest
 from pathlib import Path
 
-from cascade_instrumentation import _trace_split_lobe_pool_assignments
-from eval_cascade import build_cascade_feature_graph, eval_part
-from feature_params import analyze_step, load_step_faces
-from hole_detection import FaceGraph
-from lobe_tier_detection import (
+from cascade.cascade_instrumentation import _trace_split_lobe_pool_assignments
+from cascade.eval_cascade import build_cascade_feature_graph, eval_part
+from brep.feature_params import analyze_step, load_step_faces
+from cascade.hole_detection import FaceGraph
+from cascade.lobe_tier_detection import (
     LobeTierConfig,
     TOLERANCE_EPSILON_MM,
     TOLERANCE_FLOOR_MM,
@@ -19,7 +19,7 @@ from lobe_tier_detection import (
     _opening_side_lobe_wall,
     detect_filleted_lobe_tiers,
 )
-from pocket_detection import (
+from cascade.pocket_detection import (
     PocketDetectionConfig,
     detect_pockets,
     resolve_pocket_setup_for_run,
@@ -34,10 +34,10 @@ OPENING_BORE_WALLS = frozenset({
 
 FRONT_SAFETY_NET_ORPHAN = frozenset({134, 52, 138, 183})
 
-FRONT_STEP = Path("96260B_FRONT_XR004_PCD PLATE.stp copy")
+FRONT_STEP = Path("fixtures/step/96260B_front.stp")
 FRONT_NPZ = Path("pipeline_out/96260B_front/graph.npz")
 FRONT_GT = Path("eval/gt/96260B_front.yaml")
-REAR_STEP = Path("96260B_REAR_XR004_PCD PLATE.stp copy")
+REAR_STEP = Path("fixtures/step/96260B_rear.stp")
 REAR_NPZ = Path("pipeline_out/96260B_plate/graph.npz")
 
 FRONT_PARTITION_BASELINE_MD5 = "6763ebe651426c409ae5738fab691a95"
@@ -290,7 +290,7 @@ class LobeTierBoundaryTests(unittest.TestCase):
 
     def test_rear_sculpt_cap_bsplines_emit_open_class(self):
         """Open-tier sculpt caps (7, 45) stay filleted_open_pocket under rear setup."""
-        from pocket_detection import (
+        from cascade.pocket_detection import (
             PocketDetectionConfig,
             PocketSetupConfig,
             apply_filleted_lobe_tiers_to_result,

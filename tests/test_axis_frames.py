@@ -9,7 +9,7 @@ import unittest
 
 import numpy as np
 
-from axis_frames import (
+from cascade.axis_frames import (
     CARDINAL_LABELS,
     CARDINAL_VECTORS,
     cardinal_label,

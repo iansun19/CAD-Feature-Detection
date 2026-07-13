@@ -31,7 +31,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
-import ground_truth_store as gts
+import planning.ground_truth_store as gts
 import generate_operation_plan as gop
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -114,7 +114,7 @@ def resolve_step_path(descriptor: Mapping[str, Any] | None, setup_id: str) -> Pa
 
 def compute_extents(step_path: Path) -> dict[str, list[float]]:
     """Part AABB via the existing OCC-backed helper (mlcad env required)."""
-    from machining_context import _envelope_corners
+    from planning.machining_context import _envelope_corners
 
     mn, mx = _envelope_corners(str(step_path))
     return {"min": list(mn), "max": list(mx)}

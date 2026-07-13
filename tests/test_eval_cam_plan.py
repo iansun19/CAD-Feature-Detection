@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from cam_plan_schema import load_cam_plan  # noqa: E402
+from schema.cam_plan_schema import load_cam_plan  # noqa: E402
 from scripts.eval_cam_plan import (  # noqa: E402
     build_scorecard,
     infer_shop_operations,
@@ -19,7 +19,9 @@ from scripts.eval_cam_plan import (  # noqa: E402
     load_gt_operations,
 )
 
-PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B.json"
+# The rear part's own single-setup plan (96260B_rear and 96260B_front are two
+# separate parts); the shop program below is the rear part's.
+PLAN_PATH = Path(ROOT) / "examples" / "cam_plan_96260B_rear.json"
 GT_REAR_PATH = Path(ROOT) / "eval" / "gt" / "96260B_rear.yaml"
 SHOP_GT_PATH = Path(ROOT) / "eval" / "gt" / "96260B_rear_shop_program.yaml"
 GRAPH_PATH = Path(ROOT) / "pipeline_out" / "96260B_rear" / "feature_graph_cascade.json"
@@ -142,23 +144,23 @@ class TestShopProgramAggregateScorecard(unittest.TestCase):
         self.assertIsNotNone(aggregate)
         assert aggregate is not None
 
+        # The shop program is the REAR part's own program: 19 ops in fixturing #1
+        # plus a 1-op facing flip in fixturing #2 = 20. (Both belong to the rear
+        # part; neither is the separate FRONT part.)
         self.assertEqual(aggregate["op_count"]["shop"], 20)
-        # Both setups have geometry-derived full scope: the rear does its material
-        # removal AND owns the facing pass on the real -Y stock flat (feat 17, 7
-        # ops), and the front does its full 10-op milling program (47 reachable
-        # features) but faces nothing (no envelope stock flat on its +Z approach).
-        # Pinned to the actual emitted total, not a floor -- the >=7 floor was an
-        # artifact of the interim facing-only-front scoping that emitted 1 front
-        # op. See setup_generation.derive_setup_scope.
-        self.assertEqual(aggregate["op_count"]["emitted"], 17)
+        # 96260B_rear is planned independently as a single-setup part: 7 ops,
+        # including its own material removal and the facing pass on the real -Y
+        # stock flat (feat 17). It is NOT merged with the FRONT part (a different
+        # part). The planner emits per-feature ops; the shop batches by
+        # tool+strategy, so 7 emitted vs 20 shop is expected divergence, not a gap.
+        self.assertEqual(aggregate["op_count"]["emitted"], 7)
         self.assertIn("roughing", aggregate["strategy"]["covered"])
         self.assertIn("finishing_floor", aggregate["strategy"]["covered"])
         self.assertIn("finishing", aggregate["strategy"]["covered"])
         self.assertIn("Wall", aggregate["feature_category"]["covered"])
         self.assertIn("Contour Surface", aggregate["feature_category"]["covered"])
-        # Re-baselined plan does not machine the hole-family categories the shop
-        # program covers (through-hole / filleted blind hole live on the front
-        # setup); the rear scorecard reports them as missed.
+        # The rear plan does not machine the hole-family categories, so the rear
+        # scorecard reports them as missed.
         self.assertEqual(
             sorted(aggregate["feature_category"]["missed"]),
             ["Filleted Blind Hole", "Through Hole"],

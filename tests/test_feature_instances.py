@@ -10,7 +10,7 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from feature_instances import (  # noqa: E402
+from brep.feature_instances import (  # noqa: E402
     STOCK_CLASS,
     count_split_merge_events,
     face_iou,

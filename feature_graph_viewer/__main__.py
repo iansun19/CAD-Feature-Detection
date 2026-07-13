@@ -14,7 +14,7 @@ def main():
     ap.add_argument("--part-id", default="29000", help="MFCAD++ part id (default: 29000)")
     ap.add_argument(
         "--graph", "-g",
-        default="29000_feature_graph.json",
+        default="fixtures/graphs/fixtures/graphs/29000_feature_graph.json",
         help="feature_graph.json path",
     )
     ap.add_argument(

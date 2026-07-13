@@ -37,7 +37,7 @@ TEST_SPLIT = DATA_ROOT / "test.txt"
 CACHE_DIR = APP_DIR / "cache"
 
 sys.path.insert(0, str(REPO_ROOT))
-from taxonomy import NUM_CLASSES, NEW_COLORS, NEW_DESCRIPTIONS, NEW_NAMES
+from brep.taxonomy import NUM_CLASSES, NEW_COLORS, NEW_DESCRIPTIONS, NEW_NAMES
 
 log = logging.getLogger(__name__)
 
