@@ -1,28 +1,53 @@
 # mlcad — CAD → CAM machining-plan pipeline
 
-This repo turns a solid-model part (a STEP file or an MFCAD++ sample) into a
-structured, machinable process plan. It has two engines that share one B-rep
-front end:
+This repo turns a solid-model part (a STEP file) into a structured, machinable
+process plan. It is a **STEP → JSON** pipeline: ingest a B-rep, recognize
+machining features geometrically, and emit a validated CAM plan.
 
-1. **Perception** — recognize machining features on each face.
-2. **Planning** — group features into setups, assign tools/parameters, order the
-   operations, and emit a CAM plan.
+Three stages run in sequence, sharing one B-rep front end:
 
-Perception ships in two forms: a trained per-face **GNN classifier** (the
-original MFCAD++ "Path 1") and a geometric **cascade** that is the real engine on
-industrial parts. Everything downstream of perception (machining context,
-reachability, planner, sequencing) is built on the cascade output.
+1. **Perception** — a geometric **cascade** recognizes machining features on each
+   face, then layers approach vectors and verified 3-axis reachability on top.
+2. **Machining context** — assemble the planner input contract from the STEP
+   extents, a setup descriptor, and the cascade graph.
+3. **Planning** — group features into operations, enforce precedence, assign
+   tools/parameters, order the operations, and emit a CAM plan.
 
-> **Status (2026-07-08).** For the defined scope — one orientation per STEP file,
+> **Status (2026-07-12).** For the defined scope — one orientation per STEP file,
 > 3-axis milling, heuristic engine — the pipeline runs end to end and emits a
 > validated CAM plan. Known open work is scope expansion and generalization, most
 > of which is gated on new labeled parts. See [Roadmap & status](#roadmap--status).
 
 ---
 
-## Two ways in
+## Quick start
 
-### A. CAM pipeline (cascade → context → planner) — the current focus
+One command, arbitrary part, STEP in → CamPlan JSON out:
+
+```bash
+conda activate mlcad
+python run_step_to_plan.py <part.step> [--opening-axis +Z] [--machining-side ...]
+```
+
+[run_step_to_plan.py] chains the three stages for **any** part (no
+96260B / fish_mold hardcoding): the cascade ingests the face graph straight from
+the STEP (no pre-built `graph.npz` needed) and writes a `feature_graph_cascade.json`
+plus a single generated `setup_descriptor.yaml`; context derives the stock
+envelope from the B-rep extents; the planner emits the CamPlan.
+
+A lone STEP is its own single-setup part. Separate STEP files are **separate
+parts** — e.g. `96260B_front.stp` and `96260B_rear.stp` are two independent parts,
+each planned on its own. For a genuine flip-job (one part, one stock, refixtured
+across setups) declared by an explicit multi-setup descriptor, use
+`planner.py --multi-setup --setup-yaml <descriptor>`.
+
+The equivalent staged invocation (useful when inspecting intermediates):
+
+```bash
+python run_cascade.py "fixtures/step/96260B_rear.stp"  --export-dir pipeline_out/96260B_rear
+python run_cascade.py "fixtures/step/96260B_front.stp" --export-dir pipeline_out/96260B_front
+python planner.py --multi-setup --setups generated --scope-diff
+```
 
 ```
 STEP file
@@ -32,27 +57,11 @@ STEP file
   └─ planner.py           features → operations → precedence → sequencing → CamPlan
 ```
 
-Typical run on a split-panel part (front/rear are separate STEP files, one
-orientation each):
-
-```bash
-conda activate mlcad
-python run_cascade.py "fixtures/step/96260B_rear.stp" --export-dir pipeline_out/96260B_rear
-python run_cascade.py "fixtures/step/96260B_front.stp" --export-dir pipeline_out/96260B_front
-python planner.py --multi-setup --setups generated --scope-diff
-```
-
-### B. MFCAD++ GNN face classifier ("Path 1") — the original model
-
-A minimal PyTorch Geometric pipeline for per-face feature classification on the
-MFCAD++ dataset. Node = B-rep face, edge = shared edge; output = one class label
-per face. See [GNN classifier](#gnn-classifier-path-1) below.
-
 ---
 
 ## Pipeline stages
 
-### Stage 1 — Perception
+### Stage 1 — Perception (the cascade)
 
 **Cascade** ([run_cascade.py]). Specific-first feature recognition: the more
 specific recognizer runs first and claims its faces; the generic one takes the
@@ -63,24 +72,28 @@ pockets → holes → coaxial_stack → flats → outer_fillets → wall → pro
 ```
 
 Running pockets before holes stops a hole recognizer from grabbing concave pocket
-walls as false "holes". Each pass is independent — the cascade only threads one
-pass's `remaining_faces` into the next as its candidate pool. Detection modules:
+walls as false "holes"; the prismatic-profile pass runs before holes so an outer
+boundary reads as one profile. Each pass is independent — the cascade only threads
+one pass's `remaining_faces` into the next as its candidate pool. A terminal-pass
+invariant raises if any face is left unclaimed. Detection modules:
 [pocket_detection.py], [hole_detection.py], [coaxial_stack_detection.py],
 [flats_detection.py], [outer_fillet_detection.py], [inner_fillet_detection.py],
 [wall_detection.py], [profile_detection.py], [residual_detection.py],
-[lobe_tier_detection.py], [lobe_contour_merge.py], [exterior_boundary.py].
+[lobe_tier_detection.py], [exterior_boundary.py].
 
 The export path writes `feature_graph_cascade.json` and, layered on top:
 
 - **Approach vectors** ([approach_vectors.py]) — per-feature 3-axis approach
-  direction (Z-only MVP). Purely geometric candidacy; no collision test. Bumps
-  the graph `schema_version` to 3.
+  direction. Purely geometric candidacy; no collision test. Bumps the graph
+  `schema_version` to 3.
 - **Verified reachability** ([reachability.py]) — a swept-tool-cylinder collision
   test against the real solid, upgrading candidacy to verified reachability. Bumps
   `schema_version` to 4 and adds `reachability_summary`. Walls are exempt (lateral
   tool access, not axial plunge).
 
-**GNN classifier** ([legacy/model.py], [legacy/train.py]) — the trained alternative; see below.
+Feature classes recognized include pockets, through/blind holes (drill-tip blind
+holes discriminated from countersinks), coaxial bore stacks, counterbores,
+countersinks, flats, inner/outer fillets, walls, and prismatic profiles.
 
 ### Stage 2 — Machining context
 
@@ -129,6 +142,10 @@ strategies).
 - `remaining_material` — currently always `null` by decision (no validated
   in-process stock model yet).
 
+Persistence: molds and their features round-trip through Supabase; a saved mold
+can be replanned without re-running the cascade via [generate_operation_plan.py]
+(reconstructs the cascade graph from stored features → context → planner).
+
 ---
 
 ## Roadmap & status
@@ -138,10 +155,11 @@ strategies).
 1. **Generalize cascade** — de-scaling ([part_scale.py]) and lobe-tier
    concentric-bore relationship done, validated byte-identical on 96260B. *Open:
    labeled new test parts (data-gated).*
-2. **Per-feature approach vectors** — Z-only MVP done. *Open: lateral ±X/±Y axes
-   (needs a side-access part).*
-3. **Candidate setup generation** — generation (interpretation A) done. *Blocked:
-   setup-count minimization — needs lateral axes + a unified single-part model.*
+2. **Per-feature approach vectors** — Z-only MVP done; six-cardinal ±X/±Y/±Z
+   approach/reachability landed but unvalidated. *Open: a validated side-access
+   part.*
+3. **Candidate setup generation** — generation done. *Blocked: setup-count
+   minimization — needs lateral axes + a unified single-part model.*
 4. **Machining-state completion** — (a) verified reachability done; (b)
    `remaining_material` **descoped to `null`**: no validated toolpath layer or
    ground-truth reference to certify accuracy against.
@@ -160,50 +178,17 @@ The safety net for all cascade changes is the byte-identical golden regression o
 
 ---
 
-## GNN classifier (Path 1)
-
-A single face-adjacency graph GNN (UV-Net-style, simplified; GINEConv stack with
-edge features + residuals).
-
-- [legacy/dataset.py] — loads MFCAD++ into PyG `Data` graphs. **Two loaders:** one for
-  prebuilt H5 graphs, one that parses STEP via pythonocc. Read the comments and
-  confirm which matches your files — field-name mismatch is the #1 cause of silent
-  label misalignment.
-- [legacy/model.py] — the GNN.
-- [legacy/train.py] — training loop with early stopping, checkpointing, logging.
-- [legacy/overfit_check.py] — fast sanity run on ~20 samples. **Run this first.**
-- [config.yaml] — all hyperparameters.
-
-**Order of operations (do not skip):**
-
-1. Install env (`requirements.txt`, or the unified `environment.yml` for OCC).
-2. Download MFCAD++ (~1.5 GB) from
-   [Queen's University Belfast](https://pure.qub.ac.uk/en/datasets/mfcad-dataset-dataset-for-paper-hierarchical-cadnet-learning-from/)
-   and unzip into `MFCAD++_dataset/` at the repo root.
-3. `python -m legacy.setup_data` — confirms `train.txt` / `val.txt` / `test.txt` and the H5 are present.
-4. `python -m legacy.overfit_check` — must reach ~100% train acc on 20 parts in a couple
-   minutes. If it can't memorize 20 parts, the data loader is wrong. Fix before step 5.
-5. `python -m legacy.train` overnight.
-6. Read `runs/<timestamp>/log.txt` and `best_model.pt`.
-
-**Mac / Apple Silicon:** use the minimal Mac install in `requirements.txt`
-(`torch` + `torch_geometric` only — no `torch_scatter` / `torch_sparse`). Device
-auto-selects MPS (`config.yaml: device: auto`); the overfit check prints
-`device=mps` at startup. Set `device: cpu` if you hit a rare MPS op gap.
-
-> **Data-hygiene warning:** in MFCAD++ STEP files the `ADVANCED_FACE` name field
-> equals the ground-truth label. Strip it before any raw-text or LLM use, or you
-> leak labels.
-
----
-
 ## Environments
 
-- **CAM pipeline (perception → planning):** needs pythonocc-core (OpenCASCADE).
-  `conda env create -f environment.yml && conda activate mlcad`.
-- **GNN training only:** the minimal `requirements.txt` (PyTorch + PyG) is enough.
-- The repo `.venv` lacks OCC; run cascade / reachability / context tests under the
-  conda `mlcad` env (`python -m unittest ...`).
+The pipeline needs pythonocc-core (OpenCASCADE):
+
+```bash
+conda env create -f environment.yml && conda activate mlcad
+```
+
+The repo `.venv` lacks OCC; run cascade / reachability / context tests under the
+conda `mlcad` env. If `conda run` gets hijacked by the repo `.venv`, invoke the
+mlcad python by absolute path.
 
 ## Tests
 
